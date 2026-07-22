@@ -1,0 +1,45 @@
+/* writing.css — devlog index + post pages (reuses base + project chrome) */
+
+/* ---- index list ---- */
+.writing-hero { padding-block: clamp(2.5rem, 1.6rem + 5vw, 5rem) var(--sp-5); }
+.writing-hero h1 { font-family: var(--serif); font-weight: 320; font-size: var(--t-4); letter-spacing: -0.025em; }
+.writing-hero p { margin-top: var(--sp-3); color: var(--ink-2); max-width: 52ch; font-size: var(--t-1); }
+
+.w-list { border-top: 1px solid var(--line); }
+.w-item {
+  display: grid; grid-template-columns: 8rem 1fr auto; gap: var(--sp-4);
+  align-items: baseline; padding: var(--sp-5) 0; border-bottom: 1px solid var(--line);
+  transition: padding-inline .5s var(--ease-out);
+}
+.w-item:hover { padding-inline: clamp(0.4rem, 0.2rem + 1vw, 1.2rem); }
+.w-date { font-family: var(--mono); font-size: var(--t--1); color: var(--ink-3); }
+.w-body h2 { font-family: var(--serif); font-weight: 380; font-size: var(--t-2); letter-spacing: -0.015em; transition: color .2s; }
+.w-item:hover .w-body h2 { color: var(--accent); }
+.w-body p { color: var(--ink-2); margin-top: 0.5rem; max-width: 56ch; font-size: var(--t-0); }
+.w-tag { font-family: var(--mono); font-size: 0.68rem; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 100px; padding: 0.3em 0.7em; white-space: nowrap; }
+@media (max-width: 640px) {
+  .w-item { grid-template-columns: 1fr; gap: 0.4rem; }
+  .w-tag { justify-self: start; }
+}
+
+/* ---- post page ---- */
+.post-hero { padding-block: clamp(2.5rem, 1.6rem + 5vw, 5rem) var(--sp-4); max-width: var(--measure); margin-inline: auto; }
+.post-hero .eyebrow { margin-bottom: var(--sp-3); }
+.post-hero h1 { font-family: var(--serif); font-weight: 340; font-size: var(--t-4); line-height: 1.05; letter-spacing: -0.022em; }
+.post-meta { margin-top: var(--sp-4); display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; font-family: var(--mono); font-size: var(--t--1); color: var(--ink-3); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.post-meta .dot-sep { color: var(--line-2); }
+
+.post-body { max-width: var(--measure); margin-inline: auto; }
+.post-body .lead { font-size: var(--t-1); color: var(--ink); }
+.post-body > p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 500; float: left;
+  font-size: 3.4em; line-height: 0.78; padding: 0.05em 0.12em 0 0; color: var(--accent);
+}
+
+.post-cta {
+  margin-top: var(--sp-6); padding: var(--sp-5);
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;
+}
+.post-cta .t { font-family: var(--serif); font-size: var(--t-1); }
+.post-cta .t b { color: var(--accent); font-weight: 500; }
