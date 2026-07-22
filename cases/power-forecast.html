@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/case.css">
+<link rel="stylesheet" href="../assets/css/demo.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -133,6 +134,29 @@ df[<span class="s">"discomfort"</span>] = discomfort_index(df.temp, df.humidity)
 df[<span class="s">"feels_like"</span>] = apparent_temp(df.temp, df.wind)        <span class="c"># 체감온도</span>
 df = df.drop(columns=[<span class="s">"rain"</span>, <span class="s">"nonelec_cooling"</span>, <span class="s">"solar"</span>])   <span class="c"># 잡음·중복 제거</span></pre>
 
+<div class="demo" id="demo-power">
+  <div class="demo-head"><span class="dot"></span><span class="ttl">기상 → 전력 부하 예측</span><span class="badge">불쾌지수·체감온도 파생</span></div>
+  <div class="demo-body">
+    <div class="pw-grid">
+      <div>
+        <div class="pw-field"><label>기온 <b data-o-tempv>28°C</b></label><input type="range" min="10" max="38" step="1" value="28" data-temp aria-label="기온"></div>
+        <div class="pw-field"><label>습도 <b data-o-humv>70%</b></label><input type="range" min="30" max="95" step="1" value="70" data-hum aria-label="습도"></div>
+        <div class="pw-field"><label>풍속 <b data-o-windv>1.5 m/s</b></label><input type="range" min="0" max="8" step="0.5" value="1.5" data-wind aria-label="풍속"></div>
+      </div>
+      <div class="pw-out">
+        <div class="pw-metric"><span class="k">불쾌지수 <span style="color:var(--ink-3)">(파생)</span></span><span class="v" data-o-di>—</span></div>
+        <div class="pw-metric"><span class="k">체감온도 <span style="color:var(--ink-3)">(파생)</span></span><span class="v" data-o-at>—</span></div>
+        <div class="pw-load">
+          <div class="pw-metric" style="border:0;padding-bottom:0.3rem"><span class="k">예측 전력 부하</span><span class="v" data-o-load>—</span></div>
+          <div class="pw-loadtrack"><div class="pw-loadbar" data-o-loadbar style="width:0"></div></div>
+        </div>
+        <div class="pw-note" data-o-note></div>
+      </div>
+    </div>
+  </div>
+  <div class="demo-cap">기온·습도·풍속을 조절해 보세요 — 불쾌지수·체감온도는 실제 공식으로 계산되고, 그게 전력 부하로 이어집니다.</div>
+</div>
+
 <span class="star">결과</span>
 <h2>모델이 아니라 데이터가 순위를 만들었다</h2>
 <p>결과는 AI 부문 리더보드 <b>10위</b>. 입상까지는 아니었지만, 이 프로젝트가 제게 남긴 건 순위보다 큰 확신이었습니다. <b>원시 데이터를 그대로 쓰는 게 아니라, 도메인 지식으로 가공하는 것</b>이 성능을 얼마나 바꾸는지를 몸으로 체감했으니까요. 같은 데이터, 같은 모델이라도 Feature Engineering이 승부를 가릅니다.</p>
@@ -150,5 +174,6 @@ df = df.drop(columns=[<span class="s">"rain"</span>, <span class="s">"nonelec_co
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/demo.js" defer></script>
 </body>
 </html>

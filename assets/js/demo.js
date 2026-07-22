@@ -260,9 +260,36 @@
     } else { raf = requestAnimationFrame(loop); }
   }
 
+  /* ============ 5. Power forecast — feature engineering ============ */
+  function initPower(root) {
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const els = {};
+    ["temp", "hum", "wind"].forEach((k) => { els[k] = $(`[data-${k}]`, root); });
+    const out = {};
+    ["di", "at", "load", "loadbar", "tempv", "humv", "windv", "note"].forEach((k) => { out[k] = $(`[data-o-${k}]`, root); });
+
+    function calc() {
+      const T = +els.temp.value, RH = +els.hum.value, ws = +els.wind.value;
+      out.tempv.textContent = T + "°C"; out.humv.textContent = RH + "%"; out.windv.textContent = ws.toFixed(1) + " m/s";
+      // real formulas: Thom 불쾌지수 + Australian apparent temperature
+      const e = (RH / 100) * 6.105 * Math.exp((17.27 * T) / (237.7 + T));
+      const AT = T + 0.33 * e - 0.70 * ws - 4.0;
+      const DI = 0.81 * T + 0.01 * RH * (0.99 * T - 14.3) + 46.3;
+      const load = clamp((DI - 60) * 4.2 - ws * 1.2 + 18, 4, 100);
+      out.di.textContent = DI.toFixed(1);
+      out.at.textContent = AT.toFixed(1) + "°C";
+      out.load.textContent = Math.round(load);
+      out.loadbar.style.width = load + "%";
+      const level = DI >= 80 ? "매우 높음" : DI >= 75 ? "높음" : DI >= 68 ? "보통" : "낮음";
+      out.note.textContent = `불쾌지수 ${level} · 사람은 온도가 아니라 '불쾌함'에 반응해 냉방을 켠다 → 전력 부하로`;
+    }
+    ["temp", "hum", "wind"].forEach((k) => els[k].addEventListener("input", calc));
+    calc();
+  }
+
   /* ============ boot ============ */
   const boot = () => {
-    const map = { "demo-translate": initTranslate, "demo-detect": initDetect, "demo-fare": initFare, "demo-heap": initHeap };
+    const map = { "demo-translate": initTranslate, "demo-detect": initDetect, "demo-fare": initFare, "demo-heap": initHeap, "demo-power": initPower };
     for (const id in map) { const r = document.getElementById(id); if (r) try { map[id](r); } catch (e) { console.error(id, e); } }
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

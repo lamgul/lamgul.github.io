@@ -114,3 +114,20 @@
 .hp-toggle button.active { background: var(--accent); color: var(--on-accent); }
 .hp-stat { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); }
 .hp-stat b { color: var(--ink); }
+
+/* ---------- power forecast widget ---------- */
+.pw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); align-items: center; }
+@media (max-width: 560px) { .pw-grid { grid-template-columns: 1fr; } }
+.pw-field { margin-bottom: 1rem; }
+.pw-field label { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--ink-2); margin-bottom: 0.4rem; }
+.pw-field label b { color: var(--accent); font-family: var(--mono); }
+.pw-field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.pw-out { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 1rem 1.1rem; }
+.pw-metric { display: flex; justify-content: space-between; align-items: baseline; padding: 0.45rem 0; border-bottom: 1px dashed var(--line); }
+.pw-metric:last-of-type { border-bottom: 0; }
+.pw-metric .k { font-size: 0.8rem; color: var(--ink-2); }
+.pw-metric .v { font-family: var(--serif); font-size: 1.35rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pw-load { margin-top: 0.6rem; }
+.pw-loadtrack { height: 12px; border-radius: 100px; background: var(--line); overflow: hidden; }
+.pw-loadbar { height: 100%; background: linear-gradient(90deg, var(--teal), var(--accent)); border-radius: 100px; transition: width 0.3s var(--ease-out); }
+.pw-note { margin-top: 0.8rem; font-size: 0.78rem; color: var(--ink-3); line-height: 1.5; }
