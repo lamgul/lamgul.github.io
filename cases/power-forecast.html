@@ -67,9 +67,63 @@
 <h2>전력에는 시간의 리듬이 있다</h2>
 <p>데이터를 시각화하자 전력사용량에 뚜렷한 시간대 패턴이 보였습니다 — 22–05시 저점, 06–09시 상승, 10–16시 고점, 17–21시 하락. 이 리듬을 무시하고 데이터를 평평하게 다루면 모델이 중요한 구조를 놓칠 게 분명했습니다. 그래서 시간대와 건물을 축으로 데이터를 분류했습니다. 각 시간대·건물이 고유한 패턴을 갖기 때문입니다.</p>
 
+<figure class="viz reveal">
+  <svg viewBox="0 0 720 220" width="720" height="220" role="img" aria-label="시간대별 전력사용량 리듬">
+    <line class="v-grid" x1="40" y1="190" x2="700" y2="190"/>
+    <line class="v-grid" x1="40" y1="115" x2="700" y2="115" opacity="0.5"/>
+    <path class="v-area v-fade" d="M40,152.5 L122.5,163 L177.5,167.5 L232.5,130 L287.5,97 L342.5,70 L397.5,52 L452.5,55 L507.5,85 L562.5,115 L617.5,127 L700,148 L700,190 L40,190 Z"/>
+    <polyline class="v-line draw" points="40,152.5 122.5,163 177.5,167.5 232.5,130 287.5,97 342.5,70 397.5,52 452.5,55 507.5,85 562.5,115 617.5,127 700,148"/>
+    <g class="v-fade">
+      <circle class="v-dot" cx="177.5" cy="167.5" r="4"/>
+      <circle class="v-dot" cx="397.5" cy="52" r="4"/>
+    </g>
+    <g class="v-fade">
+      <text class="v-tag" x="177.5" y="185" text-anchor="middle">저점 · 22–05시</text>
+      <text class="v-tag accent" x="397.5" y="40" text-anchor="middle">고점 · 10–16시</text>
+    </g>
+    <g text-anchor="middle">
+      <text class="v-axis" x="40" y="208">0시</text>
+      <text class="v-axis" x="205" y="208">6시</text>
+      <text class="v-axis" x="370" y="208">12시</text>
+      <text class="v-axis" x="535" y="208">18시</text>
+      <text class="v-axis" x="700" y="208">24시</text>
+    </g>
+    <text class="v-axis" x="34" y="26" text-anchor="end">전력</text>
+  </svg>
+  <figcaption>건물 전력사용량의 하루 리듬. 이 패턴을 무시하고 데이터를 평평하게 다루면 모델이 구조를 놓친다.</figcaption>
+</figure>
+
 <span class="star">분석</span>
 <h2>상관관계가 알려준 것 — 그리고 함정</h2>
 <p>기상 요인을 분석하니 기온이 전력사용량과 가장 높은 상관을 보였고(r=0.85), 강수량은 거의 무관했습니다(r=0.12). 그런데 함정이 있었습니다. <b>기온·습도·풍속이 서로 높은 상관</b>을 가지고 있었던 겁니다. 이대로 다 넣으면 다중공선성 문제로 모델이 흔들릴 수 있었습니다.</p>
+
+<figure class="viz reveal">
+  <svg viewBox="0 0 560 196" width="560" height="196" role="img" aria-label="기상 요인별 전력사용량 상관계수">
+    <g class="v-fade">
+      <text class="v-txt" x="82" y="38" text-anchor="end">기온</text>
+      <rect class="v-bar" x="92" y="20" width="323" height="26" rx="3"/>
+      <text class="v-txt b" x="423" y="38">0.85</text>
+      <text class="v-tag accent" x="470" y="38">← 압도적</text>
+    </g>
+    <g class="v-fade" style="animation-delay:.1s">
+      <text class="v-txt" x="82" y="80" text-anchor="end">습도</text>
+      <rect class="v-bar mut" x="92" y="62" width="232" height="26" rx="3"/>
+      <text class="v-txt mut" x="332" y="80">0.61</text>
+    </g>
+    <g class="v-fade" style="animation-delay:.2s">
+      <text class="v-txt" x="82" y="122" text-anchor="end">풍속</text>
+      <rect class="v-bar mut" x="92" y="104" width="167" height="26" rx="3"/>
+      <text class="v-txt mut" x="267" y="122">0.44</text>
+    </g>
+    <g class="v-fade" style="animation-delay:.3s">
+      <text class="v-txt" x="82" y="164" text-anchor="end">강수량</text>
+      <rect class="v-bar mut" x="92" y="146" width="46" height="26" rx="3"/>
+      <text class="v-txt mut" x="146" y="164">0.12</text>
+      <text class="v-tag" x="190" y="164">← 거의 무의미</text>
+    </g>
+  </svg>
+  <figcaption>전력사용량과의 상관계수. 기온이 압도적이지만 기온·습도·풍속이 서로 얽혀 있어(다중공선성), 그대로 다 넣을 수는 없었다.</figcaption>
+</figure>
 
 <span class="star">통찰</span>
 <h2>사람은 온도가 아니라 '불쾌함'에 반응한다</h2>

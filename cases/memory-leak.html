@@ -75,6 +75,26 @@
       <h2>Scouter APM이 그림을 완성했다</h2>
       <p>Scouter APM으로 트랜잭션 동작을 추적하자 퍼즐이 맞춰졌습니다. <b>DB에서 가져온 데이터를 자바 객체로 변환하는 과정에서 지연</b>이 발생했고, 힙메모리가 부족해지자 <b>빈번한 Full GC</b>가 일어나면서 CPU를 100%로 밀어올리고 있었습니다. 100%는 원인이 아니라 <em>증상</em>이었던 겁니다.</p>
 
+      <figure class="viz reveal">
+        <svg viewBox="0 0 720 168" width="720" height="168" role="img" aria-label="장애 원인 추적 경로">
+          <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="d-arrow"/></marker></defs>
+          <g class="v-fade">
+            <text class="v-tag" x="72" y="22" text-anchor="middle">하드웨어 병목?</text>
+            <line class="v-x" x1="26" y1="18" x2="118" y2="18"/>
+          </g>
+          <rect class="d-box" x="12" y="62" width="120" height="58" rx="9"/><text class="d-label" x="72" y="86">CPU 100%</text><text class="d-sub" x="72" y="104">증상</text>
+          <rect class="d-box" x="156" y="62" width="120" height="58" rx="9"/><text class="d-label" x="216" y="86">스왑 누적</text><text class="d-sub" x="216" y="104">이상 신호</text>
+          <rect class="d-box" x="300" y="62" width="120" height="58" rx="9"/><text class="d-label" x="360" y="86">Full GC</text><text class="d-sub" x="360" y="104">Scouter APM</text>
+          <rect class="d-box" x="444" y="62" width="120" height="58" rx="9"/><text class="d-label" x="504" y="86">힙 80% 점유</text><text class="d-sub" x="504" y="104">힙덤프 분석</text>
+          <rect class="d-box accent" x="588" y="62" width="120" height="58" rx="9"/><text class="d-label" x="648" y="86">synchronized</text><text class="d-sub" x="648" y="104">근본 해결 ✓</text>
+          <path class="d-rail" d="M132 91 H156" marker-end="url(#ar)"/>
+          <path class="d-rail" d="M276 91 H300" marker-end="url(#ar)"/>
+          <path class="d-rail" d="M420 91 H444" marker-end="url(#ar)"/>
+          <path class="d-rail" d="M564 91 H588" marker-end="url(#ar)"/>
+        </svg>
+        <figcaption>증상을 원인으로 착각하지 않고, 단서를 따라 진짜 원인까지 추적한 경로.</figcaption>
+      </figure>
+
       <span class="star">임시 조치</span>
       <h2>먼저 급한 불부터, 정직하게 '임시'라고 부르며</h2>
       <p>당장 운영을 안정시키기 위해 힙메모리를 8GB에서 16GB로 증설하고, 클라이언트와 협의해 정기 재기동을 도입했습니다. 트래픽이 몰리는 시간에도 시스템이 쾌적해졌습니다. 하지만 저는 이걸 <b>임시방편</b>이라고 분명히 못 박아 두었습니다. 메모리를 늘리고 주기적으로 껐다 켜는 건, 누수를 <em>늦추는</em> 것이지 <em>없애는</em> 게 아니니까요.</p>
@@ -91,6 +111,25 @@
   cache.put(k, s);
 }</pre>
       <p><code>synchronized</code>로 스레드 안전성을 확보하자, 1년을 끌어온 메모리 누수가 사라졌습니다. 장애 주기는 7일에서 30일 이상으로 늘었고 — 사실상 재발하지 않았고 — Full GC 부담이 사라지며 트랜잭션 속도도 약 30% 개선됐습니다.</p>
+
+      <figure class="viz reveal">
+        <svg viewBox="0 0 460 152" width="460" height="152" role="img" aria-label="장애 주기 개선 전후">
+          <line class="v-grid" x1="40" y1="114" x2="430" y2="114"/>
+          <g class="v-grow">
+            <rect class="v-bar mut" x="96" y="90" width="108" height="24" rx="3"/>
+          </g>
+          <g class="v-grow" style="animation-delay:.15s">
+            <rect class="v-bar" x="266" y="24" width="108" height="90" rx="3"/>
+          </g>
+          <g class="v-fade">
+            <text class="v-txt b" x="150" y="82" text-anchor="middle">7일</text>
+            <text class="v-txt b" x="320" y="16" text-anchor="middle">30일 이상</text>
+            <text class="v-axis" x="150" y="132" text-anchor="middle">개선 전</text>
+            <text class="v-axis" x="320" y="132" text-anchor="middle">개선 후</text>
+          </g>
+        </svg>
+        <figcaption>장애와 장애 사이 간격 — 길수록 좋다. 임시 조치가 아니라 근본 원인을 없앤 결과.</figcaption>
+      </figure>
 
       <div class="callout"><span class="mark">*</span><p>제가 이 사례를 아끼는 이유는 화려한 기술 때문이 아닙니다. <b>증상(CPU 100%)을 원인으로 착각하지 않고, 임시 대응과 근본 해결을 구분해 끝까지 간 것.</b> 그리고 능력이 부족하면 퇴근 후에라도 배워서 채운 것. 이게 제가 문제를 대하는 방식입니다.</p></div>
 

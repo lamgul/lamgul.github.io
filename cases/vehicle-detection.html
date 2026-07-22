@@ -72,6 +72,20 @@
 <p>YOLO(You Only Look Once)를 조사했습니다. 이미 수백만 장으로 학습돼 사람·차·동물 등 80개 클래스를 인식하는 모델이었고, 결정적으로 <b>'차량' 클래스가 이미 학습돼 있었습니다.</b> 그래서 모델을 새로 학습시키는 대신, 출력 중 차량으로 분류된 객체만 필터링하고 바운딩 박스의 위치·크기를 분석해 <b>주차 구역에 차가 있는지</b>를 판단하는 방식으로 접근했습니다.</p>
 <div class="callout"><span class="mark">*</span><p>MVP의 핵심은 "무엇을 만들 수 있나"가 아니라 "무엇을 검증해야 하나"입니다. 검증할 질문은 '카메라로 주차 점유를 판단할 수 있는가'였고, 그 답에 커스텀 학습은 필요 없었습니다. 몇 개월을 며칠로 줄인 건 기술이 아니라 <b>범위를 자른 판단</b>이었습니다.</p></div>
 
+<figure class="viz reveal">
+  <svg viewBox="0 0 720 268" width="720" height="268" role="img" aria-label="주차 구역 차량 감지 시연">
+    <rect class="v-frame" x="8" y="8" width="704" height="252" rx="12"/>
+    <circle class="v-rec" cx="30" cy="32" r="5"/>
+    <text class="v-cam" x="44" y="36">REC · CAM-01</text>
+    <text class="v-cam" x="688" y="36" text-anchor="end">YOLOv5 · 실시간 30fps</text>
+    <line class="v-grid" x1="16" y1="48" x2="704" y2="48"/>
+    <rect class="v-spot" x="30" y="64" width="156" height="83" rx="4"/><rect class="v-spot" x="198" y="64" width="156" height="83" rx="4"/><rect class="v-spot" x="366" y="64" width="156" height="83" rx="4"/><rect class="v-spot" x="534" y="64" width="156" height="83" rx="4"/><rect class="v-spot" x="30" y="159" width="156" height="83" rx="4"/><rect class="v-spot" x="198" y="159" width="156" height="83" rx="4"/><rect class="v-spot" x="366" y="159" width="156" height="83" rx="4"/><rect class="v-spot" x="534" y="159" width="156" height="83" rx="4"/>
+    <text class="v-empty" x="444" y="109" text-anchor="middle">빈자리</text><text class="v-empty" x="276" y="204" text-anchor="middle">빈자리</text><text class="v-empty" x="612" y="204" text-anchor="middle">빈자리</text>
+    <g class="v-fade"><rect class="v-car" x="56" y="77" width="104" height="58" rx="10"/><rect class="v-carroof" x="72" y="88" width="72" height="36" rx="6"/></g><g class="v-pop" style="animation-delay:0.15s"><rect class="v-bbox" x="50" y="71" width="116" height="70"/><rect class="v-blabel-bg" x="50" y="57" width="66" height="15" rx="2"/><text class="v-blabel" x="55" y="68">car 0.96</text></g><g class="v-fade"><rect class="v-car" x="224" y="77" width="104" height="58" rx="10"/><rect class="v-carroof" x="240" y="88" width="72" height="36" rx="6"/></g><g class="v-pop" style="animation-delay:0.33s"><rect class="v-bbox" x="218" y="71" width="116" height="70"/><rect class="v-blabel-bg" x="218" y="57" width="66" height="15" rx="2"/><text class="v-blabel" x="223" y="68">car 0.94</text></g><g class="v-fade"><rect class="v-car" x="560" y="77" width="104" height="58" rx="10"/><rect class="v-carroof" x="576" y="88" width="72" height="36" rx="6"/></g><g class="v-pop" style="animation-delay:0.51s"><rect class="v-bbox" x="554" y="71" width="116" height="70"/><rect class="v-blabel-bg" x="554" y="57" width="66" height="15" rx="2"/><text class="v-blabel" x="559" y="68">car 0.89</text></g><g class="v-fade"><rect class="v-car" x="56" y="172" width="104" height="58" rx="10"/><rect class="v-carroof" x="72" y="183" width="72" height="36" rx="6"/></g><g class="v-pop" style="animation-delay:0.69s"><rect class="v-bbox" x="50" y="166" width="116" height="70"/><rect class="v-blabel-bg" x="50" y="152" width="66" height="15" rx="2"/><text class="v-blabel" x="55" y="163">car 0.92</text></g><g class="v-fade"><rect class="v-car" x="392" y="172" width="104" height="58" rx="10"/><rect class="v-carroof" x="408" y="183" width="72" height="36" rx="6"/></g><g class="v-pop" style="animation-delay:0.87s"><rect class="v-bbox" x="386" y="166" width="116" height="70"/><rect class="v-blabel-bg" x="386" y="152" width="66" height="15" rx="2"/><text class="v-blabel" x="391" y="163">car 0.95</text></g>
+  </svg>
+  <figcaption>사전학습 YOLO의 '차량' 클래스만 필터링해 주차 구역 점유를 판단. 바운딩 박스가 감지된 차량이다 (예시 시연).</figcaption>
+</figure>
+
 <span class="star">엔지니어링</span>
 <h2>실시간, 그리고 여러 대의 카메라</h2>
 <p>주차장은 카메라가 여러 대입니다. YOLOv5로 초당 30프레임을 처리할 수 있었고, GPU를 쓰면 더 빨랐습니다. 여러 카메라에서 동시에 들어오는 영상을 감당하기 위해 <b>비동기 처리 구조</b>로 설계했습니다. 한 카메라의 추론이 다른 카메라를 막지 않도록.</p>

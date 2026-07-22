@@ -83,6 +83,39 @@
 }
 <span class="c">// 웹·키오스크·카카오페이는 baseFare만 다르게 구현</span></pre>
 
+<figure class="viz reveal">
+  <svg viewBox="0 0 720 236" width="720" height="236" role="img" aria-label="정산 로직 리팩토링 전후 구조">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="d-arrow"/></marker></defs>
+    <text class="d-gtext" x="16" y="20">BEFORE · 정산 로직 5곳 중복</text>
+    <text class="d-gtext" x="404" y="20">AFTER · 로직 1곳</text>
+    <g class="v-fade">
+      <rect class="d-box accent" x="16" y="34" width="182" height="28" rx="7"/><text class="d-label" x="107" y="53" style="font-size:12px">웹 결제 · 정산 로직</text>
+      <rect class="d-box accent" x="16" y="70" width="182" height="28" rx="7"/><text class="d-label" x="107" y="89" style="font-size:12px">키오스크 · 정산 로직</text>
+      <rect class="d-box accent" x="16" y="106" width="182" height="28" rx="7"/><text class="d-label" x="107" y="125" style="font-size:12px">카카오페이 · 정산 로직</text>
+      <rect class="d-box accent" x="16" y="142" width="182" height="28" rx="7"/><text class="d-label" x="107" y="161" style="font-size:12px">월정액 · 정산 로직</text>
+      <rect class="d-box accent" x="16" y="178" width="182" height="28" rx="7"/><text class="d-label" x="107" y="197" style="font-size:12px">관리자 수동 · 정산 로직</text>
+      <text class="v-tag accent" x="107" y="226" text-anchor="middle">한 곳 고치면 5곳 수정 → 불일치</text>
+    </g>
+    <text class="v-txt mut" x="312" y="112" text-anchor="middle" style="font-size:11px">리팩토링</text>
+    <path class="d-rail" d="M286 124 H340" marker-end="url(#ar)"/>
+    <g class="v-fade" style="animation-delay:.15s">
+      <rect class="d-box" x="366" y="40" width="96" height="22" rx="6"/><text class="d-label" x="414" y="55" style="font-size:10px">웹</text>
+      <rect class="d-box" x="366" y="66" width="96" height="22" rx="6"/><text class="d-label" x="414" y="81" style="font-size:10px">키오스크</text>
+      <rect class="d-box" x="366" y="92" width="96" height="22" rx="6"/><text class="d-label" x="414" y="107" style="font-size:10px">카카오페이</text>
+      <rect class="d-box" x="366" y="118" width="96" height="22" rx="6"/><text class="d-label" x="414" y="133" style="font-size:10px">월정액</text>
+      <rect class="d-box" x="366" y="144" width="96" height="22" rx="6"/><text class="d-label" x="414" y="159" style="font-size:10px">수동</text>
+      <line class="d-rail" x1="474" y1="51" x2="486" y2="51"/><line class="d-rail" x1="474" y1="77" x2="486" y2="77"/><line class="d-rail" x1="474" y1="103" x2="486" y2="103"/><line class="d-rail" x1="474" y1="129" x2="486" y2="129"/><line class="d-rail" x1="474" y1="155" x2="486" y2="155"/>
+      <line class="d-rail" x1="486" y1="51" x2="486" y2="155"/>
+      <path class="d-rail" d="M486 103 H520" marker-end="url(#ar)"/>
+      <rect class="d-box accent" x="520" y="76" width="184" height="52" rx="9"/><text class="d-label" x="612" y="99">공통 정산</text><text class="d-sub" x="612" y="117">Template Method</text>
+      <rect class="d-box teal" x="520" y="146" width="184" height="40" rx="9"/><text class="d-label" x="612" y="171" style="font-size:12px">수단별 = Strategy</text>
+      <line class="d-rail" x1="612" y1="128" x2="612" y2="146"/>
+      <text class="v-tag" x="612" y="210" text-anchor="middle" style="fill:var(--teal)">한 곳 수정 → 전체 일관 ✓</text>
+    </g>
+  </svg>
+  <figcaption>흩어진 정산 로직을 Template Method 골격 하나로 모으고, 수단별 차이는 Strategy로 분리했다.</figcaption>
+</figure>
+
 <span class="star">결과</span>
 <h2>한 곳을 고치면 모두가 같아진다</h2>
 <p>리팩토링 후, 할인 정책을 바꿀 때 <b>한 곳만 수정하면 모든 결제 수단에 일관되게</b> 적용됐습니다. 금액 불일치 민원은 사라졌고, 새 결제 수단을 추가하는 시간도 절반으로 줄었습니다. 코드 라인 수는 약 40% 감소했지만, 오히려 더 명확하고 유지보수하기 쉬워졌습니다. 좋은 추상화는 코드를 줄이면서 동시에 더 읽히게 만든다는 걸 배운 사례입니다.</p>

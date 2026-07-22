@@ -2,18 +2,19 @@
 
 /* result metrics strip */
 .metrics {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1px; background: var(--line);
   border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden;
   margin: var(--sp-5) 0;
 }
 .metric { background: var(--bg-elev); padding: var(--sp-4) var(--sp-5); }
 .metric b {
-  font-family: var(--serif); font-weight: 400; letter-spacing: -0.02em;
-  font-size: clamp(1.55rem, 1.1rem + 2vw, 2.4rem); line-height: 1; display: block;
+  font-family: var(--serif); font-weight: 400; letter-spacing: -0.015em;
+  font-size: clamp(1.2rem, 0.95rem + 1.4vw, 1.8rem); line-height: 1.1; display: block;
+  text-wrap: balance; word-break: keep-all;
 }
-.metric b .to { color: var(--accent); font-style: italic; padding: 0 0.12em; }
-.metric .lab { display: block; margin-top: 0.55rem; color: var(--ink); font-size: var(--t-0); font-weight: 500; }
+.metric b .to { color: var(--accent); font-style: italic; padding: 0 0.1em; }
+.metric .lab { display: block; margin-top: 0.55rem; color: var(--ink); font-size: var(--t-0); font-weight: 500; text-wrap: balance; }
 .metric .sub { display: block; font-family: var(--mono); font-size: 0.66rem; color: var(--ink-3); margin-top: 0.2rem; }
 
 /* STAR badges inside prose */
@@ -53,3 +54,52 @@
 .d-arrow { fill: var(--ink-3); }
 .d-group { fill: none; stroke: var(--line-2); stroke-width: 1.3; stroke-dasharray: 5 4; }
 .d-gtext { fill: var(--ink-3); font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; }
+
+/* ---- case visuals: light "demo" charts & illustrations ---- */
+.viz {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: var(--sp-5) var(--sp-4);
+  margin: var(--sp-5) 0; overflow-x: auto;
+}
+.viz svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+.viz figcaption { text-align: center; font-family: var(--mono); font-size: var(--t--1); color: var(--ink-3); margin-top: var(--sp-3); }
+
+.v-grid { stroke: var(--line); stroke-width: 1; }
+.v-axis { fill: var(--ink-3); font-family: var(--mono); font-size: 10px; }
+.v-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.v-area { fill: color-mix(in srgb, var(--accent) 9%, transparent); }
+.v-dot { fill: var(--accent); }
+.v-bar { fill: var(--accent); }
+.v-bar.mut { fill: var(--line-2); }
+.v-bar.teal { fill: var(--teal); }
+.v-txt { fill: var(--ink); font-family: var(--sans); font-size: 11px; }
+.v-txt.b { font-weight: 700; }
+.v-txt.mut { fill: var(--ink-3); }
+.v-tag { fill: var(--ink-2); font-family: var(--mono); font-size: 10px; }
+.v-tag.accent { fill: var(--accent); }
+.v-mark { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.v-x { stroke: var(--ink-3); stroke-width: 2; }
+.v-ok { stroke: var(--teal); stroke-width: 2; fill: none; }
+
+/* scroll-triggered draw / grow (ties to site.js .reveal→.in) */
+.v-line.draw { stroke-dasharray: 1400; }
+.viz.reveal.in .v-line.draw { animation: v-draw 1.5s var(--ease-out) both; }
+@keyframes v-draw { from { stroke-dashoffset: 1400; } to { stroke-dashoffset: 0; } }
+.viz.reveal.in .v-grow { animation: v-grow 0.8s var(--ease-out) both; transform-origin: bottom; }
+@keyframes v-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.viz.reveal.in .v-fade { animation: v-fade 0.7s var(--ease-out) both; }
+@keyframes v-fade { from { opacity: 0; } to { opacity: 1; } }
+.viz.reveal.in .v-pop { animation: v-pop 0.5s var(--ease-out) both; transform-origin: center; }
+@keyframes v-pop { from { opacity: 0; transform: scale(0.82); } to { opacity: 1; transform: scale(1); } }
+
+/* detection illustration */
+.v-frame { fill: var(--bg-elev); stroke: var(--line-2); stroke-width: 1.5; }
+.v-spot { fill: none; stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.v-car { fill: color-mix(in srgb, var(--ink) 13%, var(--surface)); stroke: var(--ink-3); stroke-width: 1; }
+.v-carroof { fill: color-mix(in srgb, var(--ink) 22%, var(--surface)); }
+.v-bbox { fill: none; stroke: var(--accent); stroke-width: 2; }
+.v-blabel-bg { fill: var(--accent); }
+.v-blabel { fill: var(--on-accent); font-family: var(--mono); font-size: 10px; font-weight: 600; }
+.v-empty { fill: var(--ink-3); font-family: var(--mono); font-size: 11px; }
+.v-rec { fill: var(--accent); }
+.v-cam { fill: var(--ink-3); font-family: var(--mono); font-size: 11px; }
