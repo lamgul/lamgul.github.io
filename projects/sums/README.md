@@ -7,10 +7,9 @@
 
 ## 진짜와 데모
 
-실구현은 비공개 레포 세 개다 — React 콘솔(`sums-admin-frontend`),
-NestJS·Prisma·PostgreSQL API(`sums-admin-backend`), 목업 3차(`Smombie-MockupV3`).
-공개된 것은 [초기 프로토타입](https://github.com/lamgul/Erpsystemdevelopment)뿐이라,
-이 데모는 실레포의 도메인 데이터를 그대로 이식해 핵심 4화면을 축소 재현한다.
+실구현은 React 콘솔, NestJS·Prisma·PostgreSQL API, 목업 3차로 나뉘어 있었고,
+지금은 후속 제품 SafeIn으로 계승되며 원본 레포들은 정리됐다.
+이 데모는 정리 전 실레포의 도메인 데이터를 그대로 이식해 핵심 4화면을 축소 재현한다.
 
 - 조직·직원·구역·정책·프리셋·위반 사유 → `sums-admin-frontend/src/data/mockData.ts`
 - 로그 시드 로직, 정책-조건 M:N 구조 → `sums-admin-backend/prisma/seed-simple.ts`
