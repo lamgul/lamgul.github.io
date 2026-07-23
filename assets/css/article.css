@@ -151,3 +151,122 @@ article .prose b, article .prose strong { color: var(--ink); font-weight: 650; }
 .post-body ul li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
 .post-body ol:not(.toc ol) { list-style: decimal; padding-left: 1.5em; color: var(--ink-2); }
 .post-body .code, article .prose .code { font-size: 0.875rem; line-height: 1.7; }
+
+/* ---- smaller, blog-like headings ----
+   the display-scale titles felt oversized for a reading blog. */
+.post-hero h1 {
+  font-size: var(--t-3);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+}
+/* case pages share this file — tame their oversized hero too */
+.proj-hero h1 { font-size: var(--t-3); line-height: 1.1; }
+.proj-hero h1 .sub { font-size: 0.32em; }
+
+.post-body h2,
+article .prose h2 {
+  font-size: clamp(1.28rem, 1.13rem + 0.55vw, 1.62rem);
+  font-weight: 600;
+  margin-top: clamp(2.25rem, 1.7rem + 1.9vw, 3.25rem);
+}
+.post-body h3,
+article .prose h3 { font-size: clamp(1.06rem, 0.99rem + 0.28vw, 1.22rem); font-weight: 650; }
+
+/* ---- blog-style prev / next as clickable cards ---- */
+.proj-nav {
+  margin-top: var(--sp-6);
+  border-top: none;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+.proj-nav a {
+  padding: var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.proj-nav a:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+}
+.proj-nav .np-key {
+  font-family: var(--mono);
+  font-size: var(--t--1);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.proj-nav .np-title {
+  font-family: var(--sans);
+  font-size: var(--t-0);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  margin-top: 0;
+}
+.proj-nav .prev { padding-right: var(--sp-4); }
+.proj-nav .next {
+  text-align: right;
+  border-left: none;
+  padding-left: var(--sp-4);
+  align-items: flex-end;
+}
+@media (max-width: 560px) {
+  .proj-nav { grid-template-columns: 1fr; }
+  .proj-nav .next { text-align: left; align-items: flex-start; border-top: none; padding-left: var(--sp-4); }
+}
+
+/* ---- concept / glossary box (지식 공유용 용어 설명) ----
+   a quiet study-note box: plain-language definitions of key terms.
+   markup:
+     <div class="concept"><span class="c-head">먼저 짚고 가기</span>
+       <dl><dt>용어</dt><dd>쉬운 설명</dd> …</dl></div>  */
+.concept {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-5);
+  margin: var(--sp-5) 0;
+}
+.concept .c-head {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--t--1);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: var(--accent);
+  margin-bottom: var(--sp-3);
+}
+.concept dl { display: grid; gap: 0.85em; margin: 0; }
+.concept dt {
+  font-weight: 650;
+  color: var(--ink);
+  font-size: var(--t-0);
+  margin-bottom: 0.15em;
+}
+.concept dt .en {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  font-weight: 500;
+  color: var(--ink-3);
+  margin-left: 0.4em;
+}
+.concept dd { margin: 0; color: var(--ink-2); line-height: 1.7; }
+
+/* inline term highlight — first use of a key term */
+.post-body .term,
+article .prose .term {
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 1.5px dotted var(--line-2);
+  cursor: help;
+}
