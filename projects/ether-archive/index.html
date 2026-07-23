@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>에테르 아카이브 — 안성진</title>
+<meta name="description" content="핵겨울의 서울을 배경으로 한 텍스트 어드벤처의 플레이어블 슬라이스. 3칸 HUD, 능력·아이템 게이트 선택지, 확률 인카운터, 영구죽음 회차를 순수 JS로 재현.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="에테르 아카이브 — Ether Archive">
+<meta property="og:description" content="핵겨울의 서울, AI가 만든 가짜 낙원. 30종 생존 역할과 25종 엔딩을 가진 텍스트 어드벤처의 플레이어블 슬라이스.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/covers/ether-archive.svg">
+<link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/project.css">
+<link rel="stylesheet" href="ether-archive.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#demo">데모로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap wrap-wide header-inner">
+    <a class="back-link" href="../../index.html#products">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">ann<span class="dot">.</span></span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">projects / ether-archive</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="proj-hero wrap wrap-wide">
+    <p class="eyebrow">04 / 2026</p>
+    <h1>에테르 아카이브<span class="sub">ETHER ARCHIVE</span></h1>
+    <p class="tagline">핵겨울의 서울, AI가 만든 가짜 낙원. 30종 생존 역할과 25종 엔딩을 가진 텍스트 어드벤처의 플레이어블 슬라이스.</p>
+    <div class="proj-meta">
+      <div><span class="m-key">역할</span><span class="m-val">기획 · 집필 · 개발 (1인)</span></div>
+      <div><span class="m-key">스택</span><span class="m-val">Vanilla JS · 단일 HTML · Capacitor 8 · Node 자동 테스트</span></div>
+      <div><span class="m-key">코드</span><span class="m-val">비공개 레포 · 데모로 재현</span></div>
+    </div>
+  </section>
+
+  <section class="wrap wrap-wide" id="demo">
+    <div class="demo-frame">
+      <div class="demo-bar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="label">ether-archive — 플레이어블 슬라이스, vanilla js</span>
+      </div>
+      <div class="ea-stage" role="group" aria-label="에테르 아카이브 플레이어블 데모">
+        <div class="ea-hud" id="ea-hud" hidden>
+          <div class="ea-hud-top">
+            <span class="ea-role-name" id="ea-role-name"></span>
+            <span class="ea-run" id="ea-run"></span>
+            <div class="ea-stats">
+              <span class="ea-stat"><i>체력</i><b id="ea-hp">▣▣▣</b></span>
+              <span class="ea-stat"><i>정신</i><b id="ea-mind">▣▣▣</b></span>
+              <span class="ea-stat"><i>배고픔</i><b id="ea-food">▣▣▣</b></span>
+              <span class="ea-stat"><i>단서</i><b id="ea-clue" class="clue-n">0</b></span>
+            </div>
+          </div>
+          <div class="ea-kit" id="ea-kit"></div>
+        </div>
+        <div class="ea-body">
+          <div class="ea-art" id="ea-art" aria-hidden="true"></div>
+          <div class="ea-main">
+            <p class="ea-place" id="ea-place"></p>
+            <div class="ea-text" id="ea-text"></div>
+            <div class="ea-result" id="ea-result" role="status" aria-live="polite" hidden></div>
+            <div class="ea-choices" id="ea-choices"></div>
+          </div>
+        </div>
+        <div class="ea-foot">
+          <span class="ea-foot-note" id="ea-foot-note"></span>
+          <button id="ea-reset" type="button">회차 리셋</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ea-scale" role="list" aria-label="원작 게임의 규모">
+      <div class="ea-scale-card" role="listitem"><b>25</b><span>엔딩</span><small>메인·관계 20 + 확장 5</small></div>
+      <div class="ea-scale-card" role="listitem"><b>27</b><span>능력 · 최대 Lv.3</span><small>범용 6 + 전문 21</small></div>
+      <div class="ea-scale-card" role="listitem"><b>300+</b><span>조우 씬</span><small>지역별 확률 조우 풀</small></div>
+      <div class="ea-scale-card" role="listitem"><b>20</b><span>자동 플레이테스트</span><small>Node 기반 회귀 스위트</small></div>
+    </div>
+    <p class="ea-scale-note">원작의 규모 — 위 데모는 이 중 역할 4종 · 장면 12개 · 엔딩 3종만 떼어 낸 슬라이스입니다.</p>
+  </section>
+
+  <article class="wrap section">
+    <div class="prose">
+      <p class="lead">재의 날로부터 3년, 서울은 방사성 먼지의 재층 아래 잠들어 있습니다. AI 중앙망 GAIA는 "고통 없는 낙원"으로의 접속을 방송하고, 접속한 몸은 용산 서버팜의 열원이 됩니다. 이 세계를 <b>통째로</b> 만들었습니다 — 게임 본편, 세계관·시스템 기획 문서, 1부부터 10부까지의 장편 원고, 그리고 그 전부를 검증하는 자동 플레이테스트까지.</p>
+
+      <h2>한 사람 분량의 게임 스튜디오</h2>
+      <p>레포는 372개 파일짜리 모노레포입니다. 게임은 <b>단일 HTML 진입</b>에 프레임워크 없는 Vanilla JS로 돌아가고, Capacitor 8로 Android 앱까지 패키징됩니다. 등장인물은 함께 활동한 디스코드 커뮤니티의 사람들을 포스트아포칼립스 인물로 재해석한 것이라, 세계관 문서와 인물 문서가 게임 코드만큼 두껍습니다.</p>
+      <p>아키텍처의 핵심은 <b>겹겹이 감싸는 IIFE 모듈 30여 개</b>입니다. 전역 <code>SCENES</code> 테이블과 조우 선택 함수 <code>pickEnc</code> 하나를 각 모듈이 로드 순서대로 래핑하며 기능을 얹습니다 — 엔딩 라우터, 관계 서사, 직업 현장 장면, 조우 디렉터. 모듈끼리는 서로를 몰라도 되고, 하나를 빼도 게임은 돌아갑니다.</p>
+
+      <h2>무작위가 게임을 망치지 않게</h2>
+      <p>300개가 넘는 조우 씬을 확률로 뽑으면 반드시 사고가 납니다. 같은 사건이 연달아 나오고, 희귀한 사건은 영영 안 나옵니다. 그래서 조우 위에 <b>디렉터 한 층</b>을 얹었습니다. 최근 12개 사건과 중복을 피하고, 사건군마다 소프트 쿼터를 두고, 오래 안 나온 사건군에는 pity 타이머로 기회를 보장합니다.</p>
+      <pre class="code"><span class="c">/* 원칙:
+   - 일반 풀 후보에만 최근 중복, 사건군 소프트 쿼터, pity를 적용한다.
+   - 어떤 무작위 사건도 현재 상태에서 누를 수 있는 선택이
+     0개가 되지 않는다. */</span>
+<span class="k">var</span> RECENT_ID_WINDOW = <span class="f">12</span>;
+<span class="k">var</span> DEEP_EPISODE_GAP = <span class="f">8</span>;
+<span class="k">var</span> SOFT_MAX = { deep:<span class="f">1</span>, support:<span class="f">3</span>, world:<span class="f">4</span>, area:<span class="f">3</span>, camp:<span class="f">3</span>,
+                 cross:<span class="f">3</span>, npc:<span class="f">4</span>, procedural:<span class="f">1</span>, base:<span class="f">6</span> };
+<span class="k">var</span> PITY_AFTER = { cross:<span class="f">8</span>, npc:<span class="f">7</span>, base:<span class="f">4</span>, procedural:<span class="f">18</span> };
+<span class="c">// 게임/js/runtime/encounter_director.js 에서 발췌</span></pre>
+      <p>제가 가장 좋아하는 설계 결정은 마지막 줄의 원칙입니다. 직업 현장 장면도 같은 규칙으로 만듭니다 — 모든 장면은 <b>시작 아이템을 소비하는 해법</b>과 <b>능력으로 실패하며 전진하는 해법</b>, 그리고 <b>조건 없는 이탈 선택</b>을 함께 제공합니다. 어떤 상태 조합에서도 막다른 화면이 나오지 않는다는 것을, 20여 종의 Node 자동 플레이테스트가 회귀로 지킵니다.</p>
+      <pre class="code">{ name:<span class="s">"야전 의무병"</span>, key:<span class="s">"medic"</span>, skills:[<span class="s">"응급처치"</span>,<span class="s">"담력"</span>],
+  ally:<span class="s">"페인"</span>, routes:[<span class="s">"repair"</span>,<span class="s">"names"</span>], fields:[
+  [<span class="s">"붕괴 직후의 압박"</span>,<span class="s">"hospital"</span>,
+   <span class="s">"잔해 아래 구조자의 출혈이 멎지 않고, 주위 사람들은
+    누구부터 옮길지 다투고 있다."</span>,
+   <span class="s">"압박 처치를 끝내 이동 시간을 번다"</span>, …] ] }
+<span class="c">// 게임/js/runtime/job_fieldwork.js — 직업별 현장 장면 데이터에서 발췌</span></pre>
+
+      <h2>데모가 재현한 것, 생략한 것</h2>
+      <p>위 데모는 코어 루프를 그대로 축소한 <b>플레이어블 슬라이스</b>입니다. 역할 데이터는 원작 <code>JOBS</code> 표에서 4종(야전 의무병 · 고고학자 · 정보 브로커 · 전직 군인)을 이름·시작 능력·시작 물품 그대로 이식했고, "방진마스크 · 부모의 찢어진 사진 · 낡은 VR 장비(파손)"라는 공통 지급품 규칙도 원작 그대로입니다. 체력/정신/배고픔 3칸 HUD, <code>(관찰 Lv.1)</code> 표기의 능력 게이트와 미충족 시 회색 잠금, 아이템 소모 선택지, 확률이 표시되는 도박 선택, '방금 선택의 여파' 인라인 결과, 영구죽음과 회차 리셋 — 전부 원작의 규칙입니다.</p>
+      <ul>
+        <li><b>생략한 것.</b> 조우 디렉터, GAIA 경보 단계, 관계 수치, 능력 수련, 엔딩 라우터. 25종 엔딩은 세 계열(기록 · 생존 · 접속)의 축약판 3종으로 줄였습니다.</li>
+        <li><b>바꾼 것.</b> 원작의 흑백 손그림 PNG(장면당 2~3MB)는 포트폴리오에 싣기엔 무거워, 같은 톤의 <b>인라인 SVG 플레이스홀더</b>로 다시 그렸습니다.</li>
+        <li><b>일부러 남긴 것.</b> 역할에 따라 열리고 잠기는 선택지의 비대칭. 고고학자와 정보 브로커는 단서를 모아 기록 엔딩에 닿을 수 있지만, 전직 군인은 이번 슬라이스에서 닿지 못합니다 — 회차를 다시 시작하게 만드는 것이 이 게임의 뼈대이기 때문입니다.</li>
+      </ul>
+      <p>다른 데모들도 궁금하다면 → <a href="../../index.html#products">프로젝트 목록</a>.</p>
+    </div>
+  </article>
+
+  <nav class="proj-nav wrap wrap-wide" aria-label="프로젝트 이동">
+    <a class="prev" href="../sums/">
+      <div class="np-key">← 이전 03</div>
+      <div class="np-title">통제 콘솔</div>
+    </a>
+    <a class="next" href="../mumyeong/">
+      <div class="np-key">다음 05</div>
+      <div class="np-title">무명</div>
+    </a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon">
+    <span>© <span data-year>2025</span> 안성진</span>
+    <span><a href="../../index.html">홈으로</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/js/site.js" defer></script>
+<script src="ether-archive.js"></script>
+</body>
+</html>

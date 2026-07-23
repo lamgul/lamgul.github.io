@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>무명 — 안성진</title>
+<meta name="description" content="이름을 부르면 병드는 서울(무명록), 검은 비가 기억을 지우는 밤(무명비). 같은 세계관 공식으로 만든 두 게임과 제작 파이프라인을 재현한 데모.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="무명 — Mumyeong Series">
+<meta property="og:description" content="같은 세계관 공식으로 만든 두 게임과 그 제작 파이프라인.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/covers/mumyeong.svg">
+<link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/project.css">
+<link rel="stylesheet" href="mumyeong.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#demo">데모로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap wrap-wide header-inner">
+    <a class="back-link" href="../../index.html#products">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">ann<span class="dot">.</span></span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">projects / mumyeong</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="proj-hero wrap wrap-wide">
+    <p class="eyebrow">05 / 2026</p>
+    <h1>무명<span class="sub">MUMYEONG SERIES</span></h1>
+    <p class="tagline">이름을 부르면 병드는 서울(무명록), 검은 비가 기억을 지우는 밤(무명비). 같은 세계관 공식으로 만든 두 게임과 그 제작 파이프라인.</p>
+    <div class="proj-meta">
+      <div><span class="m-key">역할</span><span class="m-val">세계관 · 시나리오 · 개발 — 1인 제작</span></div>
+      <div><span class="m-key">스택</span><span class="m-val">Vanilla JS · 단일 HTML · localStorage · Node 플레이테스트</span></div>
+      <div><span class="m-key">코드</span><span class="m-val">비공개 레포 · 데모로 재현</span></div>
+    </div>
+  </section>
+
+  <section class="wrap wrap-wide" id="demo">
+    <div class="demo-frame">
+      <div class="demo-bar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="label">mumyeong-series — 장면 테이블 · 상태 객체 · 변주 공식</span>
+      </div>
+      <div class="mm-stage" id="mm-stage">
+        <div class="mm-tabs" role="tablist" aria-label="데모 구역">
+          <button class="mm-tab is-on" id="mm-tab-games" type="button" role="tab" aria-selected="true" aria-controls="mm-panel-games">두 게임</button>
+          <button class="mm-tab" id="mm-tab-play" type="button" role="tab" aria-selected="false" aria-controls="mm-panel-play">무명록 미니 플레이</button>
+          <button class="mm-tab" id="mm-tab-gen" type="button" role="tab" aria-selected="false" aria-controls="mm-panel-gen">세계관 생성기</button>
+        </div>
+        <section class="mm-panel" id="mm-panel-games" role="tabpanel" aria-labelledby="mm-tab-games"></section>
+        <section class="mm-panel" id="mm-panel-play" role="tabpanel" aria-labelledby="mm-tab-play" hidden></section>
+        <section class="mm-panel" id="mm-panel-gen" role="tabpanel" aria-labelledby="mm-tab-gen" hidden></section>
+      </div>
+    </div>
+  </section>
+
+  <article class="wrap section">
+    <div class="prose">
+      <p class="lead">흰비가 지나간 서울에서는 이름을 부르면 병이 옮고(무명록), 검은 비가 내리는 밤에는 이름과 기억이 지워집니다(무명비: 영만의 밤). 서로 다른 두 게임이지만, 한 저장소에 정리해 둔 같은 세계관 공식에서 출발했습니다. 위 데모는 그 공식과 두 게임의 뼈대를 브라우저 안에 다시 세운 것입니다.</p>
+
+      <h2>하나의 공식, 두 개의 밤</h2>
+      <p>시리즈의 시작점은 게임이 아니라 <b>코드가 한 줄도 없는 레포</b>입니다. 세계관 문서와 일러스트만 담은 재료 창고가 따로 있고, 배경을 만드는 공식을 이렇게 못 박아 둡니다.</p>
+      <blockquote>익숙한 한국 장소 + 비현실 규칙 + 생활 적응 + 통제 세력 + 작은 선택의 대가</blockquote>
+      <p>장소 10종, 이상 현상 9종, 생활 소품 10종, 세력 9종, 금기 8종이 소재 라이브러리 표로 정리되어 있고, 게임마다 여기서 하나씩 뽑아 변주합니다. 무명록은 <b>이름·기록·장부</b>를, 무명비는 <b>비·기억·별명</b>을 가져갔습니다. 캐릭터는 이름 풀만 공유하고 성격·나이·관계는 게임마다 다시 만듭니다 — 정본 설정을 확정하지 않는 것이 이 창고의 운영 원칙입니다. 데모의 <b>세계관 생성기</b>는 그 표들을 그대로 이식해, 같은 공식으로 다음 게임 후보를 뽑아 봅니다.</p>
+
+      <h2>엔진의 문법: 장면 테이블과 상태 객체</h2>
+      <p>두 게임 모두 프레임워크 없는 단일 HTML이고, 서버도 빌드도 없습니다. 구조도 같습니다. 회차의 모든 것이 상태 객체 하나(몸·정신·호명 같은 스탯, 단서, 물자, 습관, 관계)에 담기고, 이야기는 <code>SCENES</code> 테이블의 장면과 <code>{text, note, req, to, effect}</code> 선택지로 굴러갑니다. <code>req</code>가 잠긴 선택지는 숨기지 않고 <b>잠긴 채로 보여 줍니다</b> — 무엇을 놓쳤는지 보이는 것이 리플레이의 동력이 되기 때문입니다.</p>
+      <p>재미있는 설계 결정 하나는 무명록의 <b>확장팩 로딩</b>입니다. 84KB짜리 코어 엔진 뒤에 확장 스크립트 7개가 붙는데, 각 파일은 전역 API 하나로 장면을 주입합니다. 원작 코드에서 그대로 가져오면 이렇습니다.</p>
+      <pre class="code"><span class="c">// 게임/소스/게임.js — 확장팩 등록 API (일부 생략)</span>
+window.무명록_확장등록 = (pack) =&gt; {
+  PENDING_EXTENSIONS.push(pack);
+  <span class="k">if</span> (contentReady) <span class="f">applyExtensionPack</span>(pack);
+};
+
+<span class="k">function</span> <span class="f">applyExtensionPack</span>(pack) {
+  <span class="k">if</span> (!pack || pack.applied) <span class="k">return</span>;
+  <span class="k">if</span> (pack.scenes) Object.assign(SCENES, pack.scenes);
+  <span class="k">if</span> (pack.sceneChoices) {
+    Object.entries(pack.sceneChoices).forEach(([sceneId, choices]) =&gt; {
+      <span class="k">if</span> (SCENES[sceneId]) SCENES[sceneId].choices.push(...choices);
+    });
+  }
+  pack.applied = <span class="k">true</span>;
+}</pre>
+      <p>덕분에 코어는 확장 파일의 존재를 모르고, 확장은 로드 순서를 몰라도 됩니다(먼저 도착하면 대기열에 쌓입니다). 장편 1~3부, 관계 장면, 서브스토리가 전부 이 좁은 문 하나로 들어옵니다. 호명은 이 세계관의 심장이라 규칙도 코드에 그대로 있습니다. 첫 번째는 기억, 두 번째는 그리움, 세 번째는 병 — 게이지가 3에 닿으면 어떤 장면으로 가던 중이든 위기가 끼어듭니다.</p>
+      <pre class="code"><span class="c">// 게임/소스/게임.js — checkCrisis()</span>
+<span class="k">if</span> (S.call &gt;= 3 &amp;&amp; !String(nextScene).startsWith(<span class="s">"ending"</span>) &amp;&amp; nextScene !== <span class="s">"call_crisis"</span>) {
+  S.pendingScene = nextScene;
+  <span class="k">return</span> <span class="s">"call_crisis"</span>;
+}</pre>
+
+      <h2>데모가 재현한 것, 생략한 것</h2>
+      <ul>
+        <li><b>재현</b> — 무명록 프롤로그~2장 초입 5장면. 장면·선택지·효과 텍스트를 원작 데이터에서 그대로 발췌했습니다.</li>
+        <li><b>재현</b> — 스탯 미터, 단서 칩, 조건부 잠금 선택지, 호명 경고와 E7 '세 번째 호명' 위기 분기. 요약판에서는 호명 3에 닿기 어려워 <b>'시연 · 호명 +1'</b> 버튼을 따로 두었습니다.</li>
+        <li><b>재현</b> — 소재 라이브러리 46개 요소를 이식한 세계관 생성기. 요소별 재추첨이 가능합니다.</li>
+        <li><b>생략</b> — localStorage 자동 저장과 기록실, 인카운터 풀 대부분, 관계(신뢰)·능력 시스템, 엔딩 11종 중 E7 외의 분기.</li>
+        <li><b>생략</b> — 캐릭터 일러스트 64장. 원천 자산은 비공개로 둔다는 저장소 원칙을 따랐습니다.</li>
+      </ul>
+      <div class="callout"><span class="mark">*</span><p>데모 무대는 사이트 테마와 무관하게 <b>늘 어둡습니다</b>. 두 원작이 다크 터미널 UI라, 조명을 바꾸면 다른 게임이 되기 때문입니다.</p></div>
+      <p>다른 프로젝트들도 궁금하다면 → <a href="../../index.html#products">프로젝트 목록</a>.</p>
+    </div>
+  </article>
+
+  <nav class="proj-nav wrap wrap-wide" aria-label="프로젝트 이동">
+    <a class="prev" href="../ether-archive/">
+      <div class="np-key">← 이전 04</div>
+      <div class="np-title">에테르 아카이브</div>
+    </a>
+    <a class="next" href="../majsoul/">
+      <div class="np-key">다음 06</div>
+      <div class="np-title">다음 한 수</div>
+    </a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon">
+    <span>© <span data-year>2025</span> 안성진</span>
+    <span><a href="../../index.html">홈으로</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/js/site.js" defer></script>
+<script src="mumyeong.js"></script>
+</body>
+</html>

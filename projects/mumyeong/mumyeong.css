@@ -1,0 +1,241 @@
+/* mumyeong.css — 무명 시리즈 데모 무대.
+   원작 두 게임이 다크 터미널 UI라 이 무대만 사이트 테마와 무관하게 늘 어둡다
+   (flowfield의 '늘 어두운 무대' 예외와 같은 규칙). 무대 밖은 전부 공용 토큰. */
+
+.mm-stage {
+  --s-bg: #14120f;
+  --s-panel: #1b1814;
+  --s-panel2: #211d17;
+  --s-ink: #ece7da;
+  --s-mut: rgba(236, 231, 218, 0.58);
+  --s-faint: rgba(236, 231, 218, 0.34);
+  --s-line: rgba(255, 255, 255, 0.11);
+  --s-red: #ff6a3c;
+  --s-red-dim: rgba(255, 106, 60, 0.16);
+  --s-teal: #4ec6a7;
+  background: var(--s-bg);
+  color: var(--s-ink);
+}
+
+/* ---- tabs ---- */
+.mm-tabs {
+  display: flex; gap: 2px;
+  padding: 0.65rem 0.9rem 0;
+  border-bottom: 1px solid var(--s-line);
+  overflow-x: auto;
+}
+.mm-tab {
+  font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.02em;
+  color: var(--s-mut); white-space: nowrap;
+  padding: 0.6em 1em;
+  border: 1px solid transparent; border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  transition: color 0.2s, background 0.2s;
+}
+.mm-tab:hover { color: var(--s-ink); }
+.mm-tab.is-on { color: var(--s-red); background: var(--s-panel); border-color: var(--s-line); }
+
+.mm-panel { padding: clamp(0.9rem, 0.5rem + 1.8vw, 1.75rem); }
+
+/* ---- shared bits inside the stage ---- */
+.mm-chip {
+  display: inline-block;
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--s-mut);
+  border: 1px solid var(--s-line); border-radius: 100px;
+  padding: 0.26em 0.68em; margin: 0.14em 0.1em 0.14em 0;
+}
+.mm-chip.hot { color: var(--s-red); border-color: rgba(255, 106, 60, 0.45); }
+.mm-chip.cool { color: var(--s-teal); border-color: rgba(78, 198, 167, 0.4); }
+
+.mm-meter { display: flex; align-items: center; gap: 0.55rem; margin: 0.3rem 0; }
+.mm-meter .mm-m-label { font-family: var(--mono); font-size: 0.72rem; color: var(--s-mut); width: 2.6em; flex: none; }
+.mm-meter .mm-m-track { display: flex; gap: 4px; }
+.mm-meter .mm-m-cell { width: 17px; height: 9px; border-radius: 2px; background: rgba(255, 255, 255, 0.09); }
+.mm-meter .mm-m-cell.on { background: var(--s-teal); }
+.mm-meter.danger .mm-m-cell.on { background: var(--s-red); }
+.mm-meter .mm-m-val { font-family: var(--mono); font-size: 0.72rem; color: var(--s-faint); }
+
+/* =========================== 두 게임 =========================== */
+.mm-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.mm-card {
+  background: var(--s-panel);
+  border: 1px solid var(--s-line);
+  border-radius: 8px;
+  padding: 1.1rem 1.15rem 1rem;
+  display: flex; flex-direction: column; gap: 0.7rem;
+}
+.mm-card-kicker { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--s-faint); }
+.mm-card h3 { font-size: 1.18rem; font-weight: 650; line-height: 1.25; }
+.mm-card h3 small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: 0.1em; color: var(--s-mut); margin-top: 0.45em; }
+.mm-card .mm-card-tag { font-size: 0.86rem; color: var(--s-mut); line-height: 1.55; margin: 0; }
+.mm-card-block h4 {
+  font-family: var(--mono); font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--s-faint); margin: 0 0 0.4em;
+}
+.mm-aux { display: flex; flex-wrap: wrap; gap: 0.2rem; }
+.mm-facts { display: grid; gap: 0.3em; margin: 0; }
+.mm-facts li { font-size: 0.82rem; color: var(--s-mut); padding-left: 1.1em; position: relative; }
+.mm-facts li::before { content: "·"; position: absolute; left: 0.2em; color: var(--s-red); }
+.mm-facts li b { color: var(--s-ink); font-weight: 600; }
+
+.mm-endings-btn {
+  align-self: flex-start;
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--s-teal);
+  border: 1px solid rgba(78, 198, 167, 0.35); border-radius: 100px;
+  padding: 0.4em 0.9em;
+  transition: border-color 0.2s, background 0.2s;
+}
+.mm-endings-btn:hover { border-color: var(--s-teal); background: rgba(78, 198, 167, 0.1); }
+.mm-endings { margin: 0.2rem 0 0; display: grid; gap: 0.22em; }
+.mm-endings li { font-family: var(--mono); font-size: 0.74rem; color: var(--s-mut); padding-left: 1.2em; position: relative; }
+.mm-endings li::before { content: "▸"; position: absolute; left: 0; color: var(--s-faint); }
+.mm-endings li.bad { color: var(--s-red); }
+
+.mm-compare {
+  margin-top: 1rem;
+  border-top: 1px dashed var(--s-line);
+  padding-top: 0.9rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem;
+}
+.mm-compare .mm-compare-key { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--s-faint); }
+
+/* =========================== 미니 플레이 =========================== */
+.mm-play { display: grid; grid-template-columns: 248px 1fr; gap: 1rem; align-items: start; }
+
+.mm-hud {
+  background: var(--s-panel);
+  border: 1px solid var(--s-line); border-radius: 8px;
+  padding: 0.9rem;
+  display: flex; flex-direction: column; gap: 0.8rem;
+}
+.mm-hud-top { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.mm-hud-top .mm-run { font-family: var(--mono); font-size: 0.7rem; color: var(--s-faint); }
+.mm-hud-top .mm-tag-state { font-family: var(--mono); font-size: 0.7rem; color: var(--s-teal); }
+.mm-hud-block h4 {
+  font-family: var(--mono); font-size: 0.66rem; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--s-faint); margin: 0 0 0.35em;
+}
+.mm-hud-log { margin: 0; display: grid; gap: 0.24em; }
+.mm-hud-log li { font-size: 0.74rem; color: var(--s-mut); line-height: 1.5; padding-left: 1em; position: relative; }
+.mm-hud-log li::before { content: "—"; position: absolute; left: 0; color: var(--s-faint); }
+.mm-hud-tools { display: flex; flex-wrap: wrap; gap: 0.4rem; border-top: 1px dashed var(--s-line); padding-top: 0.7rem; }
+.mm-tool-btn {
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--s-mut);
+  border: 1px solid var(--s-line); border-radius: 100px;
+  padding: 0.4em 0.85em;
+  transition: color 0.2s, border-color 0.2s;
+}
+.mm-tool-btn:hover:not(:disabled) { color: var(--s-red); border-color: rgba(255, 106, 60, 0.5); }
+.mm-tool-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.mm-scene {
+  position: relative;
+  background: var(--s-panel2);
+  border: 1px solid var(--s-line); border-radius: 8px;
+  padding: 1.1rem 1.2rem 1.2rem;
+  overflow: hidden;
+  min-height: 380px;
+}
+#mm-rain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; }
+.mm-scene > :not(#mm-rain) { position: relative; }
+
+.mm-scene-head { margin-bottom: 0.8rem; }
+.mm-kicker { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--s-red); }
+.mm-scene-head h3 { font-size: 1.12rem; font-weight: 650; line-height: 1.35; margin: 0.35em 0 0.2em; }
+.mm-place { font-family: var(--mono); font-size: 0.7rem; color: var(--s-faint); }
+
+.mm-scene-text p { font-size: 0.9rem; line-height: 1.75; color: var(--s-ink); margin-bottom: 0.7em; }
+.mm-effects { margin: 0.6rem 0 0.9rem; }
+.mm-effects p {
+  font-family: var(--mono); font-size: 0.74rem; line-height: 1.6;
+  color: var(--s-teal); margin: 0.25em 0;
+}
+.mm-effects p.warn { color: var(--s-red); }
+
+.mm-choices { display: grid; gap: 0.5rem; }
+.mm-choice {
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--s-line); border-radius: 6px;
+  padding: 0.7rem 0.85rem;
+  color: var(--s-ink);
+  transition: border-color 0.2s, background 0.2s, transform 0.2s var(--ease-out);
+}
+.mm-choice:hover:not(:disabled) { border-color: rgba(255, 106, 60, 0.55); background: var(--s-red-dim); transform: translateX(3px); }
+.mm-choice .mm-c-text { display: block; font-size: 0.88rem; font-weight: 550; }
+.mm-choice .mm-c-note { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--s-mut); margin-top: 0.35em; }
+.mm-choice:disabled { cursor: not-allowed; border-style: dashed; opacity: 0.55; }
+.mm-choice:disabled .mm-c-note { color: var(--s-red); }
+
+.mm-ending .mm-kicker { color: var(--s-red); }
+.mm-recap { border-top: 1px dashed var(--s-line); margin-top: 0.9rem; padding-top: 0.8rem; }
+
+@keyframes mm-warnflash {
+  0% { box-shadow: inset 0 0 0 2px rgba(255, 106, 60, 0); }
+  30% { box-shadow: inset 0 0 0 2px rgba(255, 106, 60, 0.85); }
+  100% { box-shadow: inset 0 0 0 2px rgba(255, 106, 60, 0); }
+}
+.mm-scene.mm-warn { animation: mm-warnflash 0.85s var(--ease) 2; }
+
+/* =========================== 세계관 생성기 =========================== */
+.mm-gen-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin-bottom: 1rem; }
+.mm-gen-head .mm-formula { font-family: var(--mono); font-size: 0.74rem; color: var(--s-mut); margin: 0; }
+.mm-gen-head .mm-formula b { color: var(--s-teal); font-weight: 500; }
+#mm-gen-all {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--s-bg); background: var(--s-red);
+  border-radius: 100px; padding: 0.5em 1.1em;
+  transition: filter 0.2s, transform 0.2s;
+}
+#mm-gen-all:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
+.mm-gen-card { background: var(--s-panel); border: 1px solid var(--s-line); border-radius: 8px; overflow: hidden; }
+.mm-gen-row {
+  display: grid; grid-template-columns: 7.2em 1fr auto;
+  gap: 0.35rem 0.9rem; align-items: center;
+  padding: 0.75rem 1rem;
+  transition: background 0.25s;
+}
+.mm-gen-row + .mm-gen-row { border-top: 1px solid var(--s-line); }
+.mm-gen-row.is-rolling { background: var(--s-red-dim); }
+.mm-gen-cat { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--s-faint); }
+.mm-gen-val strong { display: block; font-size: 0.92rem; font-weight: 650; color: var(--s-ink); }
+.mm-gen-val span { display: block; font-size: 0.78rem; color: var(--s-mut); line-height: 1.55; margin-top: 0.15em; }
+.mm-reroll {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--s-mut);
+  border: 1px solid var(--s-line); border-radius: 100px;
+  padding: 0.35em 0.8em;
+  transition: color 0.2s, border-color 0.2s;
+}
+.mm-reroll:hover { color: var(--s-teal); border-color: rgba(78, 198, 167, 0.5); }
+
+.mm-pitch {
+  margin: 1rem 0 0;
+  font-size: 0.86rem; line-height: 1.75; color: var(--s-mut);
+  border-left: 2px solid var(--s-red);
+  padding-left: 0.9rem;
+}
+.mm-pitch b { color: var(--s-ink); font-weight: 600; }
+
+/* =========================== responsive =========================== */
+@media (max-width: 860px) {
+  .mm-play { grid-template-columns: 1fr; }
+  .mm-hud { order: 2; }
+  .mm-scene { order: 1; min-height: 0; }
+}
+@media (max-width: 720px) {
+  .mm-cards { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .mm-gen-row { grid-template-columns: 1fr auto; }
+  .mm-gen-cat { grid-column: 1 / -1; }
+  .mm-gen-head { flex-direction: column; align-items: flex-start; }
+  #mm-gen-all { margin-left: 0; }
+}

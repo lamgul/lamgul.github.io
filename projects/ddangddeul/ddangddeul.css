@@ -1,0 +1,373 @@
+/* ddangddeul.css — 땅뜰 데모 전용 스타일 (모두 dd- 접두사, 토큰만 사용) */
+
+/* ---- 스테이지 ---- */
+.dd-stage {
+  display: flex; flex-direction: column;
+  height: clamp(580px, 76vh, 740px);
+  background: var(--bg);
+}
+
+/* ---- 앱바 ---- */
+.dd-appbar {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 0.55rem 0.9rem;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--line);
+}
+.dd-brand { font-weight: 750; font-size: 0.95rem; letter-spacing: -0.01em; }
+.dd-brand i { color: var(--accent); font-style: normal; }
+.dd-tabs { display: flex; gap: 0.25rem; }
+.dd-tab {
+  position: relative;
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--ink-3); padding: 0.35em 0.85em; border-radius: 100px;
+  transition: color .2s, background .2s;
+}
+.dd-tab:hover { color: var(--ink); }
+.dd-tab.on { background: var(--surface); color: var(--ink); }
+.dd-dot {
+  position: absolute; top: 2px; right: 2px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+}
+.dd-reset {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 0.7rem; color: var(--ink-3);
+  padding: 0.3em 0.7em; border: 1px solid var(--line-2); border-radius: 100px;
+  transition: color .2s, border-color .2s;
+}
+.dd-reset:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---- 뷰 컨테이너 ---- */
+.dd-views { flex: 1; position: relative; min-height: 0; }
+.dd-view { position: absolute; inset: 0; }
+.dd-view[hidden] { display: none; }
+#dd-view-deal { overflow-y: auto; }
+
+/* ---- 지도 ---- */
+.dd-mapwrap { position: relative; height: 100%; overflow: hidden; }
+#dd-map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#dd-map.dragging { cursor: grabbing; }
+.dd-mapbg { fill: var(--surface); }
+.dd-road { stroke: var(--line-2); fill: none; stroke-linecap: round; }
+.dd-roadline { stroke: var(--bg-elev); fill: none; stroke-dasharray: 10 14; }
+
+.dd-parcel {
+  stroke: var(--bg); stroke-width: 1.6; fill-opacity: 0.92;
+  cursor: pointer; outline: none;
+  transition: opacity .25s var(--ease), fill-opacity .2s;
+}
+.dd-parcel:hover { stroke: var(--ink-3); fill-opacity: 1; }
+.dd-parcel:focus-visible { stroke: var(--accent); stroke-width: 2.5; }
+.dd-parcel.sel { stroke: var(--accent); stroke-width: 3; fill-opacity: 1; }
+.dd-parcel.dim { opacity: 0.2; }
+.dd-pg.dim-lbl text { opacity: 0.25; }
+
+/* 지목별 색 (fill) */
+[data-colormode="jimok"] .jm-jeon { fill: color-mix(in srgb, var(--teal) 20%, var(--surface)); }
+[data-colormode="jimok"] .jm-dap  { fill: color-mix(in srgb, var(--teal) 33%, var(--surface)); }
+[data-colormode="jimok"] .jm-imya { fill: color-mix(in srgb, var(--teal) 47%, var(--surface)); }
+[data-colormode="jimok"] .jm-dae  { fill: color-mix(in srgb, var(--accent) 24%, var(--surface)); }
+[data-colormode="jimok"] .jm-jap  { fill: color-mix(in srgb, var(--ink-3) 28%, var(--surface)); }
+/* 용도지역별 색 */
+[data-colormode="zone"] .zn-plan  { fill: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+[data-colormode="zone"] .zn-prod  { fill: color-mix(in srgb, var(--teal) 27%, var(--surface)); }
+[data-colormode="zone"] .zn-agri  { fill: color-mix(in srgb, var(--teal) 45%, var(--surface)); }
+[data-colormode="zone"] .zn-green { fill: color-mix(in srgb, var(--teal) 13%, var(--surface)); }
+[data-colormode="zone"] .zn-resi  { fill: color-mix(in srgb, var(--accent) 34%, var(--surface)); }
+
+.dd-lbl {
+  font-family: var(--mono); font-size: 12.5px;
+  fill: var(--ink-2); pointer-events: none; text-anchor: middle;
+}
+.dd-lbl-sub { font-size: 10px; fill: var(--ink-3); }
+
+/* 매물 마커(가격표) */
+.dd-tag { cursor: pointer; }
+.dd-pin { fill: var(--accent); }
+.dd-ping {
+  fill: none; stroke: var(--accent); stroke-width: 2;
+  transform-box: fill-box; transform-origin: center;
+  animation: dd-ping 2.2s var(--ease) infinite;
+}
+@keyframes dd-ping {
+  from { transform: scale(0.6); opacity: 0.6; }
+  to   { transform: scale(2.6); opacity: 0; }
+}
+.dd-tag rect { fill: var(--accent); }
+.dd-tag:hover rect { fill: var(--accent-press); }
+.dd-tag text {
+  fill: var(--on-accent); font-family: var(--mono);
+  font-size: 11.5px; text-anchor: middle; pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .dd-ping { display: none; } }
+
+/* ---- 범례 ---- */
+.dd-legend {
+  position: absolute; top: 0.7rem; left: 0.7rem;
+  background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 0.45rem 0.55rem; font-size: 0.7rem;
+  box-shadow: var(--shadow-1);
+}
+.dd-mode { display: flex; gap: 2px; margin-bottom: 0.4rem; background: var(--surface); border-radius: 6px; padding: 2px; }
+.dd-mode button {
+  flex: 1; font-family: var(--mono); font-size: 0.64rem; color: var(--ink-3);
+  padding: 0.25em 0.55em; border-radius: 5px;
+}
+.dd-mode button.on { background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-1); }
+#dd-legend-list { display: grid; gap: 2px; }
+#dd-legend-list button {
+  display: flex; align-items: center; gap: 0.45em;
+  font-size: 0.68rem; color: var(--ink-2); padding: 0.12em 0.3em; border-radius: 4px;
+  width: 100%; text-align: left;
+}
+#dd-legend-list button:hover { color: var(--ink); }
+#dd-legend-list button.on { background: var(--surface); color: var(--ink); font-weight: 650; }
+.dd-sw { width: 11px; height: 11px; border-radius: 3px; flex: none; border: 1px solid var(--line-2); }
+.dd-sw.jm-jeon { background: color-mix(in srgb, var(--teal) 20%, var(--surface)); }
+.dd-sw.jm-dap  { background: color-mix(in srgb, var(--teal) 33%, var(--surface)); }
+.dd-sw.jm-imya { background: color-mix(in srgb, var(--teal) 47%, var(--surface)); }
+.dd-sw.jm-dae  { background: color-mix(in srgb, var(--accent) 24%, var(--surface)); }
+.dd-sw.jm-jap  { background: color-mix(in srgb, var(--ink-3) 28%, var(--surface)); }
+.dd-sw.zn-plan  { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+.dd-sw.zn-prod  { background: color-mix(in srgb, var(--teal) 27%, var(--surface)); }
+.dd-sw.zn-agri  { background: color-mix(in srgb, var(--teal) 45%, var(--surface)); }
+.dd-sw.zn-green { background: color-mix(in srgb, var(--teal) 13%, var(--surface)); }
+.dd-sw.zn-resi  { background: color-mix(in srgb, var(--accent) 34%, var(--surface)); }
+
+.dd-maphint {
+  position: absolute; right: 0.8rem; top: 0.8rem;
+  font-family: var(--mono); font-size: 0.64rem; color: var(--ink-3);
+  background: color-mix(in srgb, var(--bg-elev) 82%, transparent);
+  padding: 0.25em 0.6em; border-radius: 100px;
+  pointer-events: none;
+}
+
+/* ---- 매물 드로어 ---- */
+.dd-drawer-toggle {
+  position: absolute; bottom: 0.8rem; left: 0.8rem; z-index: 5;
+  font-family: var(--mono); font-size: 0.74rem;
+  background: var(--accent); color: var(--on-accent);
+  padding: 0.5em 1.05em; border-radius: 100px;
+  box-shadow: var(--shadow-2);
+  transition: background .2s, transform .2s;
+}
+.dd-drawer-toggle:hover { background: var(--accent-press); transform: translateY(-1px); }
+.dd-drawer {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+  display: flex; gap: 0.6rem; overflow-x: auto;
+  padding: 0.8rem 0.8rem 3.1rem;
+  background: color-mix(in srgb, var(--bg-elev) 94%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+}
+.dd-drawer[hidden] { display: none; }
+.dd-card {
+  flex: none; width: min(258px, 78vw);
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg-elev); padding: 0.7rem 0.8rem;
+  box-shadow: var(--shadow-1);
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.dd-card h4 { font-size: 0.83rem; font-weight: 700; line-height: 1.3; }
+.dd-card .dd-price { font-size: 0.95rem; font-weight: 750; }
+.dd-card .dd-price small { font-weight: 400; color: var(--ink-3); font-size: 0.7rem; }
+.dd-card p { font-size: 0.7rem; color: var(--ink-3); line-height: 1.5; margin: 0; }
+
+/* ---- 배지 ---- */
+.dd-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.dd-badge {
+  font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.01em;
+  padding: 0.16em 0.6em; border-radius: 100px; white-space: nowrap;
+}
+.dd-badge.b-teal { background: color-mix(in srgb, var(--teal) 14%, transparent); color: var(--teal); }
+.dd-badge.b-accent { background: var(--accent-tint); color: var(--accent); }
+.dd-badge.b-mute { background: var(--surface); color: var(--ink-2); }
+.dd-badge.b-ink { background: var(--ink); color: var(--bg); }
+
+/* ---- 버튼 ---- */
+.dd-btn {
+  font-size: 0.78rem; font-weight: 600;
+  padding: 0.5em 1.05em; border-radius: 8px;
+  transition: background .2s, border-color .2s, opacity .2s;
+}
+.dd-btn.primary { background: var(--accent); color: var(--on-accent); }
+.dd-btn.primary:hover { background: var(--accent-press); }
+.dd-btn.ghost { border: 1px solid var(--line-2); color: var(--ink-2); }
+.dd-btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+.dd-btn[disabled] { opacity: 0.45; cursor: default; }
+.dd-btn.primary[disabled]:hover { background: var(--accent); }
+
+/* ---- 필지 상세 시트 ---- */
+.dd-sheet {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 6;
+  width: min(348px, 100%);
+  background: var(--bg-elev); border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  overflow-y: auto; padding: 0.9rem;
+  transform: translateX(105%); visibility: hidden;
+  transition: transform .38s var(--ease-out), visibility .38s;
+}
+.dd-sheet.open { transform: none; visibility: visible; }
+.dd-sh-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.dd-sh-head h3 { font-size: 0.95rem; font-weight: 750; line-height: 1.3; }
+.dd-sh-head .dd-badges { margin-top: 0.4rem; }
+.dd-x {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--ink-3); font-size: 1rem; line-height: 1;
+  border: 1px solid var(--line);
+}
+.dd-x:hover { color: var(--accent); border-color: var(--accent); }
+
+.dd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 0.8rem; }
+.dd-stat { background: var(--surface); border-radius: 8px; padding: 0.5rem 0.55rem; }
+.dd-stat span { display: block; font-family: var(--mono); font-size: 0.58rem; color: var(--ink-3); letter-spacing: 0.04em; }
+.dd-stat b { display: block; font-size: 0.8rem; margin-top: 0.15rem; letter-spacing: -0.01em; }
+.dd-stat i { display: block; font-style: normal; font-size: 0.62rem; color: var(--ink-3); margin-top: 0.05rem; }
+
+.dd-risk { border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.75rem; margin-top: 0.8rem; }
+.dd-risk-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; }
+.dd-risk-head b { font-weight: 700; }
+.dd-risk-grade { font-family: var(--mono); font-size: 0.72rem; font-weight: 700; }
+.g-good { color: var(--teal); }
+.g-warn { color: color-mix(in srgb, var(--accent) 60%, var(--ink)); }
+.g-bad  { color: var(--accent); }
+.dd-riskbar { height: 6px; background: var(--surface); border-radius: 100px; overflow: hidden; margin: 0.5rem 0; }
+.dd-riskbar i { display: block; height: 100%; border-radius: inherit; background: currentColor; transition: width .6s var(--ease-out); }
+.dd-risk ul { display: grid; gap: 0.25rem; }
+.dd-risk li { font-size: 0.7rem; line-height: 1.45; color: var(--ink-2); display: flex; gap: 0.45em; }
+.dd-risk li::before { font-family: var(--mono); flex: none; }
+.dd-risk li.bad::before { content: "!"; color: var(--accent); font-weight: 700; }
+.dd-risk li.good::before { content: "✓"; color: var(--teal); }
+.dd-risk .dd-note { font-size: 0.62rem; color: var(--ink-3); margin-top: 0.45rem; }
+
+.dd-trades { margin-top: 0.8rem; }
+.dd-trades h4 { font-size: 0.76rem; font-weight: 700; margin-bottom: 0.35rem; }
+.dd-trades-row {
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  font-family: var(--mono); font-size: 0.66rem; color: var(--ink-2);
+  padding: 0.3rem 0; border-top: 1px dashed var(--line);
+}
+.dd-trades-row b { color: var(--ink); font-weight: 600; }
+.dd-trades-avg { font-size: 0.66rem; color: var(--ink-3); margin-top: 0.35rem; }
+.dd-trades-avg b { color: var(--teal); }
+
+.dd-sh-listing {
+  background: var(--accent-tint);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 10px; padding: 0.7rem 0.8rem; margin-top: 0.9rem;
+}
+.dd-sh-listing h4 { font-size: 0.8rem; font-weight: 700; }
+.dd-sh-listing .dd-price { font-size: 1rem; font-weight: 750; margin-top: 0.25rem; }
+.dd-sh-listing .dd-price small { font-weight: 400; font-size: 0.68rem; color: var(--ink-2); }
+.dd-sh-listing p { font-size: 0.7rem; color: var(--ink-2); margin: 0.35rem 0 0.6rem; line-height: 1.5; }
+.dd-nolisting { font-size: 0.68rem; color: var(--ink-3); margin-top: 0.9rem; padding-top: 0.6rem; border-top: 1px dashed var(--line); }
+
+/* ---- 내 거래(파이프라인) ---- */
+.dd-deal { max-width: 720px; margin: 0 auto; padding: var(--sp-4) var(--sp-4) var(--sp-5); }
+.dd-deal-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.dd-deal-head h3 { font-size: 0.95rem; font-weight: 750; }
+.dd-deal-head .sum { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+
+.dd-steps {
+  display: flex; justify-content: space-between; gap: 0.3rem;
+  font-family: var(--mono); font-size: 0.63rem; color: var(--ink-3);
+  margin-top: var(--sp-4);
+}
+.dd-steps span { flex: 1; text-align: center; white-space: nowrap; }
+.dd-steps .done { color: var(--teal); }
+.dd-steps .cur { color: var(--accent); font-weight: 700; }
+.dd-progress { height: 8px; background: var(--surface); border-radius: 100px; overflow: hidden; margin: 0.45rem 0 var(--sp-4); }
+.dd-progress i {
+  display: block; height: 100%; width: 0; border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--teal));
+  transition: width .8s var(--ease-out);
+}
+
+.dd-stagecard {
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--bg-elev); padding: 1rem 1.1rem;
+  box-shadow: var(--shadow-1);
+}
+.dd-stagecard h4 { font-size: 0.92rem; font-weight: 750; display: flex; align-items: baseline; gap: 0.55em; }
+.dd-stagecard h4 .no { font-family: var(--mono); font-size: 0.68rem; font-weight: 500; color: var(--accent); }
+.dd-sdesc { font-size: 0.74rem; color: var(--ink-3); margin-top: 0.3rem; line-height: 1.55; }
+
+.dd-docs { margin-top: 0.7rem; }
+.dd-docs li {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0; border-top: 1px dashed var(--line);
+}
+.dd-doc-i { flex: 1; min-width: 0; }
+.dd-doc-i b { display: block; font-size: 0.76rem; font-weight: 600; }
+.dd-doc-i span { display: block; font-family: var(--mono); font-size: 0.6rem; color: var(--ink-3); margin-top: 0.1rem; }
+.dd-st {
+  flex: none; font-family: var(--mono); font-size: 0.62rem;
+  padding: 0.2em 0.62em; border-radius: 100px;
+}
+.dd-st.st-none { background: var(--surface); color: var(--ink-3); }
+.dd-st.st-recv { background: var(--surface); color: var(--ink-2); }
+.dd-st.st-review { background: var(--accent-tint); color: var(--accent); }
+.dd-st.st-review::after { content: "…"; animation: dd-blink 1.1s steps(3) infinite; }
+@keyframes dd-blink { 50% { opacity: 0.2; } }
+.dd-st.st-ok { background: color-mix(in srgb, var(--teal) 14%, transparent); color: var(--teal); }
+.dd-docs .dd-btn { flex: none; font-size: 0.68rem; padding: 0.34em 0.8em; }
+
+.dd-pay {
+  border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+  background: color-mix(in srgb, var(--teal) 7%, transparent);
+  border-radius: 10px; padding: 0.7rem 0.85rem; margin-top: 0.9rem;
+}
+.dd-pay-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.dd-pay-row b { font-size: 0.84rem; }
+.dd-pay-acct { font-family: var(--mono); font-size: 0.64rem; color: var(--ink-2); margin-top: 0.35rem; }
+.dd-pay-note { font-size: 0.62rem; color: var(--ink-3); margin-top: 0.45rem; }
+.dd-pay .dd-btn { margin-top: 0.55rem; }
+
+.dd-err { color: var(--accent); font-size: 0.72rem; margin-top: 0.7rem; line-height: 1.5; }
+.dd-deal-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+.dd-escrow {
+  font-family: var(--mono); font-size: 0.64rem; color: var(--ink-3);
+  margin-top: 0.9rem; text-align: center;
+}
+.dd-escrow b { color: var(--teal); font-weight: 600; }
+
+.dd-empty { text-align: center; padding: clamp(2rem, 8vh, 4.5rem) 1.2rem; }
+.dd-empty p { font-size: 0.8rem; color: var(--ink-3); margin-bottom: 0.5rem; }
+.dd-empty p b { color: var(--ink); font-size: 0.92rem; }
+.dd-empty .dd-btn { margin-top: 0.7rem; }
+
+.dd-donebox { text-align: center; padding: 1.2rem 0.8rem 0.4rem; }
+.dd-done-mark {
+  width: 46px; height: 46px; margin: 0 auto 0.7rem; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--teal) 16%, transparent);
+  color: var(--teal); font-size: 1.3rem; font-weight: 700;
+}
+.dd-donebox h4 { font-size: 1rem; font-weight: 750; }
+.dd-donebox p { font-size: 0.76rem; color: var(--ink-2); margin-top: 0.5rem; line-height: 1.6; }
+
+/* ---- 반응형 ---- */
+@media (max-width: 640px) {
+  .dd-stage { height: min(660px, 88vh); }
+  .dd-maphint { display: none; }
+  .dd-lbl { font-size: 15px; }
+  .dd-lbl-sub { font-size: 12px; }
+  .dd-sheet {
+    top: auto; left: 0; right: 0; bottom: 0; width: auto;
+    max-height: 76%;
+    border-left: 0; border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(105%);
+  }
+  .dd-sheet.open { transform: none; }
+  .dd-steps span { font-size: 0.56rem; }
+  .dd-stagecard { padding: 0.85rem 0.9rem; }
+}
+@media (max-width: 420px) {
+  .dd-appbar { gap: var(--sp-2); }
+  .dd-brand { font-size: 0.88rem; }
+}

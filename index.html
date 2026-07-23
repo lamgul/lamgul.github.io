@@ -59,9 +59,10 @@
     <a class="brand" href="/" aria-label="안성진, 홈">ann<span class="dot">.</span></a>
     <nav class="nav" aria-label="주요">
       <a class="nav-hide" href="#cases"><span class="num">01</span>사례</a>
-      <a class="nav-hide" href="#work"><span class="num">02</span>실험</a>
-      <a class="nav-hide" href="writing/"><span class="num">03</span>글</a>
-      <a class="nav-hide" href="about.html"><span class="num">04</span>소개</a>
+      <a class="nav-hide" href="#products"><span class="num">02</span>데모</a>
+      <a class="nav-hide" href="#work"><span class="num">03</span>실험</a>
+      <a class="nav-hide" href="writing/"><span class="num">04</span>글</a>
+      <a class="nav-hide" href="about.html"><span class="num">05</span>소개</a>
       <button class="icon-btn theme-toggle" data-theme-toggle aria-pressed="false" aria-label="다크/라이트 테마 전환">
         <svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -164,6 +165,89 @@
       <span>NestJS</span><span>Spring</span><span>Python</span><span>FastAPI</span><span>PostgreSQL</span><span>Docker</span><span>Kubernetes</span><span>AWS</span><span>YOLO</span><span>vLLM</span><span>Scouter APM</span><span>DDD</span>
     </div>
   </div>
+
+  <!-- ============ product demos (real side products, backend-free) ============ -->
+  <section class="section wrap" id="products">
+    <div class="section-head">
+      <h2>프로젝트 데모<span class="accent">.</span></h2>
+      <span class="count">product demos — 백엔드 없이, 브라우저 안에서 직접 클릭해보세요</span>
+    </div>
+
+    <div class="work">
+      <a class="work-row reveal" href="projects/ddangddeul/" data-preview="assets/img/covers/ddangddeul.svg">
+        <span class="work-num">01</span>
+        <div class="work-main">
+          <span class="work-title">땅뜰 <span class="sub">Ddangddeul</span></span>
+          <p class="work-desc">지도에서 필지를 고르고 서류·에스크로를 거쳐 등기까지 — 토지 조각거래 플랫폼의 거래 파이프라인 전 과정을 실데이터 기반 목으로 재현했습니다.</p>
+          <div class="work-tags"><span class="tag">FastAPI 원작</span><span class="tag">SVG 지도</span><span class="tag">거래 파이프라인</span></div>
+        </div>
+        <div class="work-side">
+          <span class="work-year">필지→등기</span>
+          <span class="work-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M8 7h9v9"/></svg></span>
+        </div>
+      </a>
+      <a class="work-row reveal" href="projects/lookie/" data-preview="assets/img/covers/lookie.svg">
+        <span class="work-num">02</span>
+        <div class="work-main">
+          <span class="work-title">루키 <span class="sub">Lookie</span></span>
+          <p class="work-desc">반려동물 슈퍼앱과 관리자 콘솔을 나란히 — 앱에서 예약을 만들면 콘솔의 수치와 테이블이 함께 움직입니다. NestJS 목 서버의 시드를 그대로 옮겼습니다.</p>
+          <div class="work-tags"><span class="tag">모바일 프레임</span><span class="tag">관리자 콘솔</span><span class="tag">NestJS 원작</span></div>
+        </div>
+        <div class="work-side">
+          <span class="work-year">앱+콘솔</span>
+          <span class="work-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M8 7h9v9"/></svg></span>
+        </div>
+      </a>
+      <a class="work-row reveal" href="projects/sums/" data-preview="assets/img/covers/sums.svg">
+        <span class="work-num">03</span>
+        <div class="work-main">
+          <span class="work-title">통제 콘솔 <span class="sub">SUMS Console</span></span>
+          <p class="work-desc">현장 근로자의 스마트폰을 구역·시간·행동조건으로 통제하는 관제 시스템. 구역을 그리고 정책을 조합하면 위반 로그가 흘러들어옵니다. SafeIn으로 이어진 계보의 시작.</p>
+          <div class="work-tags"><span class="tag">관제 대시보드</span><span class="tag">정책 엔진</span><span class="tag">React 원작</span></div>
+        </div>
+        <div class="work-side">
+          <span class="work-year">SafeIn의 전신</span>
+          <span class="work-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M8 7h9v9"/></svg></span>
+        </div>
+      </a>
+      <a class="work-row reveal" href="projects/ether-archive/" data-preview="assets/img/covers/ether-archive.svg">
+        <span class="work-num">04</span>
+        <div class="work-main">
+          <span class="work-title">에테르 아카이브 <span class="sub">Ether Archive</span></span>
+          <p class="work-desc">핵겨울의 서울, AI가 만든 가짜 낙원. 30종 생존 역할과 25종 엔딩을 가진 텍스트 어드벤처의 플레이어블 슬라이스 — 능력 게이트와 확률 분기까지 그대로.</p>
+          <div class="work-tags"><span class="tag">텍스트 게임</span><span class="tag">상태 머신</span><span class="tag">Capacitor 원작</span></div>
+        </div>
+        <div class="work-side">
+          <span class="work-year">플레이 가능</span>
+          <span class="work-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M8 7h9v9"/></svg></span>
+        </div>
+      </a>
+      <a class="work-row reveal" href="projects/mumyeong/" data-preview="assets/img/covers/mumyeong.svg">
+        <span class="work-num">05</span>
+        <div class="work-main">
+          <span class="work-title">무명 <span class="sub">Mumyeong Series</span></span>
+          <p class="work-desc">이름을 부르면 병드는 서울(무명록), 검은 비가 기억을 지우는 밤(무명비). 같은 세계관 공식으로 만든 두 게임과, 그 공식으로 새 컨셉을 찍어내는 생성기.</p>
+          <div class="work-tags"><span class="tag">인터랙티브 픽션</span><span class="tag">세계관 생성기</span><span class="tag">2부작</span></div>
+        </div>
+        <div class="work-side">
+          <span class="work-year">14+11 엔딩</span>
+          <span class="work-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M8 7h9v9"/></svg></span>
+        </div>
+      </a>
+      <a class="work-row reveal" href="projects/majsoul/" data-preview="assets/img/covers/majsoul.svg">
+        <span class="work-num">06</span>
+        <div class="work-main">
+          <span class="work-title">다음 한 수 <span class="sub">Shanten Lab</span></span>
+          <p class="work-desc">마작 손패 14장을 읽고 무엇을 버릴지 계산하는 안드로이드 도우미의 심장부. 샹텐 DFS와 유효패 계산을 Java에서 JS로 이식해 브라우저에서 실시간으로 돌립니다.</p>
+          <div class="work-tags"><span class="tag">알고리즘</span><span class="tag">DFS</span><span class="tag">Java→JS 포팅</span></div>
+        </div>
+        <div class="work-side">
+          <span class="work-year">실시간 계산</span>
+          <span class="work-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M8 7h9v9"/></svg></span>
+        </div>
+      </a>
+    </div>
+  </section>
 
   <!-- ============ experiments (side projects) ============ -->
   <section class="section wrap" id="work">

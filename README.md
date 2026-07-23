@@ -34,6 +34,18 @@
 | [레거시 아키텍처 개선](cases/legacy-usecase.html) | 신뢰를 쌓고 UseCase 구조 제안 | 점진적 리팩토링 |
 | [서버 보안 하드닝](cases/server-hardening.html) | ServerTokens로 버전 노출 제거 | 무중단 반영 |
 
+## 프로젝트 데모 · Product Demos
+
+사이드로 만든 실제 제품 프로토타입들을, 백엔드 없이 브라우저 안에서 클릭해볼 수
+있게 재현한 데모. 목데이터는 원본 레포의 실제 시드에서 옮겨 왔습니다.
+
+- [땅뜰](projects/ddangddeul/) — 지도에서 등기까지, 토지 조각거래 파이프라인 (FastAPI 원작)
+- [루키](projects/lookie/) — 반려동물 슈퍼앱 + 관리자 콘솔 양면 데모 (React · NestJS 원작)
+- [통제 콘솔](projects/sums/) — 구역·시간·행동조건 기반 현장 스마트폰 관제 (SafeIn의 전신)
+- [에테르 아카이브](projects/ether-archive/) — 포스트아포칼립스 텍스트 어드벤처 플레이어블 슬라이스
+- [무명](projects/mumyeong/) — 이름이 지워지는 서울 2부작 + 세계관 생성기
+- [다음 한 수](projects/majsoul/) — 마작 샹텐 DFS를 Java에서 JS로 이식한 실시간 계산기
+
 ## 실험 · Experiments
 
 회사 일과 별개로, 순전히 궁금해서 만든 인터랙티브 데모.
@@ -71,7 +83,7 @@ cd projects/rail && npm i && npm run build            # TS 파서 컴파일
 ├── index.html            허브 (실무 사례 + 실험)
 ├── about.html            이력 · CV (인쇄 시 깔끔한 이력서로)
 ├── cases/                실무 사례 9건
-├── projects/             인터랙티브 실험 5종
+├── projects/             프로젝트 데모 6종 + 인터랙티브 실험 5종
 ├── writing/              개발 기록 4편
 └── assets/               css(디자인 시스템) · js · fonts · img
 ```

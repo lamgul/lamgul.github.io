@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>땅뜰 — 안성진</title>
+<meta name="description" content="지도에서 필지를 고르고, 서류를 내고, 에스크로를 거쳐 등기까지 — 토지 거래 파이프라인을 브라우저 안에서 재현한 인터랙티브 데모.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="땅뜰 — DDANGDDEUL">
+<meta property="og:description" content="필지 조회부터 에스크로·등기까지, 토지 거래 전 과정을 재현한 데모.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/covers/ddangddeul.svg">
+<link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/project.css">
+<link rel="stylesheet" href="ddangddeul.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#demo">데모로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap wrap-wide header-inner">
+    <a class="back-link" href="../../index.html#products">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">ann<span class="dot">.</span></span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">projects / ddangddeul</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="proj-hero wrap wrap-wide">
+    <p class="eyebrow">01 / 2026</p>
+    <h1>땅뜰<span class="sub">DDANGDDEUL</span></h1>
+    <p class="tagline">지도에서 필지를 고르고, 서류를 내고, 에스크로를 거쳐 등기까지 — 토지 거래 전 과정을 브라우저 안에서.</p>
+    <div class="proj-meta">
+      <div><span class="m-key">역할</span><span class="m-val">기획 · 풀스택 개발 (1인)</span></div>
+      <div><span class="m-key">스택</span><span class="m-val">FastAPI · SQLite · 바닐라 JS · 브이월드/공공데이터 API</span></div>
+      <div><span class="m-key">코드</span><span class="m-val">비공개 레포 · 데모로 재현</span></div>
+    </div>
+  </section>
+
+  <section class="wrap wrap-wide" id="demo">
+    <div class="demo-frame">
+      <div class="demo-bar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="label">ddangddeul — svg 지적도 · 목 파이프라인 · localStorage</span>
+      </div>
+      <div class="dd-stage">
+        <header class="dd-appbar">
+          <span class="dd-brand">땅뜰<i>.</i></span>
+          <nav class="dd-tabs" aria-label="데모 화면 전환">
+            <button class="dd-tab on" id="dd-tab-map" type="button" aria-pressed="true">지도</button>
+            <button class="dd-tab" id="dd-tab-deal" type="button" aria-pressed="false">내 거래<i class="dd-dot" id="dd-deal-dot" hidden></i></button>
+          </nav>
+          <button class="dd-reset" id="dd-reset" type="button">초기화</button>
+        </header>
+        <div class="dd-views">
+          <section class="dd-view" id="dd-view-map">
+            <div class="dd-mapwrap" id="dd-mapwrap" data-colormode="jimok">
+              <svg id="dd-map" viewBox="0 0 1000 575" preserveAspectRatio="xMidYMid slice" role="group" aria-label="청록군 들말면 일대 지적도 (샘플 데이터)"></svg>
+              <div class="dd-legend" id="dd-legend">
+                <div class="dd-mode" role="group" aria-label="색상 기준">
+                  <button id="dd-mode-jimok" class="on" type="button" aria-pressed="true">지목</button>
+                  <button id="dd-mode-zone" type="button" aria-pressed="false">용도지역</button>
+                </div>
+                <ul id="dd-legend-list"></ul>
+              </div>
+              <span class="dd-maphint" aria-hidden="true">필지를 눌러보세요 · 드래그 이동</span>
+              <button class="dd-drawer-toggle" id="dd-drawer-toggle" type="button" aria-expanded="false">매물 3건 · 1,980만원부터</button>
+              <div class="dd-drawer" id="dd-drawer" hidden></div>
+              <aside class="dd-sheet" id="dd-sheet" aria-hidden="true" aria-label="필지 상세"></aside>
+            </div>
+          </section>
+          <section class="dd-view" id="dd-view-deal" hidden>
+            <div id="dd-deal-root"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <article class="wrap section">
+    <div class="prose">
+      <p class="lead">토지는 정보가 가장 어두운 자산입니다. 경계·지목·규제·시세가 서로 다른 창구에 흩어져 있고, 계약은 여전히 종이로 오갑니다. 땅뜰은 그걸 하나의 화면으로 모은 실험이었습니다 — <b>지도에서 필지를 고르면, 등기까지 한 파이프라인으로</b> 흘러가도록.</p>
+
+      <h2>실제 시스템: 공공데이터 위의 거래 파이프라인</h2>
+      <p>원본은 FastAPI + SQLite 백엔드와 프레임워크 없는 바닐라 JS 프론트(모듈 10개)로 이뤄진 프로토타입입니다. 백엔드가 <b>브이월드 연속지적도(WFS)</b>를 약 2km 격자 타일 단위로 받아 SQLite에 적재·캐싱하고, 국토부 <b>RTMS 실거래가</b>와 개별공시지가를 같은 테이블 구조에 얹습니다. 시드 데이터에는 전부 <code>(샘플)</code> 라벨을 붙여 두어, API 키가 등록되면 같은 자리에 실데이터가 들어와 자동으로 교체됩니다. 그 위에 매물 등록(소유자 직접/중개사 위탁), 딜 생성, 에스크로 결제, 서류 수령·검토, 등기 트래킹이 REST API로 이어집니다.</p>
+
+      <h2>안전도라는 뱃지의 근거</h2>
+      <p>기획부동산 피해는 대부분 '몰라서' 생깁니다. 그래서 필지 상세 시트에 <b>위험 점수</b>를 달았습니다. 맹지 여부, 용도지역의 개발 제약, 주변 실거래 대비 가격 부풀리기, 지분거래 비중 같은 신호를 점수로 합산해 양호·주의·위험 세 등급으로 보여줍니다. 원본 <code>sheet.js</code>의 실제 코드 일부입니다.</p>
+      <pre class="code"><span class="k">if</span>(p.road===<span class="f">false</span>){risk+=30;bad.push(<span class="s">"맹지 — 도로 미접으로 건축·개발 제한"</span>);}
+<span class="c">/* …용도지역·농지·허가구역 가중치… */</span>
+<span class="k">if</span>(dev&gt;40){risk+=24;bad.push(<span class="s">`가격이 주변 실거래 평균보다 ${dev}% 높음 — 부풀리기 주의`</span>);}
+<span class="k">if</span>(shareR&gt;0.25){risk+=12;bad.push(<span class="s">"주변 지분거래 비중 높음 — 기획부동산 주의 지역"</span>);}
+risk=Math.min(100,risk);
+<span class="k">const</span> grade=risk&gt;=55?<span class="s">"위험"</span>:risk&gt;=30?<span class="s">"주의"</span>:<span class="s">"양호"</span>;</pre>
+      <p>데모의 안전도 진단도 이 로직을 그대로 이식했습니다. 시세 비교에 쓰는 실거래 30건 역시 원본 <code>sample_data.py</code>가 <code>seed(42)</code>로 생성하는 값을 그대로 가져온 것입니다.</p>
+
+      <h2>설계 결정: 서류가 문을 여는 진행바</h2>
+      <p>거래 단계는 버튼을 누른다고 넘어가지 않습니다. 서버가 <b>현재 단계의 필요서류가 전부 수령됐는지</b>를 검사하고, 모자라면 무엇이 빠졌는지 이름을 붙여 409로 거절합니다. 진행바는 UI 장식이 아니라 서류 파이프라인의 상태 그 자체가 됩니다.</p>
+      <pre class="code"><span class="c"># backend/main.py — advance_deal</span>
+missing = [doc[<span class="s">"name"</span>] <span class="k">for</span> doc <span class="k">in</span> required <span class="k">if</span> doc[<span class="s">"key"</span>] <span class="k">not in</span> have]
+<span class="k">if</span> missing <span class="k">and not</span> force:
+    <span class="k">raise</span> <span class="f">HTTPException</span>(409, <span class="s">"현재 단계 필요서류 미제출: "</span> + <span class="s">", "</span>.join(missing))</pre>
+      <p>데모에서도 같은 규칙을 클라이언트에서 재현했습니다. 서류가 <b>검토중</b>인 채로 [다음 단계]를 누르면, 실제 서버가 돌려주던 것과 같은 문구로 거절당합니다.</p>
+
+      <h2>데모가 재현한 것, 생략한 것</h2>
+      <p>재현한 것: 필지 상세 시트(지목·용도지역·공시지가·주변 실거래·안전도), 매물 드로어, 구매 시작 → 서류 업로드(수령 → 검토중 → 승인) → 에스크로 가상계좌 입금 → 잔금·등기까지 차오르는 진행바. 필지 좌표와 지목·공시지가는 원본 <code>backend/db.py</code>의 시드를 그대로 옮겼고, 거래 상태는 <code>localStorage</code>에 남아 새로고침해도 이어집니다.</p>
+      <p>대체·생략한 것: 브이월드 타일 지도는 <b>인라인 SVG 필지 폴리곤</b>으로 바꿨습니다 — 네트워크 요청 없이도 지적도의 핵심(경계·지번·색상 레이어)은 전달되기 때문입니다. 색은 전부 사이트 토큰만 써서 라이트/다크 테마를 그대로 따라갑니다. 로그인·판매 등록 위저드·OCR 검증·서류 반려 흐름은 데모 범위에서 뺐습니다.</p>
+      <div class="callout"><span class="mark">*</span><p>화면의 지번·가격은 전부 샘플입니다. 원본 시스템도 시드 데이터의 모든 표기 문자열에 <b>(샘플)</b> 라벨을 붙여 실데이터와의 혼동을 설계 단계에서 차단했습니다.</p></div>
+      <p>다른 프로젝트도 궁금하다면 → <a href="../../index.html#products">프로젝트 목록</a>.</p>
+    </div>
+  </article>
+
+  <nav class="proj-nav wrap wrap-wide" aria-label="프로젝트 이동">
+    <a class="prev" href="../../index.html#products">
+      <div class="np-key">← 목록으로</div>
+      <div class="np-title">모든 프로젝트</div>
+    </a>
+    <a class="next" href="../lookie/">
+      <div class="np-key">다음 02 →</div>
+      <div class="np-title">루키</div>
+    </a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon">
+    <span>© <span data-year>2025</span> 안성진</span>
+    <span><a href="../../index.html">홈으로</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/js/site.js" defer></script>
+<script src="ddangddeul.js"></script>
+</body>
+</html>

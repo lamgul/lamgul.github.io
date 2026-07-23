@@ -28,6 +28,12 @@
   <url><loc>https://lamgul.github.io/writing/docker-image-diet.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/redis-cache-invalidation.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/observability-basics.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/projects/ddangddeul/</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/projects/lookie/</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/projects/sums/</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/projects/ether-archive/</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/projects/mumyeong/</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/projects/majsoul/</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/projects/type-playground/</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/projects/livepoll/</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/projects/rail/</loc><priority>0.6</priority></url>
