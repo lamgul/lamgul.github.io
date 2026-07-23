@@ -165,4 +165,28 @@
   .u-link { background: none; }
   .colophon { border: 0; color: #666; }
   .site-footer { margin-top: 0.5rem; border: 0; }
+  .about-photo { display: none; }
+}
+
+/* representative workspace photo under the about hero */
+.about-photo {
+  margin: var(--sp-5) 0 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+}
+.about-photo img {
+  width: 100%;
+  aspect-ratio: 21 / 8;
+  object-fit: cover;
+  display: block;
+}
+.about-photo figcaption {
+  font-family: var(--mono);
+  font-size: var(--t--1);
+  color: var(--ink-3);
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
 }
