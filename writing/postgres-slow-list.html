@@ -56,6 +56,22 @@
   <article class="post-body" id="body">
     <p class="lead">"목록 뒤로 갈수록 느려져요." 흔한 민원이고, 대개 범인은 정해져 있습니다. <b>인덱스 없는 정렬</b>과 <b>OFFSET 페이지네이션</b>. 추측 대신 <code>EXPLAIN ANALYZE</code>부터 켰습니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>실행 계획<span class="en">EXPLAIN ANALYZE</span></dt>
+    <dd>DB에게 "이 쿼리를 어떤 순서로 처리할 셈이었고, 실제로 얼마나 걸렸는지" 계획서를 받아 보는 명령입니다. 자동차 내비게이션이 경로와 소요 시간을 보여 주는 것과 비슷합니다. 느린 화면을 고칠 때 추측 대신 여기서부터 출발합니다.</dd>
+    <dt>인덱스<span class="en">index</span></dt>
+    <dd>책 뒤의 색인처럼, 특정 값을 가진 행을 페이지를 전부 넘기지 않고 바로 찾게 해 주는 보조 자료입니다. 인덱스가 없으면 DB는 조건에 맞는 행을 찾으려고 테이블을 처음부터 끝까지 훑습니다.</dd>
+    <dt>복합 인덱스<span class="en">composite index</span></dt>
+    <dd>여러 컬럼을 묶어 하나로 만든 인덱스입니다. 전화번호부가 "성 → 이름" 순서로 정렬돼 있듯, 컬럼을 나열한 <b>순서</b>가 성능을 좌우합니다. 이 글의 핵심 장면 중 하나입니다.</dd>
+    <dt>OFFSET 페이지네이션<span class="en">OFFSET pagination</span></dt>
+    <dd>"앞의 N개는 건너뛰고 그다음부터 달라"는 방식의 페이지 나누기입니다. 편하지만, 건너뛸 N개를 매번 실제로 세고 지나가야 해서 뒤 페이지로 갈수록 느려집니다.</dd>
+    <dt>keyset 페이지네이션<span class="en">keyset / seek</span></dt>
+    <dd>"마지막으로 본 값 <b>다음</b>부터 달라"는 방식입니다. 읽던 책에 끼워 둔 책갈피에서 이어 읽는 것과 같아서, 몇 페이지째든 속도가 일정합니다. OFFSET의 대안으로 뒤에서 자세히 다룹니다.</dd>
+  </dl>
+</div>
+
 <h2>먼저 실행 계획을 읽는다</h2>
 <pre class="code">EXPLAIN ANALYZE
 SELECT * FROM reports
@@ -63,7 +79,7 @@ WHERE site_id = 42
 ORDER BY created_at DESC
 LIMIT 20 OFFSET 4000;
 <span class="c">-- Seq Scan + Sort (actual time=210..214)  ← 전량 스캔 후 정렬</span></pre>
-<p><code>Seq Scan</code>에 <code>Sort</code>가 붙으면 신호입니다. 조건에 맞는 행을 <b>전부</b> 읽어 정렬한 뒤 20개만 버리고 가져오는 겁니다. 4000번째부터 보면 앞의 4020개를 매번 다시 만듭니다.</p>
+<p><span class="term" title="Sequential Scan. 인덱스를 못 쓰고 테이블을 처음부터 끝까지 훑는 것">Seq Scan</span>에 <code>Sort</code>가 붙으면 신호입니다. 조건에 맞는 행을 <b>전부</b> 읽어 정렬한 뒤 20개만 버리고 가져오는 겁니다. 4000번째부터 보면 앞의 4020개를 매번 다시 만듭니다. 뒤 페이지일수록 버리는 양이 늘어나니, 페이지가 깊어질수록 느려지는 겁니다.</p>
 
 <h2>복합 인덱스는 순서가 전부</h2>
 <pre class="code"><span class="c">-- WHERE로 좁히고(site_id) 그 안에서 정렬(created_at)</span>
@@ -82,7 +98,7 @@ LIMIT 20;   <span class="c">-- 몇 페이지든 일정하게 빠름</span></pre>
 <div class="callout"><span class="mark">*</span><p>keyset은 "3페이지로 점프" 같은 임의 접근을 포기하는 대신, <b>어느 깊이에서든 일정한 속도</b>를 얻습니다. 무한 스크롤·타임라인에는 완벽하고, 페이지 번호 UI에는 안 맞습니다. 트레이드오프를 알고 고르는 게 중요합니다.</p></div>
 
 <h2>덤: N+1도 같이 잡는다</h2>
-<p>목록이 느린 또 다른 흔한 이유는 각 행마다 연관을 다시 조회하는 N+1입니다. ORM의 지연 로딩을 믿지 말고 <code>JOIN</code>이나 배치 로딩으로 한 방에 가져오세요. 쿼리 로그를 켜서 "화면 하나에 쿼리 몇 개 나가나"를 세는 습관이 반쯤은 답입니다.</p>
+<p>목록이 느린 또 다른 흔한 이유는 각 행마다 연관을 다시 조회하는 <span class="term" title="목록 1번 조회 + 행마다 추가 조회 N번 = 총 N+1번 나가는 쿼리 폭발">N+1</span>입니다. ORM의 지연 로딩을 믿지 말고 <code>JOIN</code>이나 배치 로딩으로 한 방에 가져오세요. 쿼리 로그를 켜서 "화면 하나에 쿼리 몇 개 나가나"를 세는 습관이 반쯤은 답입니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">PostgreSQL</a>

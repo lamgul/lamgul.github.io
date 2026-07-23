@@ -56,11 +56,27 @@
   <article class="post-body" id="body">
     <p class="lead">API 키 하나면 최고의 모델을 부를 수 있는 시대에, 저는 <b>모델을 직접 GPU에 올려야</b> 했습니다. 산업안전 현장의 데이터를 외부로 전송할 수 없었기 때문입니다. 모델을 <em>부르는</em> 것과 <em>운영하는</em> 것은 완전히 다른 문제였습니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>온프레미스<span class="en">on-premise</span></dt>
+    <dd>서비스를 남의 클라우드가 아니라 우리 사무실·공장 안에 직접 둔 서버에서 돌리는 방식입니다. 데이터가 건물 밖으로 나가지 않아, 이 글처럼 현장 데이터를 외부로 못 보내는 상황에서 어쩔 수 없이 택하게 됩니다.</dd>
+    <dt>서빙<span class="en">serving</span></dt>
+    <dd>학습이 끝난 모델을 실제 사용자 요청에 24시간 응답하도록 띄워 두고 운영하는 일입니다. 모델을 한 번 불러 보는 것과 달리, 여러 사람이 동시에 써도 안 무너지게 만드는 게 핵심입니다.</dd>
+    <dt>KV 캐시<span class="en">KV cache</span></dt>
+    <dd>LLM이 문장을 한 글자씩 만들 때, 앞서 읽은 내용을 매번 다시 계산하지 않으려고 중간 결과를 저장해 두는 GPU 메모리 공간입니다. 응답이 길어질수록 커져서, 이 메모리를 어떻게 관리하느냐가 서빙 성능을 좌우합니다.</dd>
+    <dt>vLLM</dt>
+    <dd>LLM을 빠르고 효율적으로 서빙하려고 만든 오픈소스 엔진입니다. 뒤에 나오는 PagedAttention과 연속 배칭으로, 같은 GPU에서 훨씬 많은 요청을 처리하게 해 줍니다.</dd>
+    <dt>양자화<span class="en">quantization</span></dt>
+    <dd>모델의 숫자(가중치)를 32비트·16비트에서 4비트처럼 더 거친 단위로 줄여 저장하는 기술입니다. 사진을 저화질로 압축하듯 용량이 확 줄어, 작은 GPU에도 큰 모델을 올릴 수 있게 됩니다.</dd>
+  </dl>
+</div>
+
 <h2>왜 그냥 transformers로는 안 됐나</h2>
-<p><code>model.generate()</code>는 데모용입니다. 요청이 하나씩 순차 처리되고, KV 캐시가 GPU 메모리를 파편화하며, 동시 사용자가 늘면 무너집니다. 번역 요청이 몰리는 아침 조회 시간에 이걸로는 감당이 안 됐습니다. 그래서 <b>vLLM</b>으로 갈아탔습니다.</p>
+<p><code>model.generate()</code>는 데모용입니다. 요청이 하나씩 순차 처리되고, <span class="term" title="이전 계산 결과를 저장해 재사용하는 GPU 메모리">KV 캐시</span>가 GPU 메모리를 파편화하며, 동시 사용자가 늘면 무너집니다. 번역 요청이 몰리는 아침 조회 시간에 이걸로는 감당이 안 됐습니다. 그래서 <b>vLLM</b>으로 갈아탔습니다.</p>
 
 <h2>PagedAttention과 연속 배칭</h2>
-<p>vLLM의 두 가지가 판을 바꿉니다. <b>PagedAttention</b>은 KV 캐시를 OS의 가상 메모리처럼 페이지 단위로 관리해 파편화를 없앱니다. <b>연속 배칭(continuous batching)</b>은 한 요청이 끝나기를 기다리지 않고, 매 스텝 완료된 슬롯에 새 요청을 밀어 넣습니다. 처리량이 몇 배로 뜁니다.</p>
+<p>vLLM의 두 가지가 판을 바꿉니다. <b>PagedAttention</b>은 KV 캐시를 OS의 가상 메모리처럼 페이지 단위로 관리해 파편화를 없앱니다. <span class="term" title="빈 처리 슬롯에 새 요청을 즉시 채워 넣는 방식"><b>연속 배칭(continuous batching)</b></span>은 한 요청이 끝나기를 기다리지 않고, 매 스텝 완료된 슬롯에 새 요청을 밀어 넣습니다. 처리량이 몇 배로 뜁니다.</p>
 <pre class="code"><span class="c"># OpenAI 호환 엔드포인트로 바로 서빙</span>
 vllm serve Qwen2.5-7B-Instruct-AWQ \
   --quantization awq \

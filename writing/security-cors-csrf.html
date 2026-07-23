@@ -56,6 +56,22 @@
   <article class="post-body" id="body">
     <p class="lead">CORS 에러가 뜨면 손이 먼저 움직입니다. 스택오버플로를 뒤져 <code>origin: '*'</code>를 붙이고, 빨간 글씨가 사라지면 다음 일로 넘어가죠. 저도 오래 그랬습니다. 문제는 그 한 줄이 <b>에러를 지운 게 아니라 방어를 지웠다</b>는 것이었습니다. CORS와 CSRF는 이름도 비슷하고 늘 같이 등장하지만, 사실 정반대 방향을 봅니다. 이 글은 둘을 헷갈리지 않게 갈라 세우고, 미들웨어에서 무엇을 켜고 꺼야 하는지까지 정리합니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>같은 출처 정책<span class="en">Same-Origin Policy</span></dt>
+    <dd>스킴(http/https)·호스트·포트가 모두 같아야 '같은 출처'로 보고, 하나라도 다르면 브라우저가 남으로 취급하는 규칙입니다. 아파트에서 같은 동·호수 사람에게만 문을 열어 주는 것과 비슷하죠. 이 글에 나오는 CORS와 CSRF는 둘 다 이 규칙 위에서 벌어지는 일이라, 여기서 출발해야 헷갈리지 않습니다.</dd>
+    <dt>CORS<span class="en">Cross-Origin Resource Sharing</span></dt>
+    <dd>다른 출처의 응답을 자바스크립트가 읽는 것을 막는 기본 제한을, 서버가 "이 출처한테는 보여줘도 된다"고 허락해 푸는 장치입니다. 잠금장치가 아니라 <b>허가증</b>에 가깝습니다. 그래서 CORS를 열었다고 API가 뚫리는 것도, 닫았다고 안전해지는 것도 아닙니다.</dd>
+    <dt>프리플라이트<span class="en">preflight</span></dt>
+    <dd>브라우저가 진짜 요청을 보내기 전에 "이 방식으로 보내도 되나요?"라고 서버에 먼저 물어보는 OPTIONS 요청입니다. 방문 전에 미리 전화로 예약을 확인하는 셈이죠. JSON 본문이나 PUT·DELETE 같은 요청에서 자동으로 생겨, CORS 설정이 틀리면 여기서부터 막힙니다.</dd>
+    <dt>CSRF<span class="en">Cross-Site Request Forgery</span></dt>
+    <dd>브라우저가 내 도메인 요청에 쿠키를 자동으로 실어 준다는 점을 악용해, 공격자가 로그인한 사용자 몰래 요청을 대신 보내게 만드는 공격입니다. 남의 인감이 찍힌 위임장을 슬쩍 끼워 넣는 격이죠. 응답을 훔쳐볼 필요 없이 송금 같은 <b>동작</b>만 일으키면 되기에, CORS로는 막히지 않습니다.</dd>
+    <dt>SameSite 쿠키<span class="en">SameSite cookie</span></dt>
+    <dd>다른 사이트에서 날아온 요청에는 쿠키를 실을지 말지를 정하는 쿠키 옵션입니다. <code>Lax</code>(요즘 기본값)로 두면 남의 사이트가 유발한 POST에 세션 쿠키가 빠져, 고전적 CSRF가 대부분 무력화됩니다. CSRF 토큰과 함께 쓰는 두 겹 방어의 한 축입니다.</dd>
+  </dl>
+</div>
+
 <h2>1. 같은 출처 정책은 하나가 아니다</h2>
 <p>CORS와 CSRF가 헷갈리는 건 이름 탓만이 아닙니다. 둘 다 <b>같은 출처 정책(Same-Origin Policy)</b> 위에 서 있기 때문입니다. 출처(origin)는 스킴·호스트·포트 세 가지로 정의되고, 셋 중 하나만 달라도 브라우저는 다른 출처로 봅니다. 경로(path)는 출처에 포함되지 않는다는 점이 자주 헷갈리는 지점입니다.</p>
 <pre class="code"><span class="c"># 출처(origin) = 스킴 + 호스트 + 포트, 셋 중 하나만 달라도 다른 출처</span>
@@ -69,7 +85,7 @@ https://app.example.com:8443     <span class="c"># 다른 출처 (포트)</span>
 
 <h2>2. CORS는 방패가 아니라 빗장이다</h2>
 <p>CORS(Cross-Origin Resource Sharing)를 한 문장으로 줄이면 이렇습니다. 서버가 브라우저에게 <b>"이 출처한테는 내 응답을 보여줘도 된다"고 허락하는 프로토콜.</b> 잠금장치가 아니라 <b>허가증</b>입니다. 그래서 CORS 설정은 문을 잠그는 일이 아니라, 특정 손님에게만 문을 열어 주는 일에 가깝습니다.</p>
-<p>요청은 두 부류로 나뉩니다. GET이나 조건을 만족하는 단순한 POST 같은 <b>단순 요청</b>은 곧장 서버로 갑니다. 반면 <code>application/json</code> 본문이나 커스텀 헤더, PUT·DELETE·PATCH가 붙으면 브라우저가 본 요청 전에 <b>프리플라이트(preflight)</b>라는 OPTIONS 요청을 먼저 보내 허락을 구합니다.</p>
+<p>요청은 두 부류로 나뉩니다. GET이나 조건을 만족하는 단순한 POST 같은 <b><span class="term" title="프리플라이트 없이 곧바로 서버로 나가는, 조건이 단순한 요청">단순 요청</span></b>은 곧장 서버로 갑니다. 반면 <code>application/json</code> 본문이나 커스텀 헤더, PUT·DELETE·PATCH가 붙으면 브라우저가 본 요청 전에 <b>프리플라이트(preflight)</b>라는 OPTIONS 요청을 먼저 보내 허락을 구합니다.</p>
 <pre class="code"><span class="c"># 브라우저가 먼저 물어본다 (preflight) — 실제 요청 전에 자동 발생</span>
 OPTIONS /api/reports HTTP/1.1
 Origin: https://app.example.com
@@ -115,7 +131,7 @@ app.<span class="f">enableCors</span>({
 <p>왜 CORS가 여기서 구해 주지 못할까요. 폼 POST는 <code>application/x-www-form-urlencoded</code> 본문이라 <b>단순 요청</b>이고, 단순 요청엔 프리플라이트가 없습니다. 요청은 그대로 나가서 처리되고, CORS는 기껏해야 <b>응답을 가려 줄</b> 뿐인데 공격자는 애초에 응답을 원하지 않았습니다. "우리 API는 CORS를 설정했으니 CSRF는 괜찮다"가 성립하지 않는 이유입니다.</p>
 
 <h2>5. 토큰과 SameSite — 두 겹의 방어</h2>
-<p>막는 방법은 두 겹입니다. 첫째는 <b>CSRF 토큰</b>입니다. 서버가 예측 불가능한 토큰을 발급해 같은 출처 코드만 읽을 수 있는 곳에 심어 두고, 상태 변경 요청마다 그 토큰을 되돌려받아 검증합니다. 공격자는 이 토큰을 <b>읽을 수 없습니다</b> — 같은 출처 정책이 유일하게 확실히 보장하는 게 바로 '교차 출처 읽기 차단'이니까요. 쿠키에 토큰을 두고 헤더로 같은 값을 함께 보내 일치를 확인하는 <b>이중 제출(double-submit)</b> 방식은 서버 상태 없이도 됩니다.</p>
+<p>막는 방법은 두 겹입니다. 첫째는 <b>CSRF 토큰</b>입니다. 서버가 예측 불가능한 토큰을 발급해 같은 출처 코드만 읽을 수 있는 곳에 심어 두고, 상태 변경 요청마다 그 토큰을 되돌려받아 검증합니다. 공격자는 이 토큰을 <b>읽을 수 없습니다</b> — 같은 출처 정책이 유일하게 확실히 보장하는 게 바로 '교차 출처 읽기 차단'이니까요. 쿠키에 토큰을 두고 헤더로 같은 값을 함께 보내 일치를 확인하는 <b><span class="term" title="같은 토큰을 쿠키와 헤더 양쪽에 실어 두 값이 같은지 대조하는 검증 방식">이중 제출(double-submit)</span></b> 방식은 서버 상태 없이도 됩니다.</p>
 <p>둘째는 <b>SameSite 쿠키</b>입니다. <code>SameSite=Lax</code>(요즘 브라우저 기본값)는 교차 사이트에서 날아온 POST 같은 하위요청에 쿠키를 빼고 보냅니다 — 위조된 교차 사이트 POST가 세션 쿠키를 잃으니 고전적 CSRF가 대부분 무력화됩니다. <code>Strict</code>는 아예 교차 사이트에 안 보내고(로그인 복귀 흐름이 깨질 수 있음), <code>None</code>은 항상 보내되 <code>Secure</code>가 필수입니다.</p>
 <pre class="code"><span class="c">// 세션 쿠키: 브라우저 단에서 자동 첨부를 1차로 통제한다</span>
 res.<span class="f">cookie</span>(<span class="s">'sid'</span>, sessionId, {

@@ -56,6 +56,22 @@
   <article class="post-body" id="body">
     <p class="lead">다섯 곳에 흩어진 정산 로직을 한 곳으로 모으고 나니 다음 질문이 따라왔습니다. <b>정산 저장과 이력 저장은 같이 롤백되어야 하는가?</b> 답은 <code>@Transactional</code>의 전파(propagation) 옵션이 정하는데, 문서만 읽어서는 커밋·롤백 경계가 눈에 안 보입니다. REQUIRED · REQUIRES_NEW · NESTED 세 옵션을 실험 코드와 로그로 확인합니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>트랜잭션<span class="en">Transaction</span></dt>
+    <dd>여러 DB 작업을 하나로 묶어 <b>전부 성공하거나 전부 취소</b>하는 단위입니다. 계좌 이체에서 "출금과 입금은 함께 이뤄지거나 둘 다 없던 일이 돼야 한다"는 규칙이 트랜잭션이에요. 이 글은 그 "묶음의 경계"를 어디에 그을지를 다룹니다.</dd>
+    <dt>커밋 · 롤백<span class="en">Commit · Rollback</span></dt>
+    <dd>커밋은 지금까지의 변경을 <b>확정 저장</b>하는 것, 롤백은 <b>없던 일로 되돌리는</b> 것입니다. 트랜잭션은 반드시 이 둘 중 하나로 끝납니다. 이 글의 핵심 질문 "정산과 이력이 같이 롤백되는가"가 바로 이 경계 이야기입니다.</dd>
+    <dt>전파<span class="en">Propagation</span></dt>
+    <dd>트랜잭션이 걸린 메서드가 또 다른 트랜잭션 메서드를 호출할 때, 두 번째가 <b>기존 트랜잭션에 참여할지 · 새로 열지 · 중첩할지</b>를 정하는 규칙입니다. REQUIRED / REQUIRES_NEW / NESTED가 바로 이 선택지고, 롤백 경계가 여기서 갈립니다.</dd>
+    <dt>프록시 기반 AOP<span class="en">Proxy-based AOP</span></dt>
+    <dd>스프링은 원본 객체를 <b>얇게 감싼 대리인(프록시)</b>을 만들어, 트랜잭션을 열고 닫는 코드를 그 대리인이 대신 실행합니다. 그래서 같은 클래스 안에서 <code>this.메서드()</code>로 직접 부르면 대리인을 건너뛰어 트랜잭션 설정이 무시됩니다(6장의 함정).</dd>
+    <dt>세이브포인트<span class="en">Savepoint</span></dt>
+    <dd>하나의 트랜잭션 안에 찍어 두는 <b>중간 저장 지점</b>입니다. 문제가 생기면 처음까지 다 되돌리지 않고 이 지점까지만 부분 롤백할 수 있어요. NESTED 옵션이 이 기능을 쓰는데, JPA에서는 지원되지 않는다는 게 5장의 벽입니다.</dd>
+  </dl>
+</div>
+
 <h2>1. 전파는 "경계를 어떻게 이어붙일 것인가"의 문제</h2>
 <p><code>@Transactional</code> 메서드가 또 다른 <code>@Transactional</code> 메서드를 호출할 때, 두 번째 메서드가 첫 번째의 트랜잭션에 <b>참여할지, 새로 만들지, 중첩할지</b>를 정하는 규칙이 전파 옵션입니다. 이때 두 개념을 구분해야 사고가 정리됩니다.</p>
 <p><b>논리 트랜잭션</b>은 <code>@Transactional</code> 스코프 하나하나이고, <b>물리 트랜잭션</b>은 실제 DB 커넥션 위에서 도는 <code>BEGIN … COMMIT</code>입니다. REQUIRED는 여러 논리 트랜잭션을 하나의 물리 트랜잭션에 태우고, REQUIRES_NEW는 물리 트랜잭션을 하나 더 만듭니다. 롤백 관련 사고는 대부분 이 둘을 혼동할 때 생깁니다.</p>
@@ -122,7 +138,7 @@ JpaTransactionManager : <span class="k">Resuming suspended transaction</span> af
 <div class="callout"><span class="mark">*</span><p>REQUIRES_NEW는 바깥 커넥션을 반납하지 않은 채 <b>커넥션을 하나 더</b> 잡습니다. 요청 하나가 커넥션 두 개를 점유하므로, 풀 크기가 빠듯하면 서로가 서로의 반납을 기다리는 교착으로 풀이 말라붙을 수 있습니다. REQUIRES_NEW를 늘릴 때는 HikariCP <code>maximum-pool-size</code>를 같이 봐야 합니다.</p></div>
 
 <h2>5. NESTED — 세이브포인트, 그리고 JPA의 벽</h2>
-<p>NESTED는 새 물리 트랜잭션을 만들지 않습니다. 대신 바깥 물리 트랜잭션 안에 JDBC <b>세이브포인트</b>를 찍고, 안쪽이 실패하면 그 지점까지만 부분 롤백합니다. 안쪽이 성공해도 독립 커밋은 없고, 최종 커밋은 바깥과 함께 일어납니다. "안쪽 실패가 바깥을 죽이면 안 되지만, 바깥이 죽으면 안쪽도 같이 사라져야 한다"는 요구에 정확히 맞는 옵션입니다.</p>
+<p>NESTED는 새 물리 트랜잭션을 만들지 않습니다. 대신 바깥 물리 트랜잭션 안에 JDBC <span class="term" title="트랜잭션 중간에 찍어 두는 저장 지점 — 여기까지만 부분 롤백할 수 있다"><b>세이브포인트</b></span>를 찍고, 안쪽이 실패하면 그 지점까지만 부분 롤백합니다. 안쪽이 성공해도 독립 커밋은 없고, 최종 커밋은 바깥과 함께 일어납니다. "안쪽 실패가 바깥을 죽이면 안 되지만, 바깥이 죽으면 안쪽도 같이 사라져야 한다"는 요구에 정확히 맞는 옵션입니다.</p>
 <p>다만 JPA에서는 벽에 부딪힙니다. <code>JpaTransactionManager</code>는 세이브포인트 기반 중첩 트랜잭션을 지원하지 않아서, NESTED를 걸면 시작조차 못 하고 예외가 납니다.</p>
 <pre class="code"><span class="k">@Transactional</span>(propagation = Propagation.<span class="k">NESTED</span>)
 <span class="k">public void</span> <span class="f">record</span>(Order order) { .. }
@@ -148,7 +164,7 @@ NestedTransactionNotSupportedException:
     historyRepository.save(History.of(order));  <span class="c">// 그냥 REQUIRED처럼 동작</span>
   }
 }</pre>
-<p><code>@Transactional</code>은 프록시 기반 AOP입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 있는데, 같은 클래스 안에서의 <code>this.record()</code> 호출은 프록시를 우회해 원본 객체로 직행합니다. 그래서 <code>record()</code>의 전파 설정은 <b>조용히 무시되고</b>, 호출자의 트랜잭션에 그대로 묻어갑니다. 예외도 로그도 없이 의도와 다르게 동작하니 알아채기 어렵습니다. 해법은 위 실험처럼 <b>별도 빈으로 분리</b>하거나, 경계를 코드로 직접 긋는 <code>TransactionTemplate</code>을 쓰는 것입니다.</p>
+<p><code>@Transactional</code>은 <span class="term" title="원본 객체를 감싼 대리인이 트랜잭션을 대신 열고 닫는 방식">프록시 기반 AOP</span>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 있는데, 같은 클래스 안에서의 <code>this.record()</code> 호출은 프록시를 우회해 원본 객체로 직행합니다. 그래서 <code>record()</code>의 전파 설정은 <b>조용히 무시되고</b>, 호출자의 트랜잭션에 그대로 묻어갑니다. 예외도 로그도 없이 의도와 다르게 동작하니 알아채기 어렵습니다. 해법은 위 실험처럼 <b>별도 빈으로 분리</b>하거나, 경계를 코드로 직접 긋는 <code>TransactionTemplate</code>을 쓰는 것입니다.</p>
 <div class="callout"><span class="mark">*</span><p>전파 옵션은 기술이 아니라 업무 요구가 정합니다. "이력은 정산이 실패해도 남아야 하는가?"에 답할 수 있어야 옵션을 고를 수 있습니다 — 같이 죽어야 하면 <b>REQUIRED</b>, 바깥과 무관하게 남아야 하면 <b>REQUIRES_NEW</b>, 부분 롤백이 필요하고 JDBC라면 <b>NESTED</b>.</p></div>
     <div class="post-tags">
       <span class="pt-head">태그</span>

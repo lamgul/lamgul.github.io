@@ -56,6 +56,22 @@
   <article class="post-body" id="body">
     <p class="lead">지금 보고 계신 이 포트폴리오 자체가 하나의 프로젝트였습니다. 프레임워크 없이 짜고 GitHub Pages까지 올리는 동안, 예상 못 한 벽에 다섯 번 부딪혔습니다. 전부 커밋 이력에 흉터로 남아 있어서, 기억이 아니라 <a href="https://github.com/lamgul/lamgul.github.io" target="_blank" rel="noopener">기록</a>으로 씁니다. 증상 → 원인 → 해결 → 교훈 순으로.</p>
 
+    <div class="concept">
+      <span class="c-head">먼저 짚고 가기</span>
+      <dl>
+        <dt>가변폰트<span class="en">Variable Font</span></dt>
+        <dd>굵기·기울기 같은 성질을 슬라이더처럼 무단계로 조절할 수 있는 한 개의 폰트 파일입니다. 예전엔 Bold·Italic을 각각 다른 파일로 받았지만, 가변폰트는 이 값들을 "축(axis)"으로 담아 하나로 묶습니다. 첫 번째 벽이 바로 이 축들을 다루다 생긴 일입니다.</dd>
+        <dt>가변폰트의 축<span class="en">axis</span></dt>
+        <dd>가변폰트가 조절 가능한 성질 하나하나를 축이라고 부릅니다. 무게(wght), 기울기(slnt)처럼 네 글자 이름을 갖습니다. <code>font-variation-settings</code>는 이 축들을 CSS에서 지정하는 속성인데, 여기 적지 않은 축은 기본값으로 되돌아갑니다.</dd>
+        <dt>베지어 곡선<span class="en">Bézier curve</span></dt>
+        <dd>몇 개의 점(끝점과 방향을 잡아 주는 조절점)만으로 매끈한 곡선을 정의하는 방식입니다. 폰트 외곽선부터 그래픽 편집기의 펜 도구까지 널리 쓰입니다. 두 번째 벽에서 다루기 까다로운 SVG arc 대신 이 곡선을 골랐습니다.</dd>
+        <dt>타입 검사기<span class="en">tsc, TypeScript</span></dt>
+        <dd>코드를 실행하기 전에 "이 변수에 엉뚱한 값이 들어갈 수 있는지"를 미리 훑어 주는 도구입니다. <code>tsc --noEmit</code>은 결과물을 만들지 않고 검사만 합니다. 세 번째 벽에서 실제로 터질 뻔한 버그를 배포 전에 잡아 줬습니다.</dd>
+        <dt>IntersectionObserver</dt>
+        <dd>어떤 요소가 화면(뷰포트)에 들어왔는지를 브라우저가 대신 감시해 알려 주는 기능입니다. 스크롤하면 나타나는 애니메이션을 만들 때 씁니다. 다섯 번째 벽은 이 감시 대상을 "언제 수집하는가"라는 타이밍에서 생겼습니다.</dd>
+      </dl>
+    </div>
+
     <h2>① 슬라이더를 움직였더니 다른 축이 리셋됐다</h2>
     <p><b>증상.</b> <a href="../projects/type-playground/">활자 실험실</a>에서 무게(weight)를 바꿨더니, 방금 조절해 둔 기울기(slant)가 슬그머니 0으로 돌아갔습니다.</p>
     <p><b>원인.</b> <code>font-variation-settings</code>는 <b>명시하지 않은 축을 전부 기본값으로 되돌립니다</b>. <code>"wght" 700</code>만 넣으면 나머지 축은 "리셋해라"라는 뜻이 됩니다.</p>
@@ -67,7 +83,7 @@
     <h2>② SVG arc의 sweep 플래그와 두 번 싸웠다</h2>
     <p><b>증상.</b> <a href="../projects/rail/">정규식 철길</a>에서 분기 레일을 SVG <code>arc</code>(<code>a</code> 명령)로 그렸더니, 곡선이 엉뚱한 방향으로 감겼습니다. 방향을 바꾸면 이번엔 반대쪽이 뒤집혔습니다.</p>
     <p><b>원인.</b> arc의 <code>large-arc-flag</code>와 <code>sweep-flag</code>는 네 방향 회전마다 조합이 달라지는데, 화면 좌표계(y가 아래로 증가)까지 겹쳐 머릿속 계산이 계속 어긋났습니다.</p>
-    <p><b>해결.</b> arc를 버리고 <b>끝점 두 개로 큐빅 베지어</b>를 뽑았습니다. 수평 접선을 준 S자 곡선이라 방향 계산이 아예 필요 없어졌습니다.</p>
+    <p><b>해결.</b> arc를 버리고 <b>끝점 두 개로 큐빅 <span class="term" title="몇 개의 점으로 매끈한 곡선을 정의하는 방식">베지어</span></b>를 뽑았습니다. 수평 접선을 준 S자 곡선이라 방향 계산이 아예 필요 없어졌습니다.</p>
     <pre class="code"><span class="k">const</span> mx = (x1 + x2) / 2;
 <span class="k">return</span> <span class="s">`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`</span>;</pre>
     <blockquote>도구가 자꾸 나를 이기면, 더 단순한 도구를 안 찾아본 것일 수도 있다.</blockquote>
@@ -93,7 +109,7 @@ opts.reduce&lt;Option | undefined&gt;((a, b) =&gt; !a || b.votes &gt; a.votes ? 
 
     <h2>⑤ 통계 타일이 화면에 안 나타났다</h2>
     <p><b>증상.</b> <a href="../projects/commit-rhythm/">새벽의 커밋</a>의 요약 숫자 타일들이 투명하게 사라진 채였습니다. 다른 카드는 멀쩡한데 이것들만.</p>
-    <p><b>원인.</b> 스크롤 등장 애니메이션은 <code>IntersectionObserver</code>가 <code>.reveal</code> 요소를 초기화 시점에 한 번 수집합니다. 그런데 이 타일들은 <code>fetch</code>로 데이터를 받은 <b>뒤에 JS로 생성</b>돼서, 옵저버가 이미 훑고 지나간 뒤였습니다. 관찰되지 않으니 영영 <code>opacity: 0</code>.</p>
+    <p><b>원인.</b> 스크롤 등장 애니메이션은 <span class="term" title="요소가 화면에 들어왔는지 브라우저가 대신 감시해 알려 주는 기능"><code>IntersectionObserver</code></span>가 <code>.reveal</code> 요소를 초기화 시점에 한 번 수집합니다. 그런데 이 타일들은 <code>fetch</code>로 데이터를 받은 <b>뒤에 JS로 생성</b>돼서, 옵저버가 이미 훑고 지나간 뒤였습니다. 관찰되지 않으니 영영 <code>opacity: 0</code>.</p>
     <p><b>해결.</b> 나중에 만들어지는 요소에는 <code>.reveal</code>을 붙이지 않고 바로 보이게 했습니다. 근본적으론 동적 요소를 옵저버에 다시 등록하는 방법도 있지만, 이 경우엔 애니메이션을 포기하는 게 더 정직했습니다.</p>
     <p><b>교훈.</b> "선언적으로 한 번 수집"하는 패턴은 <b>DOM이 시간에 따라 자라날 때</b> 조용히 어긋납니다. 정적 마크업엔 완벽했던 코드가, 비동기 렌더 앞에서 반쪽이 됐습니다.</p>
 

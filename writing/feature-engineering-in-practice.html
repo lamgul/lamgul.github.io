@@ -56,8 +56,24 @@
   <article class="post-body" id="body">
     <p class="lead">같은 데이터, 같은 모델이라도 순위를 가르는 건 <b>데이터를 어떻게 이해했는가</b>였습니다. "다 넣으면 되겠지"로 시작했다가, EDA를 하며 생각이 완전히 바뀐 이야기입니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>EDA<span class="en">Exploratory Data Analysis</span></dt>
+    <dd>본격적으로 모델을 만들기 전에 데이터를 그래프로 그려 보고 이리저리 뜯어보며 성격을 파악하는 단계입니다. 처음 만난 사람과 대화해 보며 성향을 알아가는 것과 비슷합니다. 이 글에서 "다 넣으면 되겠지"라는 생각이 뒤집힌 것도 바로 이 EDA 덕분입니다.</dd>
+    <dt>상관계수<span class="en">correlation, r</span></dt>
+    <dd>두 값이 얼마나 나란히 움직이는지를 −1에서 1 사이 숫자로 나타낸 것입니다. 1에 가까울수록 한쪽이 오를 때 다른 쪽도 같이 오릅니다. 다만 함께 움직인다고 해서 한쪽이 다른 쪽의 <b>원인</b>이라는 뜻은 아닙니다. 이 글에서 기온과 전력사용량의 r≈0.85가 그 예입니다.</dd>
+    <dt>다중공선성<span class="en">multicollinearity</span></dt>
+    <dd>모델에 넣는 입력 변수들끼리 서로 너무 닮아서 겹치는 상태입니다. 같은 이야기를 하는 사람을 회의에 여럿 부른 셈이라, 누구 말이 진짜 영향을 준 건지 구분이 어려워집니다. 그래서 각 변수의 계수(영향력)가 불안정해지고 해석이 흔들립니다.</dd>
+    <dt>VIF<span class="en">Variance Inflation Factor</span></dt>
+    <dd>다중공선성이 얼마나 심한지를 변수별로 재는 점수입니다. 보통 10을 넘으면 "겹침이 심하다"는 경고 신호로 봅니다. 눈대중이 아니라 숫자로 문제를 짚어 주기 때문에 어떤 변수를 손봐야 할지 판단하는 근거가 됩니다.</dd>
+    <dt>파생변수<span class="en">derived feature</span></dt>
+    <dd>원본 데이터를 그대로 쓰지 않고 조합·가공해 새로 만든 변수입니다. 기온과 습도를 합쳐 만든 불쾌지수처럼요. 이 글의 핵심은 바로 이 파생변수를 도메인 지식으로 잘 만드는 일이 모델 선택보다 순위를 크게 좌우했다는 것입니다.</dd>
+  </dl>
+</div>
+
 <h2>상관은 신호이자 함정</h2>
-<p>기온은 전력사용량과 강한 상관(r≈0.85), 강수량은 거의 무관(r≈0.12)이었습니다. 여기까지는 쉽습니다. 함정은 <b>기온·습도·풍속이 서로도 강하게 상관</b>한다는 것 — 다중공선성입니다. 이걸 그대로 넣으면 계수가 불안정해지고 해석이 무너집니다.</p>
+<p>기온은 전력사용량과 강한 상관(r≈0.85), 강수량은 거의 무관(r≈0.12)이었습니다. 여기까지는 쉽습니다. 함정은 <b>기온·습도·풍속이 서로도 강하게 상관</b>한다는 것 — <span class="term" title="입력 변수들끼리 서로 너무 닮아 겹치는 상태">다중공선성</span>입니다. 이걸 그대로 넣으면 계수가 불안정해지고 해석이 무너집니다.</p>
 <pre class="code"><span class="c"># VIF로 다중공선성을 수치로 확인</span>
 <span class="k">from</span> statsmodels.stats.outliers_influence <span class="k">import</span> variance_inflation_factor
 vif = [variance_inflation_factor(X.values, i) <span class="k">for</span> i <span class="k">in</span> range(X.shape[<span class="s">1</span>])]

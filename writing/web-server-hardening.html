@@ -54,7 +54,23 @@
   </section>
 
   <article class="post-body" id="body">
-    <p class="lead">보안 감사의 첫 지적은 "서버 버전이 응답 헤더에 노출된다"였습니다. 사소해 보였지만, 공격자에게 <b>정확한 버전을 알려주는 건 CVE 목록을 손에 쥐여주는 것</b>과 같습니다. 그 일을 계기로 정리한 체크리스트입니다.</p>
+    <p class="lead">보안 감사의 첫 지적은 "서버 버전이 응답 헤더에 노출된다"였습니다. 사소해 보였지만, 공격자에게 <b>정확한 버전을 알려주는 건 <span class="term" title="공개적으로 알려진 보안 취약점에 붙는 고유 번호">CVE</span> 목록을 손에 쥐여주는 것</b>과 같습니다. 그 일을 계기로 정리한 체크리스트입니다.</p>
+
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>응답 헤더<span class="en">Response Header</span></dt>
+    <dd>서버가 웹 요청에 답할 때 본문(화면 내용) 앞에 붙여 보내는 짧은 부가 정보입니다. 편지로 치면 내용물이 아니라 봉투에 적힌 메모에 가깝습니다. 여기에 서버 종류·버전 같은 정보가 무심코 담겨 나가는 게 이 글의 출발점입니다.</dd>
+    <dt>CVE<span class="en">Common Vulnerabilities and Exposures</span></dt>
+    <dd>공개적으로 알려진 보안 취약점 하나하나에 붙는 전 세계 공통 번호표입니다. 서버 버전이 노출되면 공격자는 "그 버전에 해당하는 CVE"를 목록에서 바로 찾아 공격할 수 있어, 버전 숨기기가 첫 번째 방어가 됩니다.</dd>
+    <dt>HSTS<span class="en">HTTP Strict Transport Security</span></dt>
+    <dd>"앞으로 이 사이트는 반드시 암호화된 HTTPS로만 접속하라"고 브라우저에 못 박는 규칙입니다. 중간에서 통신을 가로채 평문(HTTP)으로 유도하는 공격을 막아 줍니다.</dd>
+    <dt>CSP<span class="en">Content Security Policy</span></dt>
+    <dd>페이지가 어떤 출처의 스크립트·이미지만 불러올 수 있는지 정해 두는 허용 목록입니다. 공격자가 몰래 심은 악성 스크립트 실행을 막지만, 잘못 설정하면 정상 자원까지 막혀 화면이 깨지므로 조심스럽게 도입합니다.</dd>
+    <dt>TLS<span class="en">Transport Layer Security</span></dt>
+    <dd>인터넷 통신을 암호화해 도청·변조를 막는 기술로, HTTPS의 자물쇠를 담당합니다. 오래된 버전(1.0·1.1)에는 알려진 약점이 있어 1.2 이상만 허용하는 것이 권장됩니다.</dd>
+  </dl>
+</div>
 
 <h2>1. 나를 소개하지 않기</h2>
 <pre class="code"><span class="c"># Apache — Server 헤더에서 버전 제거</span>
@@ -72,7 +88,7 @@ X-Content-Type-Options: nosniff
 X-Frame-Options: DENY            <span class="c"># 클릭재킹 방지</span>
 Referrer-Policy: strict-origin-when-cross-origin
 Content-Security-Policy: default-src 'self'   <span class="c"># 점진 도입</span></pre>
-<p>CSP는 강력하지만 잘못 넣으면 화면이 깨집니다. <code>Content-Security-Policy-Report-Only</code>로 먼저 위반을 <b>수집만</b> 하다가, 리포트가 깨끗해지면 강제로 전환하는 게 안전합니다.</p>
+<p><span class="term" title="불러올 수 있는 스크립트·자원의 출처를 제한하는 보안 정책">CSP</span>는 강력하지만 잘못 넣으면 화면이 깨집니다. <code>Content-Security-Policy-Report-Only</code>로 먼저 위반을 <b>수집만</b> 하다가, 리포트가 깨끗해지면 강제로 전환하는 게 안전합니다.</p>
 
 <h2>3. 표면 줄이기</h2>
 <ul>

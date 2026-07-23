@@ -56,6 +56,22 @@
   <article class="post-body" id="body">
     <p class="lead">한동안 오전에는 Spring으로 정산 모듈을 만지고, 오후에는 FastAPI로 크롤링 파이프라인과 vLLM 게이트웨이를 짰습니다. 두 세계를 오갈 때 진짜 비용은 문법이 아니라 <b>머릿속 모델을 갈아 끼우는 일</b>이었습니다. 둘 다 의존성 주입·검증·트랜잭션이라는 같은 문제를 푸는데, 방향이 정반대입니다 — 한쪽은 <b>컨테이너</b>로, 한쪽은 <b>함수 시그니처</b>로. 이 노트는 같은 REST 엔드포인트를 양쪽으로 구현해 그 철학 차이를 비교하고, 제가 DI의 뿌리를 이해하게 해준 『토비의 스프링』을 그 렌즈로 다시 읽습니다. 어느 쪽이 낫다가 아니라, 언제 무엇을 고르느냐의 이야기입니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>의존성 주입<span class="en">Dependency Injection, DI</span></dt>
+    <dd>어떤 객체가 필요로 하는 다른 객체를 <b>스스로 만들지 않고 밖에서 받아 쓰는</b> 방식입니다. 요리사가 재료를 직접 밭에서 기르지 않고 배달받는 것과 비슷합니다. 이 글은 Spring과 FastAPI가 이 '재료 배달'을 각각 어떻게 하는지를 축으로 삼습니다.</dd>
+    <dt>DTO<span class="en">Data Transfer Object</span></dt>
+    <dd>계층 사이에서 데이터를 실어 나르기 위한 전용 상자 객체입니다. 요청용(<code>RegisterWorker</code>)과 응답용(<code>WorkerResponse</code>)을 나눠 두면, 받는 데이터와 돌려주는 데이터의 모양을 따로 관리할 수 있어 안전합니다.</dd>
+    <dt>트랜잭션<span class="en">Transaction</span></dt>
+    <dd>여러 DB 작업을 <b>하나로 묶어 전부 성공하거나 전부 취소되게</b> 하는 단위입니다. 계좌 이체에서 출금과 입금이 함께 성사되어야 하는 것과 같습니다. 두 프레임워크가 이 '묶는 경계'를 어디에 긋느냐가 5장의 주제입니다.</dd>
+    <dt>이벤트 루프<span class="en">Event Loop</span></dt>
+    <dd>한 명의 일꾼이 여러 일을 번갈아 처리하는 방식입니다. 어떤 일이 응답을 <b>기다리는 동안</b> 놀지 않고 다른 일을 처리하다가, 답이 오면 다시 이어서 합니다. 여러 서버에 동시에 요청을 뿌리고 기다리는 작업에서 힘을 발휘합니다.</dd>
+    <dt>프록시<span class="en">Proxy</span></dt>
+    <dd>진짜 객체를 <b>감싸서 대신 받는 대리인</b> 객체입니다. 요청이 진짜 객체에 닿기 전에 프록시가 먼저 가로채 트랜잭션 열기 같은 부가 작업을 몰래 끼워 넣습니다. Spring의 <code>@Transactional</code>이 이 원리로 동작합니다.</dd>
+  </dl>
+</div>
+
 <h2>1. 같은 엔드포인트, 두 개의 세계</h2>
 <p>비교를 추상적으로 하면 끝이 없으니 하나의 엔드포인트에 못 박겠습니다. 산업안전 시스템에서 흔한 <b>근로자 등록</b> — 요청을 검증하고, 서비스가 저장하고, 결과를 돌려주는 POST입니다. 먼저 Spring입니다.</p>
 <pre class="code"><span class="k">@RestController</span>
@@ -114,7 +130,7 @@ app = FastAPI()
 <p>두 코드는 겉으로 놀랍도록 닮았습니다. <b>검증 → 서비스 → 저장 → 응답</b>이라는 뼈대가 같고, 요청 DTO와 응답 DTO를 나눈 것도 같습니다. 차이는 눈에 보이는 코드가 아니라 <b>조각들이 언제, 어떻게 조립되는가</b>에 있습니다. Spring은 시작할 때 컨테이너가 그래프를 통째로 엮어 싱글턴으로 세워 두고, FastAPI는 요청이 올 때마다 함수 시그니처를 읽어 그 요청만의 조각을 맞춥니다. 이 한 문장의 차이가 DI·검증·비동기·트랜잭션 전부로 번집니다. 하나씩 보겠습니다.</p>
 
 <h2>2. 컨테이너 대 시그니처</h2>
-<p>Spring의 세계는 <b>컨테이너</b>가 중심입니다. <code>@Service</code>·<code>@Repository</code>가 붙은 클래스를 애플리케이션이 뜰 때 스캔해 <code>ApplicationContext</code>가 객체 그래프를 통째로 엮고, 대부분 싱글턴으로 한 번만 만들어 재사용합니다. 객체의 생성과 조립·수명을 전부 컨테이너가 소유하고, 내 코드는 생성자로 받기만 합니다. FastAPI에는 그런 전역 컨테이너가 없습니다. <code>Depends</code>가 <b>요청이 올 때마다</b> 핸들러의 시그니처를 읽어 그 요청만의 의존성 트리를 그때그때 조립합니다. 같은 DI인데 <b>미리 통째로</b>와 <b>매번 그때그때</b>로 갈립니다.</p>
+<p>Spring의 세계는 <b>컨테이너</b>가 중심입니다. <code>@Service</code>·<code>@Repository</code>가 붙은 클래스를 애플리케이션이 뜰 때 스캔해 <code>ApplicationContext</code>가 객체 그래프를 통째로 엮고, 대부분 <span class="term" title="애플리케이션 전체에서 딱 하나만 만들어 공유하는 객체">싱글턴</span>으로 한 번만 만들어 재사용합니다. 객체의 생성과 조립·수명을 전부 컨테이너가 소유하고, 내 코드는 생성자로 받기만 합니다. FastAPI에는 그런 전역 컨테이너가 없습니다. <code>Depends</code>가 <b>요청이 올 때마다</b> 핸들러의 시그니처를 읽어 그 요청만의 의존성 트리를 그때그때 조립합니다. 같은 DI인데 <b>미리 통째로</b>와 <b>매번 그때그때</b>로 갈립니다.</p>
 <p>이 차이를 원리로 이해하게 된 건 『토비의 스프링』 덕이었습니다. 1권은 스프링 문법으로 시작하지 않습니다. <code>UserDao</code> 하나가 <b>직접 DB 커넥션을 만드는</b> 평범한 코드에서 출발해, '이게 왜 문제인가'를 집요하게 파고듭니다.</p>
 <pre class="code"><span class="c">// 출발점: UserDao가 커넥션 만드는 법을 "직접" 안다 — 강하게 결합돼 있다</span>
 <span class="k">public class</span> <span class="f">UserDao</span> {
@@ -137,7 +153,7 @@ app = FastAPI()
 <p>그 렌즈를 끼고 FastAPI를 보면 <code>Depends</code>가 더 이상 낯선 마법이 아닙니다. 컨테이너가 생성자를 읽어 조립하던 일을, FastAPI는 <code>inspect</code>로 함수 시그니처를 읽어 요청 단위로 할 뿐입니다. '사용하는 쪽은 만들지 않는다'는 원리는 똑같고, <b>조립도를 어디에 적는가</b>만 다릅니다 — 컨테이너라는 한 곳에 모으느냐, 시그니처마다 흩뿌리느냐. 이 이야기의 실전은 따로 정리해 두었으니 여기서는 원리만 짚고 넘어갑니다.</p>
 
 <h2>3. 검증 — 애너테이션 대 타입</h2>
-<p>Spring에서 검증은 <b>횡단 관심사</b>입니다. DTO에 <code>@NotBlank</code>·<code>@Email</code> 같은 Bean Validation 애너테이션으로 규칙을 선언하면, 이미 만들어진 객체를 프레임워크가 <code>@Valid</code> 시점에 훑어 규칙을 적용합니다. 실패하면 <code>MethodArgumentNotValidException</code>이 튀고, 보통 <code>@RestControllerAdvice</code>에서 공통으로 400으로 변환합니다. 검증이 <b>객체 생성과 별개의 단계</b>이고, 실패 처리도 별도의 자리에서 이뤄지는 구조입니다.</p>
+<p>Spring에서 검증은 <b><span class="term" title="여러 기능에 공통으로 걸치는 부가 관심사(검증·로깅·보안 등)">횡단 관심사</span></b>입니다. DTO에 <code>@NotBlank</code>·<code>@Email</code> 같은 Bean Validation 애너테이션으로 규칙을 선언하면, 이미 만들어진 객체를 프레임워크가 <code>@Valid</code> 시점에 훑어 규칙을 적용합니다. 실패하면 <code>MethodArgumentNotValidException</code>이 튀고, 보통 <code>@RestControllerAdvice</code>에서 공통으로 400으로 변환합니다. 검증이 <b>객체 생성과 별개의 단계</b>이고, 실패 처리도 별도의 자리에서 이뤄지는 구조입니다.</p>
 <p>Pydantic의 태도는 정반대입니다. <b>타입 자체가 검증기</b>입니다. 파싱과 검증이 같은 행위라서, 모델이 만들어졌다는 것은 이미 규칙을 통과했다는 뜻입니다. 잘못된 입력은 모델 생성 단계에서 걸려 <b>내 함수 본문에 도달조차 못 합니다</b> — FastAPI는 그 실패를 자동으로 422로 돌려주고, 저는 예외 핸들러도 <code>@Valid</code> 같은 트리거도 쓰지 않았습니다. 도메인 규칙까지 타입 안에 넣을 수 있습니다.</p>
 <pre class="code"><span class="k">from</span> pydantic <span class="k">import</span> field_validator
 
@@ -167,7 +183,7 @@ app = FastAPI()
 <div class="callout"><span class="mark">*</span><p>FastAPI에서 <code>async def</code> 핸들러는 이벤트 루프에서, 평범한 <code>def</code> 핸들러는 스레드풀에서 돕니다. 그래서 <b>동기 블로킹 드라이버를 <code>async def</code> 안에서 부르면</b> 루프 전체가 그 시간만큼 멈춰, 무관한 다른 요청까지 함께 느려집니다. 비동기로 갈 거면 드라이버도 끝까지 비동기여야 하고, 어중간하면 차라리 <code>def</code>로 두어 스레드풀에 맡기는 편이 안전합니다.</p></div>
 
 <h2>5. 트랜잭션 — 선언 대 명시</h2>
-<p>트랜잭션 경계를 긋는 방식에서 두 프레임워크의 성격이 가장 선명하게 드러납니다. Spring의 <code>@Transactional</code>은 <b>프록시 기반 AOP</b>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 숨어 있고, 메서드 본문에는 <b>경계가 보이지 않습니다</b>. 보일러플레이트가 사라지는 대신, 어디서 트랜잭션이 시작되고 끝나는지가 애너테이션 뒤로 감춰집니다.</p>
+<p>트랜잭션 경계를 긋는 방식에서 두 프레임워크의 성격이 가장 선명하게 드러납니다. Spring의 <code>@Transactional</code>은 <b>프록시 기반 AOP</b>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 숨어 있고, 메서드 본문에는 <b>경계가 보이지 않습니다</b>. <span class="term" title="매번 똑같이 반복해서 써야 하는 상투적인 준비·마무리 코드">보일러플레이트</span>가 사라지는 대신, 어디서 트랜잭션이 시작되고 끝나는지가 애너테이션 뒤로 감춰집니다.</p>
 <pre class="code"><span class="c">// Spring: 경계가 애너테이션 뒤에 숨는다 — 프록시가 열고 닫는다</span>
 <span class="k">@Transactional</span>
 <span class="k">public</span> WorkerResponse <span class="f">register</span>(RegisterWorker req) {

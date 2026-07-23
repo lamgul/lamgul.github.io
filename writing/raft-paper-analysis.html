@@ -56,12 +56,28 @@
   <article class="post-body" id="body">
     <p class="lead">합의(consensus)는 분산 시스템의 심장인데, 오랫동안 그 표준이던 Paxos는 <b>배우는 것 자체가 고통</b>이었습니다. Diego Ongaro와 John Ousterhout의 2014년 논문 <em>In Search of an Understandable Consensus Algorithm</em>은 여기에 정면으로 반기를 듭니다. 성능도, 새로운 보장도 아닌 <b>이해 가능성(understandability)을 1급 설계 목표</b>로 놓은 드문 논문입니다. 핵심 메커니즘인 리더 선출과 로그 복제를 실행 가능한 미니 코드로 재현하며 읽어봤습니다.</p>
 
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>합의<span class="en">consensus</span></dt>
+    <dd>여러 대의 서버가 흩어져 있어도 "값 하나"에 다 같이 동의하게 만드는 것입니다. 한 명이 죽거나 네트워크가 끊겨도 나머지가 같은 답을 유지해야 하죠. 이 글이 다루는 Raft가 바로 이 합의를 이루는 절차입니다.</dd>
+    <dt>임기<span class="en">term</span></dt>
+    <dd>한 리더가 다스리는 기간에 붙는 번호로, 1·2·3처럼 계속 커지기만 합니다. 시계 대신 쓰는 순번이라 보면 됩니다. "누가 더 최신인가"를 term 숫자만 비교해 가리므로 낡은 서버를 걸러내는 기준이 됩니다.</dd>
+    <dt>로그 복제<span class="en">log replication</span></dt>
+    <dd>리더가 받은 명령들을 순서대로 적은 목록(로그)을, 나머지 서버에도 똑같이 베껴 넣는 일입니다. 모두가 같은 명령을 같은 순서로 실행해야 서버들의 상태가 일치하기 때문에 합의의 실제 알맹이가 됩니다.</dd>
+    <dt>상태 머신<span class="en">state machine</span></dt>
+    <dd>같은 입력을 같은 순서로 넣으면 늘 같은 결과가 나오는 계산 모형입니다. 그래서 모든 서버에 똑같은 로그만 흘려주면 상태도 저절로 같아집니다 — Raft가 로그 순서에 집착하는 이유입니다.</dd>
+    <dt>커밋<span class="en">commit</span></dt>
+    <dd>어떤 명령이 서버 과반에 안전하게 복제되어, 이제 되돌리지 않기로 "확정"된 상태입니다. 커밋된 명령만 실제로 실행하기 때문에, 리더가 갑자기 바뀌어도 확정된 결과는 사라지지 않습니다.</dd>
+  </dl>
+</div>
+
 <h2>1. 이해 가능성이라는 설계 목표</h2>
 <p>논문의 문제의식은 명확합니다. Paxos는 정확성이 증명된 알고리즘이지만, 단일 값 합의(single-decree)를 중심으로 서술되어 있어 <b>실제 시스템이 필요로 하는 복제 로그</b>까지 가는 길이 논문에 없습니다. 그래서 실무 구현들은 저마다 "Paxos 비슷한 무언가"를 만들었고, 증명된 것과 배포된 것 사이의 간극이 벌어졌습니다.</p>
 <p>Raft는 이 간극을 두 가지 기법으로 줄입니다. 첫째, <b>문제 분해</b> — 합의를 리더 선출, 로그 복제, 안전성, 멤버십 변경이라는 독립적인 조각으로 나눠 하나씩 설명합니다. 둘째, <b>상태 공간 축소</b> — 로그에 구멍을 허용하지 않고, 로그는 항상 리더에서 팔로워로 한 방향으로만 흐르게 해서(strong leader) 고려해야 할 경우의 수 자체를 줄입니다. 흥미로운 건 저자들이 이 목표를 실증까지 했다는 점입니다. 두 대학 학생 43명에게 Raft와 Paxos를 각각 강의하고 퀴즈를 치르게 했더니 Raft 쪽 점수가 유의미하게 높았습니다. <b>"이해하기 쉽다"를 주장이 아니라 측정으로 보인</b>, 시스템 논문에서 보기 드문 장면입니다.</p>
 
 <h2>2. 세 가지 역할과 임기 — 상태 머신으로 읽기</h2>
-<p>Raft 노드는 언제나 <b>follower, candidate, leader</b> 세 상태 중 하나입니다. 시간은 <b>임기(term)</b>라는 단조 증가 정수로 구획되고, 한 임기에 리더는 최대 한 명입니다(Election Safety). RPC는 단 두 개 — 표를 요청하는 <code>RequestVote</code>, 로그를 밀어 넣고 하트비트를 겸하는 <code>AppendEntries</code>뿐입니다. 이 골격을 코드로 옮기면 이렇습니다.</p>
+<p>Raft 노드는 언제나 <b>follower, candidate, leader</b> 세 상태 중 하나입니다. 시간은 <b>임기(term)</b>라는 단조 증가 정수로 구획되고, 한 임기에 리더는 최대 한 명입니다(Election Safety). RPC는 단 두 개 — 표를 요청하는 <code>RequestVote</code>, 로그를 밀어 넣고 <span class="term" title="리더가 '나 살아있다'고 주기적으로 보내는 빈 신호">하트비트</span>를 겸하는 <code>AppendEntries</code>뿐입니다. 이 골격을 코드로 옮기면 이렇습니다.</p>
 <pre class="code"><span class="c">// 노드는 세 상태 중 하나 — 모든 규칙은 두 개의 RPC 위에서 움직인다</span>
 <span class="k">const</span> Role = { FOLLOWER: <span class="s">"follower"</span>, CANDIDATE: <span class="s">"candidate"</span>, LEADER: <span class="s">"leader"</span> };
 
@@ -86,7 +102,7 @@
 <p>임기가 곧 논리적 시계이기 때문에, "낡은 리더가 돌아와서 명령을 내리면?" 같은 골치 아픈 경우들이 전부 <code>observeTerm</code> 한 규칙으로 정리됩니다. 낡은 term의 요청은 거부되고, 낡은 노드는 더 큰 term을 보는 순간 스스로 물러납니다. 상태 전이 다이어그램 하나가 논문 한 장(Figure 4)에 다 들어가는 이유입니다.</p>
 
 <h2>3. 리더 선출 — 무작위 타임아웃이 하는 일</h2>
-<p>follower는 리더의 하트비트를 못 받은 채 <b>선출 타임아웃</b>이 지나면 candidate가 되어 term을 올리고 표를 모읍니다. 문제는 여러 노드가 동시에 후보로 나서면 표가 갈려 아무도 과반을 못 얻는 <b>분할 투표(split vote)</b>입니다. Paxos 계열이라면 노드 순위 같은 메커니즘을 얹었겠지만, Raft의 답은 허무할 만큼 단순합니다. <b>타임아웃을 무작위로 준다</b> — 논문이 예시로 쓰는 구간은 150~300ms입니다. 먼저 깨어난 노드가 먼저 표를 쓸어가고, 충돌해도 다음 라운드의 무작위성이 다시 흩어줍니다.</p>
+<p>follower는 리더의 하트비트를 못 받은 채 <b>선출 타임아웃</b>이 지나면 candidate가 되어 term을 올리고 표를 모읍니다. 문제는 여러 노드가 동시에 후보로 나서면 표가 갈려 아무도 과반을 못 얻는 <span class="term" title="표가 여러 후보로 갈려 아무도 과반을 못 넘긴 상태">분할 투표(split vote)</span>입니다. Paxos 계열이라면 노드 순위 같은 메커니즘을 얹었겠지만, Raft의 답은 허무할 만큼 단순합니다. <b>타임아웃을 무작위로 준다</b> — 논문이 예시로 쓰는 구간은 150~300ms입니다. 먼저 깨어난 노드가 먼저 표를 쓸어가고, 충돌해도 다음 라운드의 무작위성이 다시 흩어줍니다.</p>
 <pre class="code"><span class="c">// 리더 선출 미니 시뮬레이션 뼈대 — requestVote 전송부(RPC)는 생략</span>
 <span class="k">const</span> rand = () =&gt; 150 + Math.random() * 150;  <span class="c">// 150~300ms 무작위 타임아웃</span>
 
