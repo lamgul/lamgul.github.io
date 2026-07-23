@@ -2,24 +2,6 @@
    (toc box, heading anchors, tag row, reading rhythm).
    Pairs with assets/js/article.js. Tokens only; light/dark via base.css. */
 
-/* ---- post cover photo (slim banner under the title) ---- */
-.post-cover {
-  max-width: min(58rem, 100%);
-  margin: var(--sp-2) auto var(--sp-5);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow-1);
-}
-.post-cover img {
-  width: 100%;
-  aspect-ratio: 21 / 8;
-  object-fit: cover;
-  display: block;
-}
-@media (max-width: 640px) { .post-cover img { aspect-ratio: 16 / 9; } }
-
 /* ---- table of contents (inline box, tistory-style) ---- */
 nav.toc {
   background: var(--surface);
@@ -192,36 +174,46 @@ article .prose h3 { font-size: clamp(1.06rem, 0.99rem + 0.28vw, 1.22rem); font-w
 
 /* ---- simple prev / next (Naver·Tistory style, stacked rows) ----
    used on blog posts via <nav class="post-nav">. no "글 목록" link —
-   just the previous and next article, one row each. */
+   just the previous and next article. compact, one quiet size. */
 .post-nav {
   margin-top: var(--sp-6);
-  border-top: 1px solid var(--line-2);
+  border-top: 1px solid var(--line);
 }
 .post-nav a {
   display: flex;
   align-items: baseline;
-  gap: var(--sp-4);
-  padding: var(--sp-4) var(--sp-2);
+  gap: 0.8em;
+  padding: 0.55rem var(--sp-1);
   border-bottom: 1px solid var(--line);
-  transition: background 0.2s, padding-inline 0.35s var(--ease-out);
-}
-.post-nav a:hover { background: var(--surface); padding-inline: var(--sp-3); }
-.post-nav .pn-label {
-  flex: none;
-  width: 4em;
-  font-family: var(--mono);
   font-size: var(--t--1);
   color: var(--ink-3);
+  transition: color 0.2s, background 0.2s;
 }
-.post-nav a:hover .pn-label { color: var(--accent); }
+.post-nav a:hover { background: var(--surface); }
+.post-nav .pn-label {
+  flex: none;
+  width: 3.4em;
+  font-family: var(--mono);
+  color: var(--ink-3);
+}
 .post-nav .pn-title {
-  font-weight: 600;
-  color: var(--ink);
-  font-size: var(--t-0);
-  line-height: 1.4;
-  transition: color 0.2s;
+  color: var(--ink-2);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.post-nav a:hover .pn-title { color: var(--accent); }
+.post-nav .pn-date {
+  flex: none;
+  margin-left: auto;
+  padding-left: 0.8em;
+  font-family: var(--mono);
+  color: var(--ink-3);
+}
+.post-nav a:hover .pn-label,
+.post-nav a:hover .pn-title,
+.post-nav a:hover .pn-date { color: var(--accent); }
 
 /* ---- concept / glossary box (지식 공유용 용어 설명) ----
    a quiet study-note box: plain-language definitions of key terms.

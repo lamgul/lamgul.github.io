@@ -52,8 +52,6 @@
       <span>AWS · 아키텍처 · 비용</span>
     </div>
   </section>
-
-    <figure class="post-cover"><img src="../assets/img/photos/cover-infra.jpg" alt="인프라 — 케이블이 얽힌 서버룸" width="1600" height="610" loading="lazy"></figure>
   <article class="post-body" id="body">
     <p class="lead">AWS 아키텍처 문서는 대개 완성형에서 시작합니다. 멀티 AZ, 오토스케일링, 관리형 데이터베이스가 처음부터 그려져 있죠. 하지만 두세 명이 만드는 서비스의 첫 계산서는 다른 이야기입니다. 이 글은 <b>EC2 한 대 → ALB+ASG → 관리형 서비스</b>로 단계를 넓혀갈 때, 각 단계로 넘어가는 판단 기준과 월 비용 감각을 정리합니다. 금액은 us-east-1 온디맨드 기준의 대략치이고, 리전과 시점에 따라 달라지니 절대값보다 <b>비율의 감각</b>으로 읽어 주세요.</p>
 
@@ -168,8 +166,8 @@ docker run -d --name app <span class="k">--restart unless-stopped</span> \
   </article>
 
   <nav class="post-nav" aria-label="글 이동">
-    <a class="pn-prev" href="security-tls-reverse-proxy.html"><span class="pn-label">이전 글</span><span class="pn-title">보안: TLS와 리버스 프록시 — NGINX 앞단에서 끝내기</span></a>
-    <a class="pn-next" href="web-server-hardening.html"><span class="pn-label">다음 글</span><span class="pn-title">웹 서버 하드닝 체크리스트 — ServerTokens부터 헤더까지</span></a>
+    <a class="pn-prev" href="security-tls-reverse-proxy.html"><span class="pn-label">이전 글</span><span class="pn-title">보안: TLS와 리버스 프록시 — NGINX 앞단에서 끝내기</span><span class="pn-date">2024 · 09</span></a>
+    <a class="pn-next" href="web-server-hardening.html"><span class="pn-label">다음 글</span><span class="pn-title">웹 서버 하드닝 체크리스트 — ServerTokens부터 헤더까지</span><span class="pn-date">2024 · 12</span></a>
   </nav>
 </main>
 

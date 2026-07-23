@@ -52,8 +52,6 @@
       <span>Rate Limiting · Redis · 미들웨어</span>
     </div>
   </section>
-
-    <figure class="post-cover"><img src="../assets/img/photos/cover-security.jpg" alt="보안 — 흘러내리는 코드 스트림" width="1600" height="610" loading="lazy"></figure>
   <article class="post-body" id="body">
     <p class="lead">온프레미스로 vLLM 추론 서버를 세우고 나서 가장 먼저 한 일은 기능 추가가 아니라 <b>한도를 긋는 것</b>이었습니다. GPU 한 장으로 버티는 엔드포인트에서, 한 클라이언트가 쉬지 않고 두드리면 나머지 모두가 굶습니다. 레이트 리미팅은 그 방어선을 <b>요청이 비싼 자원에 닿기 전</b>에, 미들웨어에 긋는 일입니다. 이 글은 알고리즘을 고르고, Redis로 분산 환경에서 원자적으로 세는 데까지의 기록입니다 — 원칙의 나열이 아니라 <b>왜 그 선택인지</b>와 <b>어디서 무너지는지</b>까지.</p>
 
@@ -192,8 +190,8 @@ redis.call(<span class="s">'EXPIRE'</span>, KEYS[1], math.ceil(cap / refill) * 2
   </article>
 
   <nav class="post-nav" aria-label="글 이동">
-    <a class="pn-prev" href="feature-engineering-in-practice.html"><span class="pn-label">이전 글</span><span class="pn-title">Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</span></a>
-    <a class="pn-next" href="redis-cache-invalidation.html"><span class="pn-label">다음 글</span><span class="pn-title">Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</span></a>
+    <a class="pn-prev" href="feature-engineering-in-practice.html"><span class="pn-label">이전 글</span><span class="pn-title">Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</span><span class="pn-date">2024 · 06</span></a>
+    <a class="pn-next" href="redis-cache-invalidation.html"><span class="pn-label">다음 글</span><span class="pn-title">Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</span><span class="pn-date">2024 · 09</span></a>
   </nav>
 </main>
 
