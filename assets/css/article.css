@@ -114,7 +114,7 @@ article .prose h3 { scroll-margin-top: 5rem; }
    overrides the narrower defaults from writing.css / project.css. */
 .post-hero,
 .post-body,
-article .prose { max-width: min(58rem, 100%); }
+article .prose { max-width: min(64rem, 100%); }
 
 .post-body,
 article .prose {

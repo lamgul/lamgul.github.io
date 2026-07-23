@@ -77,7 +77,7 @@
 .full-link { font-family: var(--mono); font-size: var(--t--1); color: var(--accent); }
 
 /* prose writeup */
-.prose { max-width: var(--measure); margin-inline: auto; }
+.prose { max-width: min(64rem, 100%); margin-inline: auto; }
 .prose h2 {
   font-family: var(--serif); font-weight: 380; font-size: var(--t-2);
   letter-spacing: -0.015em; margin: var(--sp-6) 0 var(--sp-3);

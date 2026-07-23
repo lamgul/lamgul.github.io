@@ -89,10 +89,10 @@
 .hero h1 {
   font-family: var(--serif);
   font-weight: 300;
-  font-size: var(--t-5);
-  line-height: 1.0;
-  letter-spacing: -0.028em;
-  max-width: 15ch;
+  font-size: var(--t-3);
+  line-height: 1.06;
+  letter-spacing: -0.022em;
+  max-width: 20ch;
 }
 .hero h1 .em {
   font-style: italic;
@@ -101,11 +101,11 @@
 }
 .hero h1 .line { display: block; }
 .hero-sub {
-  margin-top: var(--sp-5);
-  max-width: 46ch;
-  font-size: var(--t-1);
+  margin-top: var(--sp-4);
+  max-width: 58ch;
+  font-size: var(--t-0);
   color: var(--ink-2);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 .hero-sub b { color: var(--ink); font-weight: 600; }
 
@@ -116,30 +116,6 @@
   align-items: center;
   gap: var(--sp-4) var(--sp-5);
 }
-
-/* intro photo under the hero (self-introduction on the main page) */
-.hero-photo {
-  margin-block: 0 var(--sp-7);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-2);
-}
-.hero-photo img {
-  width: 100%;
-  aspect-ratio: 21 / 8;
-  object-fit: cover;
-  display: block;
-}
-.hero-photo figcaption {
-  font-family: var(--mono);
-  font-size: var(--t--1);
-  color: var(--ink-3);
-  padding: 0.75rem 1.1rem;
-  background: var(--surface);
-  border-top: 1px solid var(--line);
-}
-@media (max-width: 640px) { .hero-photo img { aspect-ratio: 16 / 9; } }
 .btn {
   display: inline-flex;
   align-items: center;
