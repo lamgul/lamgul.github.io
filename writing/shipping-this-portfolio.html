@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -99,6 +100,13 @@ opts.reduce&lt;Option | undefined&gt;((a, b) =&gt; !a || b.votes &gt; a.votes ? 
     <h2>공통점</h2>
     <p>다섯 개 다 "환경이 내 예상과 다르게 동작한" 경우였습니다. 폰트 API의 리셋 규칙, 좌표계, 컴파일러의 엄격함, git의 무시 규칙, 옵저버의 수집 타이밍 — 전부 제가 <em>가정</em>했지만 <em>확인</em>하지 않은 것들이었죠. 버그는 대개 코드가 아니라 <b>가정</b>에 있었습니다. 그래서 요즘은 막히면 코드를 노려보기 전에 "내가 뭘 사실이라고 믿고 있지?"부터 적어봅니다.</p>
 
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">디버깅</a>
+      <a class="tag" href="index.html">배포</a>
+      <a class="tag" href="index.html">트러블슈팅</a>
+      <a class="tag" href="index.html">Devlog</a>
+    </div>
     <div class="post-cta">
       <span class="t">이 흉터들이 남은 저장소 → <b>lamgul.github.io</b></span>
       <a class="chip primary" href="https://github.com/lamgul/lamgul.github.io" target="_blank" rel="noopener">GitHub에서 보기 ↗</a>
@@ -116,5 +124,6 @@ opts.reduce&lt;Option | undefined&gt;((a, b) =&gt; !a || b.votes &gt; a.votes ? 
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: Raft — 이해할 수 있는 합의 알고리즘 — 안성진</title>
+<meta name="description" content="In Search of an Understandable Consensus Algorithm을 읽고 리더 선출·로그 복제를 상태 머신 코드로 재현한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: Raft — 이해할 수 있는 합의 알고리즘">
+<meta property="og:description" content="In Search of an Understandable Consensus Algorithm을 읽고 리더 선출·로그 복제를 상태 머신 코드로 재현한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: Raft — 이해할 수 있는 합의 알고리즘","datePublished":"2020-09-24","dateModified":"2026-07-23","inLanguage":"ko","description":"In Search of an Understandable Consensus Algorithm을 읽고 리더 선출·로그 복제를 상태 머신 코드로 재현한다.","keywords":"Raft · 분산시스템 · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/raft-paper-analysis.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / raft-paper-analysis</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: Raft — 이해할 수 있는 합의 알고리즘</h1>
+    <div class="post-meta">
+      <span>2020년 9월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>Raft · 분산시스템 · 논문</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">합의(consensus)는 분산 시스템의 심장인데, 오랫동안 그 표준이던 Paxos는 <b>배우는 것 자체가 고통</b>이었습니다. Diego Ongaro와 John Ousterhout의 2014년 논문 <em>In Search of an Understandable Consensus Algorithm</em>은 여기에 정면으로 반기를 듭니다. 성능도, 새로운 보장도 아닌 <b>이해 가능성(understandability)을 1급 설계 목표</b>로 놓은 드문 논문입니다. 핵심 메커니즘인 리더 선출과 로그 복제를 실행 가능한 미니 코드로 재현하며 읽어봤습니다.</p>
+
+<h2>1. 이해 가능성이라는 설계 목표</h2>
+<p>논문의 문제의식은 명확합니다. Paxos는 정확성이 증명된 알고리즘이지만, 단일 값 합의(single-decree)를 중심으로 서술되어 있어 <b>실제 시스템이 필요로 하는 복제 로그</b>까지 가는 길이 논문에 없습니다. 그래서 실무 구현들은 저마다 "Paxos 비슷한 무언가"를 만들었고, 증명된 것과 배포된 것 사이의 간극이 벌어졌습니다.</p>
+<p>Raft는 이 간극을 두 가지 기법으로 줄입니다. 첫째, <b>문제 분해</b> — 합의를 리더 선출, 로그 복제, 안전성, 멤버십 변경이라는 독립적인 조각으로 나눠 하나씩 설명합니다. 둘째, <b>상태 공간 축소</b> — 로그에 구멍을 허용하지 않고, 로그는 항상 리더에서 팔로워로 한 방향으로만 흐르게 해서(strong leader) 고려해야 할 경우의 수 자체를 줄입니다. 흥미로운 건 저자들이 이 목표를 실증까지 했다는 점입니다. 두 대학 학생 43명에게 Raft와 Paxos를 각각 강의하고 퀴즈를 치르게 했더니 Raft 쪽 점수가 유의미하게 높았습니다. <b>"이해하기 쉽다"를 주장이 아니라 측정으로 보인</b>, 시스템 논문에서 보기 드문 장면입니다.</p>
+
+<h2>2. 세 가지 역할과 임기 — 상태 머신으로 읽기</h2>
+<p>Raft 노드는 언제나 <b>follower, candidate, leader</b> 세 상태 중 하나입니다. 시간은 <b>임기(term)</b>라는 단조 증가 정수로 구획되고, 한 임기에 리더는 최대 한 명입니다(Election Safety). RPC는 단 두 개 — 표를 요청하는 <code>RequestVote</code>, 로그를 밀어 넣고 하트비트를 겸하는 <code>AppendEntries</code>뿐입니다. 이 골격을 코드로 옮기면 이렇습니다.</p>
+<pre class="code"><span class="c">// 노드는 세 상태 중 하나 — 모든 규칙은 두 개의 RPC 위에서 움직인다</span>
+<span class="k">const</span> Role = { FOLLOWER: <span class="s">"follower"</span>, CANDIDATE: <span class="s">"candidate"</span>, LEADER: <span class="s">"leader"</span> };
+
+<span class="k">class</span> <span class="f">RaftNode</span> {
+  constructor(id, peers) {
+    <span class="k">this</span>.id = id; <span class="k">this</span>.peers = peers;
+    <span class="k">this</span>.role = Role.FOLLOWER;
+    <span class="k">this</span>.term = 0;          <span class="c">// currentTerm: 단조 증가하는 논리적 시계</span>
+    <span class="k">this</span>.votedFor = <span class="k">null</span>;   <span class="c">// 이 임기에 투표한 후보 — 임기당 1표</span>
+    <span class="k">this</span>.log = [];          <span class="c">// { term, command } 의 배열, 구멍 없음</span>
+    <span class="k">this</span>.commitIndex = 0;
+  }
+  <span class="c">// 모든 RPC에 공통인 단 하나의 강등 규칙:</span>
+  <span class="c">// 더 높은 term을 보면 즉시 follower로 내려간다</span>
+  <span class="f">observeTerm</span>(term) {
+    <span class="k">if</span> (term &gt; <span class="k">this</span>.term) {
+      <span class="k">this</span>.term = term; <span class="k">this</span>.votedFor = <span class="k">null</span>;
+      <span class="k">this</span>.role = Role.FOLLOWER;
+    }
+  }
+}</pre>
+<p>임기가 곧 논리적 시계이기 때문에, "낡은 리더가 돌아와서 명령을 내리면?" 같은 골치 아픈 경우들이 전부 <code>observeTerm</code> 한 규칙으로 정리됩니다. 낡은 term의 요청은 거부되고, 낡은 노드는 더 큰 term을 보는 순간 스스로 물러납니다. 상태 전이 다이어그램 하나가 논문 한 장(Figure 4)에 다 들어가는 이유입니다.</p>
+
+<h2>3. 리더 선출 — 무작위 타임아웃이 하는 일</h2>
+<p>follower는 리더의 하트비트를 못 받은 채 <b>선출 타임아웃</b>이 지나면 candidate가 되어 term을 올리고 표를 모읍니다. 문제는 여러 노드가 동시에 후보로 나서면 표가 갈려 아무도 과반을 못 얻는 <b>분할 투표(split vote)</b>입니다. Paxos 계열이라면 노드 순위 같은 메커니즘을 얹었겠지만, Raft의 답은 허무할 만큼 단순합니다. <b>타임아웃을 무작위로 준다</b> — 논문이 예시로 쓰는 구간은 150~300ms입니다. 먼저 깨어난 노드가 먼저 표를 쓸어가고, 충돌해도 다음 라운드의 무작위성이 다시 흩어줍니다.</p>
+<pre class="code"><span class="c">// 리더 선출 미니 시뮬레이션 뼈대 — requestVote 전송부(RPC)는 생략</span>
+<span class="k">const</span> rand = () =&gt; 150 + Math.random() * 150;  <span class="c">// 150~300ms 무작위 타임아웃</span>
+
+<span class="k">function</span> <span class="f">resetTimer</span>(node) {
+  clearTimeout(node.timer);
+  node.timer = setTimeout(() =&gt; startElection(node), rand());
+}
+
+<span class="k">function</span> <span class="f">startElection</span>(node) {
+  node.role = Role.CANDIDATE;
+  node.term += 1; node.votedFor = node.id;     <span class="c">// 자기 자신에게 1표</span>
+  <span class="k">let</span> votes = 1;
+  <span class="k">for</span> (<span class="k">const</span> peer <span class="k">of</span> node.peers) {
+    <span class="k">const</span> granted = requestVote(peer, {
+      term: node.term, candidateId: node.id,
+      lastLogIndex: node.log.length,
+      lastLogTerm: node.log.at(-1)?.term ?? 0,
+    });
+    <span class="k">if</span> (granted &amp;&amp; ++votes &gt; (node.peers.length + 1) / 2) {
+      node.role = Role.LEADER;
+      console.log(<span class="s">`term ${node.term}: ${node.id} 당선 (${votes}표)`</span>);
+      <span class="k">return</span>;  <span class="c">// 이후엔 주기적 AppendEntries(하트비트)로 재선출을 막는다</span>
+    }
+  }
+  resetTimer(node);  <span class="c">// 과반 실패(분할 투표) → 다음 무작위 타임아웃에 재도전</span>
+}</pre>
+<p>여기서 논문의 설계 철학이 잘 드러납니다. 저자들은 처음에 순위 기반 선출을 검토했다가, 미묘한 코너 케이스가 늘어나자 <b>무작위화가 더 단순하고 이해하기 쉽다</b>는 이유로 버렸다고 씁니다. 무작위성으로 상태 공간의 결정적 분기를 지워버리는 것 — 이해 가능성이라는 목표가 알고리즘의 모양 자체를 바꾼 사례입니다.</p>
+<div class="callout"><span class="mark">*</span><p>논문의 타이밍 조건은 <b>broadcastTime ≪ electionTimeout ≪ MTBF</b>입니다. 실무에서 etcd 같은 Raft 구현을 운영할 때 디스크가 느려지거나 네트워크 RTT가 길어져 하트비트 왕복(broadcast time)이 타임아웃에 가까워지면, 멀쩡한 리더를 두고 <b>불필요한 재선출</b>이 반복됩니다. 리더가 자꾸 바뀐다면 코드보다 먼저 디스크 fsync 지연과 네트워크부터 의심하고, 타임아웃을 왕복 시간의 한 자릿수 이상 크게 잡으세요.</p></div>
+
+<h2>4. 로그 복제와 로그 매칭 프로퍼티</h2>
+<p>리더가 뽑히면 클라이언트 명령은 리더의 로그에 붙고, <code>AppendEntries</code>로 팔로워에 복제되며, <b>과반에 복제되는 순간 커밋</b>되어 상태 머신에 적용됩니다. 이 파트의 핵심 정리가 <b>로그 매칭 프로퍼티(Log Matching Property)</b>입니다.</p>
+<p>"서로 다른 두 로그에서 <b>같은 index에 같은 term</b>을 가진 항목이 있다면, 두 항목은 같은 명령을 담고 있고, <b>그 이전의 로그 전체도 동일하다.</b>"</p>
+<p>이 성질은 저절로 얻어지는 게 아니라 <code>AppendEntries</code>가 매번 수행하는 <b>일관성 검사</b>로 귀납적으로 유지됩니다. 리더는 새 항목과 함께 "직전 항목의 index와 term"(<code>prevLogIndex</code>, <code>prevLogTerm</code>)을 보내고, 팔로워는 자기 로그의 그 자리와 일치할 때만 받아들입니다. 파이썬으로 옮기면 검사 전체가 함수 하나입니다.</p>
+<pre class="code"><span class="c"># 로그 매칭 프로퍼티를 유지하는 AppendEntries 일관성 검사 (논문 §5.3)</span>
+<span class="k">def</span> <span class="f">append_entries</span>(node, term, prev_index, prev_term, entries, leader_commit):
+    <span class="k">if</span> term &lt; node.term:              <span class="c"># 낡은 리더의 요청은 거부</span>
+        <span class="k">return</span> <span class="k">False</span>
+    <span class="c"># prev 자리의 (index, term)이 일치해야만 이어붙인다 — 귀납의 한 걸음</span>
+    <span class="k">if</span> prev_index &gt; 0:
+        <span class="k">if</span> len(node.log) &lt; prev_index <span class="k">or</span> node.log[prev_index - 1].term != prev_term:
+            <span class="k">return</span> <span class="k">False</span>              <span class="c"># 리더는 nextIndex를 낮춰 재시도한다</span>
+    <span class="k">for</span> i, entry <span class="k">in</span> enumerate(entries):
+        pos = prev_index + i
+        <span class="k">if</span> pos &lt; len(node.log) <span class="k">and</span> node.log[pos].term != entry.term:
+            <span class="k">del</span> node.log[pos:]        <span class="c"># 충돌: 그 지점 이후를 전부 잘라낸다</span>
+        <span class="k">if</span> pos &gt;= len(node.log):
+            node.log.append(entry)
+    <span class="k">if</span> leader_commit &gt; node.commit_index:
+        node.commit_index = min(leader_commit, len(node.log))
+    <span class="k">return</span> <span class="k">True</span></pre>
+<p>검사가 실패하면 리더는 그 팔로워의 <code>nextIndex</code>를 하나 낮춰 다시 보냅니다. 두 로그가 일치하는 지점까지 내려간 뒤, 거기서부터 리더의 로그로 <b>덮어씁니다</b>. 팔로워의 로그가 리더와 달라도 협상하지 않습니다 — 리더의 로그가 곧 진실이고, 이 단방향성이 Raft가 Paxos보다 따라가기 쉬운 가장 큰 이유입니다.</p>
+
+<h2>5. 안전성 — 표를 주지 않을 권리</h2>
+<p>남은 질문은 이겁니다. 리더가 죽고 새 리더가 뽑힐 때, <b>커밋된 항목이 없는 노드가 리더가 되면?</b> 커밋된 로그가 덮여 사라질 수 있습니다. Raft는 이걸 커밋 시점이 아니라 <b>선출 시점</b>에 막습니다(선거 제한, §5.4.1). 투표자는 후보의 마지막 로그가 자기 로그보다 낡았으면 표를 주지 않습니다. 커밋된 항목은 과반에 존재하므로, 과반의 표를 얻은 리더는 반드시 그 항목을 가지고 있습니다(Leader Completeness).</p>
+<pre class="code"><span class="c"># §5.4.1 선거 제한 — "내 로그보다 낡은 후보에게는 표를 주지 않는다"</span>
+<span class="k">def</span> <span class="f">is_up_to_date</span>(my_log, last_log_index, last_log_term):
+    my_term = my_log[-1].term <span class="k">if</span> my_log <span class="k">else</span> 0
+    <span class="k">if</span> last_log_term != my_term:
+        <span class="k">return</span> last_log_term &gt; my_term    <span class="c"># 마지막 항목의 term이 크면 더 최신</span>
+    <span class="k">return</span> last_log_index &gt;= len(my_log)  <span class="c"># term이 같으면 더 긴 로그가 최신</span>
+
+<span class="k">def</span> <span class="f">request_vote</span>(node, term, candidate_id, last_log_index, last_log_term):
+    <span class="k">if</span> term &lt; node.term:
+        <span class="k">return</span> <span class="k">False</span>
+    <span class="k">if</span> node.voted_for <span class="k">in</span> (<span class="k">None</span>, candidate_id) \
+       <span class="k">and</span> is_up_to_date(node.log, last_log_index, last_log_term):
+        node.voted_for = candidate_id         <span class="c"># 임기당 한 표, 선착순</span>
+        <span class="k">return</span> <span class="k">True</span>
+    <span class="k">return</span> <span class="k">False</span></pre>
+<p>여기에 미묘한 규칙이 하나 더 붙습니다. 리더는 <b>자기 임기의 항목만 복제 수를 세어 커밋</b>합니다. 이전 임기의 항목이 과반에 복제되어 있어도 그것만으로는 커밋으로 치지 않고, 현재 임기의 항목이 커밋될 때 로그 매칭에 의해 <em>간접적으로</em> 함께 커밋됩니다. 논문의 Figure 8이 이 규칙이 없을 때 커밋된 항목이 덮여 사라지는 반례를 단계별로 보여주는데, 개인적으로 이 논문에서 가장 공들여 읽어야 할 그림이라고 생각합니다.</p>
+
+<h2>6. 논문 밖에서 — 무엇을 가져갈 것인가</h2>
+<p>Raft의 성공은 논문 바깥에서 증명됐습니다. 쿠버네티스의 저장소인 etcd, Consul, TiKV 같은 시스템이 Raft를 채택했고, 수많은 언어로 구현이 존재합니다. <b>이해할 수 있어서 구현되고, 구현되어서 표준이 된</b> 알고리즘입니다.</p>
+<p>저는 합의 알고리즘을 직접 구현할 일이 없는 백엔드 개발자지만, 이 논문에서 가져간 건 두 가지입니다. 하나는 문제를 보는 눈입니다. 여러 워커가 나눠 도는 크롤링 파이프라인에서 "지금 이 작업의 주인이 누구인가"를 정하는 문제나, 정산 리팩토링에서 겪은 "어디까지가 확정된 상태인가"라는 질문은 결국 리더 선출과 커밋의 축소판이었습니다. 문제를 이름 붙여 분해하고 나면 락 하나, 상태 컬럼 하나를 어디에 둘지가 훨씬 또렷해집니다.</p>
+<p>다른 하나는 태도입니다. 이 논문은 <b>읽는 사람을 설계에 포함</b>시켰습니다. 더 배우기 쉬운 쪽을 고르기 위해 알고리즘의 모양을 바꿨고, 그 선택이 정확성을 해치지 않음을 증명했으며, 이해 가능성 자체를 실험으로 측정했습니다. 코드 리뷰에서 "동작은 같은데 왜 이렇게 고치자는 거예요?"라는 질문에 대한 가장 좋은 대답을, 저는 이 논문에서 배웠습니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Raft</a>
+      <a class="tag" href="index.html">분산시스템</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">다른 논문·기술 분석 → <b>분석 글 전체</b></span><a class="chip primary" href="index.html">글 목록 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="pagedattention-paper.html"><div class="np-key">← 이전 글</div><div class="np-title">논문 분석: PagedAttention</div></a>
+    <a class="next" href="spring-transaction-propagation.html"><div class="np-key">다음 글 →</div><div class="np-title">Spring 트랜잭션 전파</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아키텍처 패턴 · UseCase와 Repository — 레거시에 경계 긋기 — 안성진</title>
+<meta name="description" content="전면 재작성 없이 레거시에 UseCase 계층을 도입하는 점진 전략 — 신뢰를 얻는 순서, 경계 인터페이스, 스트랭글러 패턴.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="아키텍처 패턴 · UseCase와 Repository — 레거시에 경계 긋기">
+<meta property="og:description" content="전면 재작성 없이 레거시에 UseCase 계층을 도입하는 점진 전략 — 신뢰를 얻는 순서, 경계 인터페이스, 스트랭글러 패턴.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"아키텍처 패턴 · UseCase와 Repository — 레거시에 경계 긋기","datePublished":"2022-11-22","dateModified":"2026-07-23","inLanguage":"ko","description":"전면 재작성 없이 레거시에 UseCase 계층을 도입하는 점진 전략 — 신뢰를 얻는 순서, 경계 인터페이스, 스트랭글러 패턴.","keywords":"아키텍처 · UseCase · 레거시","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/pattern-usecase-repository.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / pattern-usecase-repository</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 아키텍처</p>
+    <h1>아키텍처 패턴 · UseCase와 Repository — 레거시에 경계 긋기</h1>
+    <div class="post-meta">
+      <span>2022년 11월</span><span class="dot-sep">•</span>
+      <span>약 12분</span><span class="dot-sep">•</span>
+      <span>UseCase · Repository · 스트랭글러</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">레거시 개선 사례 글에서 "6개월간 신뢰를 쌓은 뒤 제안했다"는 이야기를 했습니다. 이 글은 그 뒷면입니다. 회의에서 팀이 동의해 준 <em>다음 날부터</em>, 실제로 무엇을 어떤 순서로 옮겼는가. 전면 재작성은 처음부터 선택지가 아니었습니다. 운영 중인 시스템 위에 <b>경계를 하나씩 긋는 것</b> — 그게 전부였고, 그래서 가능했습니다.</p>
+
+<h2>1. 트랜잭션 스크립트가 무너지는 조건</h2>
+<p>제가 만난 코드는 2008년 주차 시스템을 기반으로 자라온 것이었습니다. 요청이 들어오면 서비스 메서드 하나가 검증부터 저장, 알림까지 전부 처리합니다. 이런 구조를 <b>트랜잭션 스크립트</b>라고 부르는데, 실제 모습은 대략 이렇습니다.</p>
+<pre class="code"><span class="c">// SeasonTicketService.java — 2008년부터 자라온 메서드</span>
+<span class="k">public</span> Map&lt;String, Object&gt; <span class="f">regist</span>(HttpServletRequest req) {
+  String carNo   = req.getParameter(<span class="s">"car_no"</span>);
+  String lotType = req.getParameter(<span class="s">"lot_type"</span>);
+  String phone   = req.getParameter(<span class="s">"phone"</span>);
+  <span class="c">// 1) 검증 — 같은 규칙이 화면마다 복사되어 있다</span>
+  <span class="k">if</span> (carNo == <span class="k">null</span> || carNo.length() &lt; 7) { <span class="c">/* ... */</span> }
+  <span class="c">// 2) 요금 계산 — 지점 × 차종 × 감면이 if로 중첩</span>
+  <span class="k">int</span> fee = 100000;
+  <span class="k">if</span> (<span class="s">"B"</span>.equals(lotType))  fee = 80000;
+  <span class="k">if</span> (isDiscount(req))      fee = fee / 2;
+  <span class="c">// 3) 저장 — SQL이 서비스 안에 그대로</span>
+  jdbc.update(<span class="s">"INSERT INTO ST_MST (CAR_NO, FEE, USE_YN) VALUES (?, ?, 'Y')"</span>, carNo, fee);
+  <span class="c">// 4) 알림 — 트랜잭션 한가운데서 외부 호출</span>
+  smsClient.send(phone, <span class="s">"정기권이 등록되었습니다"</span>);
+  <span class="k">return</span> resultMap(<span class="s">"OK"</span>);
+}</pre>
+<p>여기서 짚고 싶은 건, <b>트랜잭션 스크립트 자체는 결함이 아니라는 점</b>입니다. 《엔터프라이즈 애플리케이션 아키텍처 패턴》도 로직이 단순할 때는 이 방식이 가장 정직한 선택이라고 말합니다. 절차가 위에서 아래로 읽히니까요. 이 구조가 무너지는 건 두 조건이 <em>겹칠 때</em>입니다.</p>
+<p>첫째, <b>분기의 조합 폭발</b>. 지점별 요금 × 차종 × 감면 조건이 곱해지면서 if 중첩이 사람이 추적할 수 있는 깊이를 넘어섭니다. 둘째, <b>화면 단위 복사</b>. 새 화면을 만들 때 기존 메서드를 복사해 고치는 관행이 쌓이면, 같은 업무 규칙이 몇 군데에 존재하는지 아무도 모르게 됩니다. 이 시점부터 변경 비용은 코드량이 아니라 <em>"이 규칙이 어디에 또 있는지 모른다"는 불확실성</em>에서 나옵니다. 수정이 아니라 수색이 일이 되는 것입니다. 제가 그은 경계는 정확히 이 두 문제를 겨냥합니다.</p>
+
+<h2>2. 첫 번째 경계 — UseCase는 시스템이 하는 '한 문장'이다</h2>
+<p>UseCase 계층의 단위는 클래스도 메서드도 아니고, <b>업무 문장 하나</b>입니다. "관리자가 정기권을 등록한다" — 이 문장 하나가 클래스 하나가 되고, 진입점은 <code>execute</code> 하나, 입력과 출력은 그 유스케이스 전용 타입입니다. 위의 <code>regist</code>를 옮기면 이렇게 됩니다.</p>
+<pre class="code"><span class="c">// 유스케이스 하나 = 클래스 하나 = 진입점 하나</span>
+<span class="k">public class</span> <span class="f">RegisterSeasonTicket</span> {
+
+  <span class="k">public record</span> <span class="f">Command</span>(String carNo, Long lotId, DiscountKind discount) {}
+  <span class="k">public record</span> <span class="f">Result</span>(Long ticketId, Money fee) {}
+
+  <span class="k">private final</span> SeasonTicketRepository tickets;
+  <span class="k">private final</span> ParkingLotRepository lots;
+  <span class="k">private final</span> FeePolicy feePolicy;
+
+  <span class="k">@Transactional</span>   <span class="c">// 트랜잭션 경계는 유스케이스가 소유한다</span>
+  <span class="k">public</span> Result <span class="f">execute</span>(Command cmd) {
+    ParkingLot lot = lots.getById(cmd.lotId());
+    tickets.findActiveByCarNo(cmd.carNo())
+           .ifPresent(t -&gt; { <span class="k">throw new</span> AlreadyRegistered(t); });
+    Money fee = feePolicy.calculate(lot, cmd.discount());
+    SeasonTicket ticket = SeasonTicket.issue(cmd.carNo(), lot, fee);
+    tickets.save(ticket);
+    <span class="k">return new</span> Result(ticket.getId(), fee);  <span class="c">// SMS는 커밋 후 이벤트로</span>
+  }
+}</pre>
+<p>왜 서비스 클래스에 메서드를 추가하는 대신 클래스 단위로 쪼개는가. 근거는 <b>변경의 축</b>입니다. 하나의 서비스 클래스에 등록·해지·연장 메서드가 쌓이면, 서로 다른 이유로 바뀌는 코드가 한 파일에 삽니다. 등록 규칙을 고치다 해지를 깨뜨리고, 두 사람이 같은 파일을 고치다 충돌합니다. 유스케이스가 클래스 단위면 세 가지가 공짜로 따라옵니다. <b>디렉터리 목록이 곧 기능 목록</b>이 되고(신규 입사자가 코드를 열면 시스템이 뭘 하는지 보입니다), <b>테스트 단위가 명확</b>해지고(클래스 하나 = 시나리오 하나), <b>삭제가 쉬워집니다</b>(기능을 내리는 일이 클래스를 지우는 일이 됩니다). 레거시에서 마지막 항목은 생각보다 자주 필요합니다.</p>
+<p>원래 코드의 4번 — 트랜잭션 한가운데의 SMS 발송 — 이 사라진 것도 경계의 결과입니다. 외부 호출이 트랜잭션 안에 있으면 SMS 지연이 DB 커넥션을 물고 있게 되고, 발송 후 롤백되면 "등록됐다는 문자를 받았는데 등록이 안 된" 상태가 됩니다. 알림은 커밋 이후로 밀어내는 것이 맞고, 그 판단을 내릴 자리가 바로 트랜잭션 경계를 소유한 UseCase입니다.</p>
+<div class="callout"><span class="mark">*</span><p><b>이름이 경계의 리트머스입니다.</b> 유스케이스 이름은 동사+목적어로 짓습니다 — <code>RegisterSeasonTicket</code>, <code>CancelSeasonTicket</code>. 이름에 <code>Manager</code>, <code>Processor</code>, <code>Service</code> 같은 단어가 필요해지는 순간, 문장 두 개를 한 클래스에 담으려 한다는 신호입니다. 쪼개세요.</p></div>
+
+<h2>3. 두 번째 경계 — Repository가 숨겨야 할 것, 드러내야 할 것</h2>
+<p>UseCase가 위쪽 경계라면 Repository는 아래쪽 경계입니다. 그런데 "저장소를 추상화한다"는 말만으로는 부족합니다. 실무에서 중요한 건 <b>무엇을 숨기고 무엇을 드러내는가</b>의 목록입니다.</p>
+<p><b>숨겨야 하는 것</b>은 저장 기술의 사정입니다. SQL 문자열, ORM 사용 여부, 테이블·조인 구조, soft delete 플래그, 캐시를 타는지 여부. 이것들이 시그니처로 새어 나오면 호출부가 기술에 결합되고, 경계는 이름만 남습니다. <b>드러내야 하는 것</b>은 도메인의 사정입니다. '없을 수 있음'은 <code>Optional</code>로 타입에 드러나야 하고, '활성인', '만료된' 같은 업무 조건은 메서드 이름에 드러나야 합니다. 그리고 앞서 말했듯 <b>트랜잭션 경계는 Repository가 가지면 안 됩니다</b> — 저장소가 스스로 커밋해 버리면, 유스케이스는 여러 저장을 하나의 원자적 작업으로 묶을 방법을 잃습니다.</p>
+<pre class="code"><span class="c">// 나쁜 경계 — 저장 기술이 시그니처로 샌다</span>
+List&lt;Map&lt;String,Object&gt;&gt; <span class="f">selectList</span>(Map&lt;String,Object&gt; param); <span class="c">// 무엇이든 물어보세요</span>
+<span class="k">void</span> <span class="f">executeQuery</span>(String sql);                                  <span class="c">// 경계가 아예 없다</span>
+Entity <span class="f">findByCarNoAndUseYnAndDelYn</span>(String c, String u, String d); <span class="c">// 테이블 사정이 호출부로</span>
+
+<span class="c">// 좋은 경계 — 도메인의 질문만 남긴다</span>
+<span class="k">public interface</span> <span class="f">SeasonTicketRepository</span> {
+  Optional&lt;SeasonTicket&gt; <span class="f">findActiveByCarNo</span>(String carNo); <span class="c">// '없음'을 타입으로</span>
+  SeasonTicket <span class="f">getById</span>(Long id);   <span class="c">// 없으면 예외 — get 접두사의 계약</span>
+  <span class="k">void</span> <span class="f">save</span>(SeasonTicket ticket);
+}</pre>
+<p>나쁜 예의 첫 줄 <code>selectList(Map)</code>은 레거시에서 정말 자주 만나는 형태입니다. 언뜻 유연해 보이지만, 실제로는 <em>모든 호출부가 파라미터 키 이름이라는 문서화되지 않은 계약</em>에 묶입니다. 인터페이스가 넓다는 건 추상화가 아니라 경계의 부재입니다. 좋은 Repository 인터페이스는 오히려 좁고, 메서드 하나하나가 도메인의 질문 하나에 대응합니다. 인터페이스를 도메인 언어로 좁혀 두면 부수 효과로 테스트도 쉬워집니다 — <code>findActiveByCarNo</code>를 가짜 구현으로 바꾸는 건 쉽지만, <code>selectList(Map)</code>의 가짜 구현은 사실상 DB를 다시 만드는 일입니다.</p>
+
+<h2>4. 원칙이 깨지는 곳 — 집계 쿼리와 읽기 모델</h2>
+<p>여기까지의 원칙을 한 줄로 줄이면 "모든 데이터 접근은 Repository를 통해 도메인 객체로"입니다. 그리고 이 원칙이 <b>깨지는 지점</b>이 실제로 있습니다. 월 정산 집계가 그랬습니다. 지점별 월 매출을 뽑는 화면을 원칙대로 만들면, 정기권 수만 건을 도메인 객체로 로딩해 메모리에서 합산하게 됩니다. 성능이 무너지는 건 물론이고, 더 본질적인 문제가 있습니다. <b>도메인 객체가 이 작업에서 하는 일이 없다</b>는 것입니다.</p>
+<p>Repository가 도메인 객체를 반환하는 이유를 다시 물어보면 답이 보입니다. 그 이유는 <b>쓰기 경로의 불변식 보호</b>입니다 — "만료된 정기권은 연장할 수 없다" 같은 규칙을 객체가 강제하도록. 그런데 읽기 전용 집계에는 보호할 불변식이 없습니다. 원칙이 서 있던 전제가 사라졌으니, 원칙을 지킬 이유도 사라진 것입니다. 이럴 때는 읽기 전용 쿼리 모델로 <em>의도적으로</em> 우회합니다.</p>
+<pre class="code"><span class="c">// 읽기 전용 쿼리 모델 — 원칙을 '알고' 깬다</span>
+<span class="k">public interface</span> <span class="f">SettlementQuery</span> {
+  List&lt;LotMonthlyRow&gt; <span class="f">monthlyByLot</span>(YearMonth month);  <span class="c">// 반환은 DTO — 도메인 객체인 척하지 않는다</span>
+}
+
+<span class="c">// 구현은 SQL 한 방 — 집계는 DB가 가장 잘한다</span>
+<span class="k">public</span> List&lt;LotMonthlyRow&gt; <span class="f">monthlyByLot</span>(YearMonth m) {
+  <span class="k">return</span> jdbc.query(<span class="s">"""
+    SELECT LOT_ID, COUNT(*) AS CNT, SUM(FEE) AS TOTAL
+      FROM ST_MST
+     WHERE ISSUED_AT BETWEEN ? AND ?
+     GROUP BY LOT_ID"""</span>, rowMapper, start(m), end(m));
+}</pre>
+<p>단, 우회에는 두 가지 조건을 겁니다. <b>읽기 전용일 것</b> — 이 경로로는 절대 쓰지 않습니다. 그리고 <b>DTO를 반환할 것</b> — 집계 결과가 도메인 객체 행세를 하기 시작하면 두 모델이 섞이며 경계가 다시 무너집니다. 이건 CQRS를 가볍게 적용한 형태인데, 이름보다 중요한 건 "원칙이 어떤 전제 위에 서 있는지 알고 있으면, 전제가 사라진 곳에서 당당하게 깰 수 있다"는 태도입니다. 요금 계산 쪽의 <code>FeePolicy</code>도 같은 맥락에서 Strategy로 분리해 두었는데, 이 구조는 이후 정산 시스템을 Template Method + Strategy로 리팩토링할 때 훨씬 큰 규모로 다시 쓰게 됩니다.</p>
+
+<h2>5. 스트랭글러 — 옮기는 순서가 곧 전략이다</h2>
+<p>구조가 정해졌어도 레거시 전체를 한 번에 옮길 수는 없습니다. 스트랭글러 패턴의 요점은 새 구조가 옛 구조를 <em>감싸며 자라게</em> 하는 것이고, 실무에서 그 성패는 <b>옮기는 순서</b>가 결정합니다. 저는 이 순서를 지켰습니다.</p>
+<p><b>1순위, 새 기능.</b> 새로 들어오는 요구사항은 처음부터 UseCase로 작성합니다. 기존 코드를 한 줄도 건드리지 않으니 리스크가 0이고, 팀은 실제 코드로 패턴을 학습하며, "새 방식이 돌아간다"는 증거가 쌓입니다. <b>2순위, 버그가 난 지점.</b> 어차피 고쳐야 하는 코드입니다. 고치기 전에 현재 동작을 그대로 박제하는 특성 테스트(characterization test)를 먼저 만들고, 테스트가 초록인 상태에서 UseCase로 이관한 뒤 버그를 고칩니다. 수정 비용에 이관 비용을 얹는 게 아니라, 이관이 수정을 안전하게 만들어 줍니다. <b>3순위, 자주 바뀌는 지점.</b> 변경 빈도가 곧 투자 대비 수익입니다. 반대로 몇 년째 안 바뀐 코드는 <em>끝까지 안 옮겨도 됩니다</em>. 레거시를 소멸시키는 것이 목표가 아니라, 변경이 일어나는 자리에 경계가 있게 하는 것이 목표입니다.</p>
+<p>이관한 뒤에도 기존 화면단 호출부는 수정하지 않습니다. 레거시 서비스 메서드를 껍데기로 만들어 위임합니다.</p>
+<pre class="code"><span class="c">// 레거시 서비스는 껍데기로 — 호출부는 그대로 둔다</span>
+<span class="c">/** @deprecated RegisterSeasonTicket 으로 이관됨. 새 코드에서 호출 금지. */</span>
+<span class="k">@Deprecated</span>
+<span class="k">public</span> Map&lt;String, Object&gt; <span class="f">regist</span>(HttpServletRequest req) {
+  <span class="k">var</span> cmd = <span class="k">new</span> RegisterSeasonTicket.Command(
+      req.getParameter(<span class="s">"car_no"</span>),
+      Long.valueOf(req.getParameter(<span class="s">"lot_id"</span>)),
+      DiscountKind.from(req.getParameter(<span class="s">"dc"</span>)));
+  <span class="k">var</span> result = registerSeasonTicket.execute(cmd);
+  <span class="k">return</span> legacyResponse(result);  <span class="c">// 기존 화면이 기대하는 Map 형태 유지</span>
+}</pre>
+<p>이 껍데기가 하는 일이 곧 스트랭글러의 본질입니다. 낡은 인터페이스(HttpServletRequest와 Map)와 새 경계(Command와 Result) 사이의 번역만 남기고, 업무 로직은 전부 경계 안쪽으로 들어갔습니다. 껍데기의 호출자가 하나씩 줄어들다 0이 되면 그때 지웁니다.</p>
+<div class="callout"><span class="mark">!</span><p><b>이관 기간의 가장 위험한 함정은 쓰기 경로의 이원화입니다.</b> 같은 테이블을 레거시 DAO와 새 Repository가 동시에 쓰면, 도메인 객체가 강제하던 불변식이 레거시 경로로 우회됩니다 — "만료 정기권은 연장 불가"를 UseCase가 지켜도, 옛 화면의 UPDATE 한 줄이 뚫습니다. 읽기는 공유해도 <b>쓰기 소유권은 한 시점에 한쪽에만</b> 두세요. 테이블 단위로 소유권을 넘기고, 넘긴 뒤 레거시 쪽 쓰기 코드는 즉시 위임으로 바꿉니다.</p></div>
+<p>그리고 이 순서는 기술 전략이면서 동시에 <b>신뢰 전략</b>이었습니다. 새 기능부터 시작하면 누구의 코드도 부수지 않으면서 증거를 만들 수 있습니다. 6개월을 기다려 얻은 발언권을, 첫 이관에서 장애를 내며 소진할 수는 없었으니까요. 그 신뢰의 이야기는 <a class="u-link" href="../cases/legacy-usecase.html">사례 글</a>에 적었습니다. 덧붙이면 이 경계는 프레임워크와 무관합니다 — 이후 NestJS로 백엔드를 설계할 때도 UseCase를 Provider로 두는 같은 규칙을 그대로 썼습니다. 언어가 바뀌어도 경계는 남습니다.</p>
+
+<h2>6. 정리 — 경계를 긋는 규칙들</h2>
+<p>이 글의 규칙을 목록으로 남깁니다. 레거시 위에서 하나씩 검증한 것들입니다.</p>
+<ul>
+  <li><b>트랜잭션 스크립트는 조건부 부채다.</b> 분기의 조합 폭발과 규칙 복사가 겹치는 순간부터 비용이 불확실성으로 바뀐다.</li>
+  <li><b>UseCase의 단위는 업무 문장 하나.</b> 클래스 하나, 진입점 하나, 전용 입출력 타입. 이름은 동사+목적어 — <code>Manager</code>가 필요해지면 쪼갤 때다.</li>
+  <li><b>트랜잭션 경계는 UseCase가 소유한다.</b> Repository는 커밋하지 않고, 외부 호출(알림 등)은 커밋 뒤로 보낸다.</li>
+  <li><b>Repository는 기술을 숨기고 도메인을 드러낸다.</b> SQL·테이블 사정은 감추고, '없음'은 <code>Optional</code>로, 업무 조건은 메서드 이름으로. 넓은 인터페이스는 추상화가 아니라 경계의 부재다.</li>
+  <li><b>읽기 전용 집계에서는 원칙을 알고 깬다.</b> 보호할 불변식이 없으면 쿼리 모델로 우회하되, 읽기 전용 + DTO 반환이라는 조건을 건다.</li>
+  <li><b>이관 순서는 새 기능 → 버그 지점 → 변경 빈도 순.</b> 레거시 소멸이 아니라, 변경이 일어나는 자리에 경계를 두는 것이 목표다.</li>
+  <li><b>스트랭글러 기간에도 쓰기 소유권은 한쪽에만.</b> 레거시 메서드는 위임 껍데기로 남기고, 호출자가 0이 되면 지운다.</li>
+</ul>
+<p>경계를 긋는 일은 코드를 다시 쓰는 일보다 훨씬 지루하고, 훨씬 오래갑니다. 재작성은 한 번의 결단이지만 경계는 매일의 규율이기 때문입니다. 그래도 운영 중인 시스템에서 선택할 수 있는 길은 대개 후자뿐이었고, 그 길은 실제로 통했습니다.</p>
+
+    <div class="post-tags"><span class="pt-head">태그</span><a class="tag" href="index.html">아키텍처</a><a class="tag" href="index.html">UseCase</a><a class="tag" href="index.html">레거시</a></div>
+    <div class="post-cta"><span class="t">이 리팩토링의 전말 → <b>레거시 아키텍처 개선 사례</b></span><a class="chip primary" href="../cases/legacy-usecase.html">사례 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="pattern-pipe-filter.html"><div class="np-key">← 이전 글</div><div class="np-title">아키텍처 패턴 · Pipe &amp; Filter</div></a>
+    <a class="next" href="index.html"><div class="np-key">글 목록 →</div><div class="np-title">전체 보기</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

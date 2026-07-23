@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PostgreSQL MVCC — UPDATE가 사실은 INSERT인 이유 — 안성진</title>
+<meta name="description" content="튜플 버전과 VACUUM의 동작을 pageinspect로 직접 들여다보며, 느려지는 테이블의 원인을 구조에서 찾는다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL MVCC — UPDATE가 사실은 INSERT인 이유">
+<meta property="og:description" content="튜플 버전과 VACUUM의 동작을 pageinspect로 직접 들여다보며, 느려지는 테이블의 원인을 구조에서 찾는다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"PostgreSQL MVCC — UPDATE가 사실은 INSERT인 이유","datePublished":"2022-09-10","dateModified":"2026-07-23","inLanguage":"ko","description":"튜플 버전과 VACUUM의 동작을 pageinspect로 직접 들여다보며, 느려지는 테이블의 원인을 구조에서 찾는다.","keywords":"PostgreSQL · MVCC · VACUUM","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/postgres-mvcc-vacuum.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / postgres-mvcc-vacuum</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 백엔드</p>
+    <h1>PostgreSQL MVCC — UPDATE가 사실은 INSERT인 이유</h1>
+    <div class="post-meta">
+      <span>2022년 9월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>PostgreSQL · MVCC · VACUUM</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">지난 글에서는 인덱스와 keyset 페이지네이션으로 느린 목록을 살렸습니다. 그런데 인덱스가 멀쩡한데도 시간이 지나면 도로 느려지는 테이블이 있습니다. 이번에는 쿼리가 아니라 저장 구조를 봅니다. 출발점은 한 문장입니다 — PostgreSQL에서 <b>UPDATE는 제자리 수정이 아니라 새 버전의 INSERT</b>입니다.</p>
+
+<h2>1. UPDATE는 제자리에서 고치지 않는다</h2>
+<p>PostgreSQL은 MVCC(다중 버전 동시성 제어)로 읽기와 쓰기가 서로를 막지 않게 합니다. 방법은 단순합니다. 행을 고치는 대신 <b>버전을 쌓습니다</b>. 모든 튜플(행 버전)에는 숨은 컬럼이 있습니다 — <code>xmin</code>은 이 버전을 만든 트랜잭션 ID, <code>xmax</code>는 이 버전을 지운(또는 지우는 중인) 트랜잭션 ID입니다.</p>
+<p>그래서 UPDATE 한 번은 실제로 두 가지 일을 합니다. <b>새 튜플을 추가</b>하고, 옛 튜플의 <code>xmax</code>에 자기 트랜잭션 ID를 적습니다. DELETE는 <code>xmax</code>만 적고 끝입니다. 어떤 트랜잭션이 어떤 버전을 보느냐는 각자의 스냅샷이 결정하므로, 긴 SELECT가 도는 동안에도 UPDATE는 기다리지 않습니다. 대가도 분명합니다 — <b>옛 버전이 파일 안에 그대로 남습니다</b>.</p>
+
+<h2>2. xmin·xmax를 눈으로 확인한다</h2>
+<p>숨은 컬럼은 이름을 직접 부르면 조회됩니다. <code>ctid</code>는 튜플의 물리 위치, 즉 (페이지 번호, 페이지 안 순번)입니다.</p>
+<pre class="code"><span class="k">CREATE TABLE</span> account (id int <span class="k">PRIMARY KEY</span>, balance int);
+<span class="k">INSERT INTO</span> account <span class="k">VALUES</span> (<span class="s">1</span>, <span class="s">100</span>);
+
+<span class="k">SELECT</span> ctid, xmin, xmax, * <span class="k">FROM</span> account;
+<span class="c">--  ctid  | xmin | xmax | id | balance
+-- (0,1)  |  801 |    0 |  1 |     100</span>
+
+<span class="k">UPDATE</span> account <span class="k">SET</span> balance = <span class="s">90</span> <span class="k">WHERE</span> id = <span class="s">1</span>;
+
+<span class="k">SELECT</span> ctid, xmin, xmax, * <span class="k">FROM</span> account;
+<span class="c">--  ctid  | xmin | xmax | id | balance
+-- (0,2)  |  802 |    0 |  1 |      90   ← 위치가 (0,1)→(0,2). 새 튜플이다</span></pre>
+<p>UPDATE 후 <code>ctid</code>가 바뀌었습니다. 같은 페이지의 <b>다음 슬롯에 새 버전이 추가</b>된 겁니다. <code>xmax</code>가 0이 아닌 순간도 잡을 수 있습니다. 세션을 두 개 열면 됩니다.</p>
+<pre class="code"><span class="c">-- 세션 A</span>
+<span class="k">BEGIN</span>;
+<span class="k">DELETE FROM</span> account <span class="k">WHERE</span> id = <span class="s">1</span>;   <span class="c">-- 아직 COMMIT하지 않는다</span>
+
+<span class="c">-- 세션 B: 행이 여전히 보이고, xmax에 A의 트랜잭션 ID가 적혀 있다</span>
+<span class="k">SELECT</span> ctid, xmin, xmax <span class="k">FROM</span> account;
+<span class="c">--  ctid  | xmin | xmax
+-- (0,2)  |  802 |  803</span></pre>
+<p><code>xmax</code>는 "이 버전을 지우려는 트랜잭션"의 표시일 뿐, 실제로 지우는 게 아닙니다. A가 <code>ROLLBACK</code>하면 그 표시는 무효가 되고 행은 그대로 삽니다. PostgreSQL의 롤백이 순식간에 끝나는 것도 같은 구조의 결과입니다 — 되돌릴 게 없으니까요.</p>
+
+<h2>3. pageinspect로 페이지 속을 본다</h2>
+<p>일반 SELECT는 스냅샷에 보이는 버전만 돌려줍니다. 페이지에 실제로 뭐가 있는지는 <code>pageinspect</code> 확장으로 봅니다. (위 실험의 세션 A가 ROLLBACK을 마친 상태입니다.)</p>
+<pre class="code"><span class="k">CREATE EXTENSION IF NOT EXISTS</span> pageinspect;
+
+<span class="k">SELECT</span> lp, t_xmin, t_xmax, t_ctid
+<span class="k">FROM</span> <span class="f">heap_page_items</span>(<span class="f">get_raw_page</span>(<span class="s">'account'</span>, <span class="s">0</span>));
+<span class="c">-- lp | t_xmin | t_xmax | t_ctid
+--  1 |    801 |    802 | (0,2)   ← 옛 버전. 다음 버전 (0,2)를 가리킨다
+--  2 |    802 |    803 | (0,2)   ← 현재 버전. ROLLBACK한 DELETE의 803이 남아 있다</span></pre>
+<p>SELECT에는 안 보이던 옛 버전(lp 1)이 페이지에 그대로 있습니다. <code>t_xmax</code>에 UPDATE 트랜잭션의 ID가 적혀 있고, <code>t_ctid</code>는 버전 체인의 다음 칸을 가리킵니다. 눈여겨볼 곳이 하나 더 있습니다 — 현재 버전(lp 2)의 <code>t_xmax</code>에는 ROLLBACK으로 무효가 된 803이 <b>지워지지 않고 남아 있습니다</b>. PostgreSQL은 803이 중단된 트랜잭션이라는 사실만 따로 기록해 두고 이 표시를 무시할 뿐, 페이지를 되돌리러 오지 않습니다. 롤백이 순식간에 끝나는 이유가 페이지 위에 그대로 보이는 셈입니다. 반면 커밋이 끝나 어떤 스냅샷에도 더는 보이지 않게 된 lp 1 같은 버전이 <b>dead tuple</b>입니다. 자리를 차지하고, 스캔은 그 위를 지나갑니다.</p>
+<div class="callout"><span class="mark">*</span><p><code>pageinspect</code>는 슈퍼유저 권한이 필요한 저수준 도구라 운영 DB에서 남발할 물건은 아닙니다. 로컬에서 UPDATE·DELETE·VACUUM을 한 줄씩 실행하며 페이지가 어떻게 변하는지 따라가 보는 용도로는 최고의 교재입니다.</p></div>
+
+<h2>4. dead tuple이 테이블을 느리게 만드는 방식</h2>
+<p>UPDATE가 잦은 테이블은 살아있는 행 수는 그대로인데 파일은 계속 자랍니다. 그리고 스캔 비용은 행 수가 아니라 <b>페이지 수</b>를 따라갑니다. 전형적인 피해자가 작업 큐입니다. 제가 만들던 크롤링 파이프라인의 큐 테이블이 그랬습니다 — 대기 중인 몇백 건을 집는 <code>LIMIT</code> 쿼리가, 완료 처리로 UPDATE된 수많은 죽은 버전을 헤치고 나서야 살아있는 행에 닿았습니다. 살아있는 행이 적을수록 역설적으로 더 느려지는 구조입니다.</p>
+<p>인덱스도 무사하지 않습니다. 인덱스 항목은 <code>ctid</code>를 가리키므로, 새 버전이 생길 때마다 항목이 추가되고 옛 버전을 가리키는 항목이 남습니다(예외는 뒤에 나올 HOT). 지난 글에서 인덱스를 깔아 살린 목록도, 방치하면 이 경로로 다시 무너집니다. 관찰은 통계 뷰부터 시작합니다.</p>
+<pre class="code"><span class="k">SELECT</span> relname, n_live_tup, n_dead_tup,
+       <span class="f">round</span>(n_dead_tup * <span class="s">100.0</span> / <span class="f">nullif</span>(n_live_tup + n_dead_tup, <span class="s">0</span>), <span class="s">1</span>) <span class="k">AS</span> dead_pct,
+       last_autovacuum
+<span class="k">FROM</span> pg_stat_user_tables
+<span class="k">ORDER BY</span> n_dead_tup <span class="k">DESC</span>
+<span class="k">LIMIT</span> <span class="s">10</span>;</pre>
+<p><code>n_dead_tup</code>은 통계 수집기의 추정치입니다. 정확한 수치가 필요하면 <code>pgstattuple</code> 확장의 <code>dead_tuple_percent</code>로 확인합니다. <code>last_autovacuum</code>이 오래전이라면 그 자체가 단서입니다.</p>
+
+<h2>5. VACUUM이 하는 일, 하지 않는 일</h2>
+<p>VACUUM은 어떤 스냅샷에도 더 이상 보이지 않는 버전을 찾아 <b>그 자리를 재사용 가능으로 표시</b>하고, 인덱스에서 해당 항목을 걷어냅니다. 중요한 건 하지 않는 일입니다 — 파일을 줄여 OS에 돌려주지 않습니다(파일 끝의 빈 페이지를 잘라내는 정도가 전부입니다). 이미 부풀 대로 부푼 테이블에 VACUUM을 돌려도 크기가 그대로인 이유입니다. 크기를 되돌리려면 <code>VACUUM FULL</code>인데, 테이블을 통째로 재작성하는 동안 <code>ACCESS EXCLUSIVE</code> 잠금을 잡으므로 운영 중에는 사실상 못 씁니다. 무중단이 필요하면 pg_repack 같은 도구를 검토합니다.</p>
+<p>UPDATE 비용 자체를 줄이는 장치로는 <b>HOT</b>(Heap-Only Tuple)이 있습니다. 인덱스에 걸린 컬럼이 바뀌지 않았고 같은 페이지에 빈자리가 있으면, 인덱스 항목을 새로 만들지 않고 페이지 안에서 버전 체인만 잇습니다. <code>fillfactor</code>를 낮춰 페이지마다 여유를 남겨두면 HOT 확률이 올라갑니다.</p>
+<pre class="code"><span class="c">-- 페이지를 80%만 채워 HOT 업데이트 여지를 남긴다 (기본 100)</span>
+<span class="k">ALTER TABLE</span> jobs <span class="k">SET</span> (fillfactor = <span class="s">80</span>);
+
+<span class="c">-- 전체 UPDATE 중 HOT 비율 확인</span>
+<span class="k">SELECT</span> n_tup_upd, n_tup_hot_upd
+<span class="k">FROM</span> pg_stat_user_tables <span class="k">WHERE</span> relname = <span class="s">'jobs'</span>;</pre>
+
+<h2>6. autovacuum 튜닝 포인트</h2>
+<p>autovacuum은 <code>n_dead_tup</code>이 대략 <code>threshold(기본 50) + scale_factor(기본 0.2) × 행 수</code>를 넘으면 그 테이블을 청소합니다. 기본값의 함정이 여기 있습니다 — 천만 행 테이블이면 dead tuple이 <b>2백만 개</b>를 넘어야 시작한다는 뜻입니다. 큰 테이블, UPDATE가 잦은 테이블은 테이블 단위로 조입니다.</p>
+<pre class="code"><span class="c">-- 이 테이블만 더 일찍, 더 자주 청소하게</span>
+<span class="k">ALTER TABLE</span> jobs <span class="k">SET</span> (
+  autovacuum_vacuum_scale_factor = <span class="s">0.02</span>,   <span class="c">-- 기본 0.2 → dead 2%면 시작</span>
+  autovacuum_vacuum_threshold    = <span class="s">1000</span>
+);</pre>
+<p>돌긴 도는데 쌓이는 속도를 못 따라간다면 청소 속도 제한이 원인일 수 있습니다. <code>autovacuum_vacuum_cost_limit</code>을 올리거나 <code>autovacuum_vacuum_cost_delay</code>(기본 2ms)를 낮춰 autovacuum에 더 많은 I/O 예산을 줍니다.</p>
+<p>마지막으로, VACUUM이 아무리 돌아도 <b>못 지우는</b> 경우가 있습니다. 오래된 트랜잭션이 옛 스냅샷을 붙잡고 있으면 그 시점 이후의 dead tuple은 회수 대상이 아닙니다. 단골 범인은 <code>idle in transaction</code>으로 방치된 세션과 잊힌 replication slot입니다.</p>
+<pre class="code"><span class="c">-- 스냅샷을 오래 붙잡고 있는 트랜잭션 찾기</span>
+<span class="k">SELECT</span> pid, state, <span class="f">now</span>() - xact_start <span class="k">AS</span> xact_age, <span class="f">left</span>(query, <span class="s">40</span>) <span class="k">AS</span> query
+<span class="k">FROM</span> pg_stat_activity
+<span class="k">WHERE</span> backend_xmin <span class="k">IS NOT NULL</span>
+<span class="k">ORDER BY</span> xact_age <span class="k">DESC</span>;</pre>
+<div class="callout"><span class="mark">*</span><p>autovacuum이 부담스럽다고 끄는 건 최악의 수입니다. 문제는 거의 항상 "너무 자주"가 아니라 <b>"너무 늦게"</b>입니다 — 더 작게, 더 자주 돌게 만드세요. 그리고 정산 배치처럼 한 번에 대량 UPDATE를 치는 작업 뒤에는 <code>VACUUM ANALYZE</code>를 수동으로 한 번 돌려두는 편이 다음 트래픽을 편하게 합니다.</p></div>
+<p>지난 글이 "쿼리를 어떻게 쓰나"였다면 이번 글은 "테이블이 왜 부푸나"였습니다. UPDATE가 INSERT라는 사실 하나를 받아들이면, 느려지는 테이블 앞에서 볼 곳이 달라집니다 — 실행 계획보다 먼저 <code>n_dead_tup</code>과 <code>last_autovacuum</code>을 여는 습관, 그게 이 글의 결론입니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">PostgreSQL</a>
+      <a class="tag" href="index.html">MVCC</a>
+      <a class="tag" href="index.html">VACUUM</a>
+    </div>
+    <div class="post-cta"><span class="t">기본 편부터 보기 → <b>PostgreSQL 느린 목록 글</b></span><a class="chip primary" href="postgres-slow-list.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="spring-transaction-propagation.html"><div class="np-key">← 이전 글</div><div class="np-title">Spring 트랜잭션 전파</div></a>
+    <a class="next" href="prisma-transactions-n1.html"><div class="np-key">다음 글 →</div><div class="np-title">Prisma 트랜잭션과 N+1</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

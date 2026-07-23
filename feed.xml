@@ -1,116 +1,149 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>안성진 기술 블로그</title>
-    <link>https://lamgul.github.io/writing/</link>
-    <atom:link href="https://lamgul.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <description>백엔드 개발자 안성진의 기술 블로그 — LLM 서빙, JVM, PostgreSQL, 아키텍처, 보안, 데이터.</description>
-    <language>ko</language>
-    <lastBuildDate>Fri, 01 May 2026 00:00:00 GMT</lastBuildDate>
-    <item>
-      <title>온프레미스에서 LLM을 서빙한다는 것 — vLLM과 양자화</title>
-      <link>https://lamgul.github.io/writing/serving-llm-on-prem.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/serving-llm-on-prem.html</guid>
-      <pubDate>Fri, 01 May 2026 00:00:00 GMT</pubDate>
-      <description>PagedAttention·연속 배칭·양자화로 GPU에서 LLM을 운영 속도로.</description>
-    </item>
-    <item>
-      <title>관리자와 근로자는 같은 데이터를 다르게 쓴다 — NestJS 역할 분리</title>
-      <link>https://lamgul.github.io/writing/nestjs-role-based-api.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/nestjs-role-based-api.html</guid>
-      <pubDate>Sun, 01 Mar 2026 00:00:00 GMT</pubDate>
-      <description>모듈·Guard·DTO로 API와 권한을 가르는 법.</description>
-    </item>
-    <item>
-      <title>PostgreSQL 느린 목록 화면 — 인덱스와 keyset 페이지네이션</title>
-      <link>https://lamgul.github.io/writing/postgres-slow-list.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/postgres-slow-list.html</guid>
-      <pubDate>Sat, 01 Nov 2025 00:00:00 GMT</pubDate>
-      <description>EXPLAIN ANALYZE, 복합 인덱스, OFFSET→keyset.</description>
-    </item>
-    <item>
-      <title>Docker 이미지를 반으로 — 멀티스테이지와 레이어 캐시</title>
-      <link>https://lamgul.github.io/writing/docker-image-diet.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/docker-image-diet.html</guid>
-      <pubDate>Wed, 01 Oct 2025 00:00:00 GMT</pubDate>
-      <description>런타임만 남기고, 캐시 순서로 재빌드를 몇 초로.</description>
-    </item>
-    <item>
-      <title>힙덤프 읽는 법 — MAT의 Dominator Tree로 범인 찾기</title>
-      <link>https://lamgul.github.io/writing/reading-heap-dumps.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/reading-heap-dumps.html</guid>
-      <pubDate>Mon, 01 Sep 2025 00:00:00 GMT</pubDate>
-      <description>Retained Heap·Leak Suspects·Path to GC Roots.</description>
-    </item>
-    <item>
-      <title>Adapter로 크롤러를 무한 확장하고, Backoff로 안 잘리기</title>
-      <link>https://lamgul.github.io/writing/adapter-and-backoff.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/adapter-and-backoff.html</guid>
-      <pubDate>Fri, 01 Aug 2025 00:00:00 GMT</pubDate>
-      <description>사이트별 차이는 Adapter 뒤로, 재시도는 지수 백오프+지터.</description>
-    </item>
-    <item>
-      <title>이 사이트를 배포하며 부딪힌 다섯 개의 벽</title>
-      <link>https://lamgul.github.io/writing/shipping-this-portfolio.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/shipping-this-portfolio.html</guid>
-      <pubDate>Tue, 01 Jul 2025 00:00:00 GMT</pubDate>
-      <description>가변폰트·SVG arc·타입에러·gitignore·옵저버 타이밍.</description>
-    </item>
-    <item>
-      <title>데이터베이스 없이 상태를 버티기</title>
-      <link>https://lamgul.github.io/writing/state-without-a-database.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/state-without-a-database.html</guid>
-      <pubDate>Sun, 01 Jun 2025 00:00:00 GMT</pubDate>
-      <description>영속성을 빼면 무엇이 단순해지고 무엇이 무너지나.</description>
-    </item>
-    <item>
-      <title>반복 업무를 죽이는 자동화 — 보고서 생성을 절반으로</title>
-      <link>https://lamgul.github.io/writing/killing-repetitive-work.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/killing-repetitive-work.html</guid>
-      <pubDate>Thu, 01 May 2025 00:00:00 GMT</pubDate>
-      <description>pandas·openpyxl, 그리고 확보한 시간의 재투자.</description>
-    </item>
-    <item>
-      <title>정규식을 손으로 파싱하기</title>
-      <link>https://lamgul.github.io/writing/parsing-regex-by-hand.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/parsing-regex-by-hand.html</guid>
-      <pubDate>Tue, 01 Apr 2025 00:00:00 GMT</pubDate>
-      <description>라이브러리 없이 재귀 하강 파서. 문법이 곧 함수.</description>
-    </item>
-    <item>
-      <title>가변 폰트로 UI에 숨을 불어넣기</title>
-      <link>https://lamgul.github.io/writing/variable-fonts-in-ui.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/variable-fonts-in-ui.html</guid>
-      <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
-      <description>font-variation-settings의 함정과 가능성.</description>
-    </item>
-    <item>
-      <title>웹 서버 하드닝 체크리스트 — ServerTokens부터 헤더까지</title>
-      <link>https://lamgul.github.io/writing/web-server-hardening.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/web-server-hardening.html</guid>
-      <pubDate>Sun, 01 Dec 2024 00:00:00 GMT</pubDate>
-      <description>버전 노출 제거, 보안 헤더, 표면 줄이기.</description>
-    </item>
-    <item>
-      <title>Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</title>
-      <link>https://lamgul.github.io/writing/redis-cache-invalidation.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/redis-cache-invalidation.html</guid>
-      <pubDate>Sun, 01 Sep 2024 00:00:00 GMT</pubDate>
-      <description>TTL·스탬피드·이벤트 기반 무효화.</description>
-    </item>
-    <item>
-      <title>Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</title>
-      <link>https://lamgul.github.io/writing/feature-engineering-in-practice.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/feature-engineering-in-practice.html</guid>
-      <pubDate>Sat, 01 Jun 2024 00:00:00 GMT</pubDate>
-      <description>다중공선성 정리와 도메인 파생 변수.</description>
-    </item>
-    <item>
-      <title>관측 가능성 — 새벽에 안 깨려면 무엇을 남겨야 하나</title>
-      <link>https://lamgul.github.io/writing/observability-basics.html</link>
-      <guid isPermaLink="true">https://lamgul.github.io/writing/observability-basics.html</guid>
-      <pubDate>Fri, 01 Mar 2024 00:00:00 GMT</pubDate>
-      <description>로그·메트릭·트레이스, 구조화 로깅과 상관 ID.</description>
-    </item>
-  </channel>
+<rss version="2.0">
+<channel>
+  <title>안성진 기술 블로그</title>
+  <link>https://lamgul.github.io/writing/</link>
+  <description>백엔드 개발자 안성진의 기술 블로그 — 실무에서 배운 것을 구체적으로 기록합니다.</description>
+  <language>ko</language>
+  <item>
+    <title>회고: 2020년부터의 학습 지도 — 무엇을 왜 공부했나</title>
+    <link>https://lamgul.github.io/writing/learning-since-2020.html</link>
+    <guid>https://lamgul.github.io/writing/learning-since-2020.html</guid>
+    <pubDate>Mon, 15 Jun 2026 09:00:00 -0000</pubDate>
+    <description>2020년 데이터 가공에서 시작해 Spring·FastAPI·쿠버네티스·온프레미스 AI 서빙까지, 무엇을 왜 공부했는지 시간순으로 정리한다.</description>
+  </item>
+  <item>
+    <title>온프레미스에서 LLM을 서빙한다는 것 — vLLM과 양자화</title>
+    <link>https://lamgul.github.io/writing/serving-llm-on-prem.html</link>
+    <guid>https://lamgul.github.io/writing/serving-llm-on-prem.html</guid>
+    <pubDate>Sat, 09 May 2026 09:00:00 -0000</pubDate>
+    <description>현장 데이터를 밖으로 못 보내는 제약 아래, vLLM의 PagedAttention과 연속 배칭, 그리고 양자화로 온프레미스 GPU에서 LLM을 실제 운영 가능한 속도로 서빙…</description>
+  </item>
+  <item>
+    <title>논문 분석: PagedAttention — vLLM이 빠른 진짜 이유</title>
+    <link>https://lamgul.github.io/writing/pagedattention-paper.html</link>
+    <guid>https://lamgul.github.io/writing/pagedattention-paper.html</guid>
+    <pubDate>Thu, 02 Apr 2026 09:00:00 -0000</pubDate>
+    <description>KV 캐시를 OS 페이징처럼 관리하는 PagedAttention 논문을 분석하고, 실서빙에서 처리량이 왜 달라지는지 정리한다.</description>
+  </item>
+  <item>
+    <title>관리자와 근로자는 같은 데이터를 다르게 쓴다 — NestJS 역할 분리</title>
+    <link>https://lamgul.github.io/writing/nestjs-role-based-api.html</link>
+    <guid>https://lamgul.github.io/writing/nestjs-role-based-api.html</guid>
+    <pubDate>Sun, 08 Mar 2026 09:00:00 -0000</pubDate>
+    <description>같은 도메인을 관리자 Web과 근로자 App이 서로 다른 흐름으로 사용할 때, NestJS의 모듈·Guard·DTO로 API와 권한을 어떻게 갈랐는지.</description>
+  </item>
+  <item>
+    <title>Prisma 트랜잭션과 N+1 — ORM이 숨기는 쿼리</title>
+    <link>https://lamgul.github.io/writing/prisma-transactions-n1.html</link>
+    <guid>https://lamgul.github.io/writing/prisma-transactions-n1.html</guid>
+    <pubDate>Sat, 07 Feb 2026 09:00:00 -0000</pubDate>
+    <description>Prisma의 $transaction·include가 실제로 만드는 SQL을 로그로 확인하고, N+1을 잡는 세 가지 방법을 비교한다.</description>
+  </item>
+  <item>
+    <title>PostgreSQL 느린 목록 화면 — 인덱스와 keyset 페이지네이션</title>
+    <link>https://lamgul.github.io/writing/postgres-slow-list.html</link>
+    <guid>https://lamgul.github.io/writing/postgres-slow-list.html</guid>
+    <pubDate>Tue, 25 Nov 2025 09:00:00 -0000</pubDate>
+    <description>EXPLAIN ANALYZE로 병목을 읽고, 복합 인덱스 순서와 OFFSET→keyset 페이지네이션으로 느린 목록 화면을 살린 실무 기록.</description>
+  </item>
+  <item>
+    <title>Docker 이미지를 반으로 — 멀티스테이지와 레이어 캐시</title>
+    <link>https://lamgul.github.io/writing/docker-image-diet.html</link>
+    <guid>https://lamgul.github.io/writing/docker-image-diet.html</guid>
+    <pubDate>Fri, 10 Oct 2025 09:00:00 -0000</pubDate>
+    <description>빌드 도구까지 담긴 무거운 이미지를 멀티스테이지 빌드로 런타임만 남기고, 레이어 캐시 순서로 빌드 시간을 줄인 실무 노트.</description>
+  </item>
+  <item>
+    <title>힙덤프 읽는 법 — MAT의 Dominator Tree로 범인 찾기</title>
+    <link>https://lamgul.github.io/writing/reading-heap-dumps.html</link>
+    <guid>https://lamgul.github.io/writing/reading-heap-dumps.html</guid>
+    <pubDate>Sat, 13 Sep 2025 09:00:00 -0000</pubDate>
+    <description>메모리 누수를 추적할 때 힙덤프를 어떻게 뜨고, Eclipse MAT의 Dominator Tree·Leak Suspects·GC Roots로 어떻게 범인을 좁히는지 실무 순…</description>
+  </item>
+  <item>
+    <title>학습 노트: Spring과 FastAPI를 오가며 배운 것</title>
+    <link>https://lamgul.github.io/writing/study-spring-vs-fastapi.html</link>
+    <guid>https://lamgul.github.io/writing/study-spring-vs-fastapi.html</guid>
+    <pubDate>Tue, 16 Sep 2025 09:00:00 -0000</pubDate>
+    <description>두 프레임워크를 실무에서 오가며 느낀 DI·검증·비동기·타입 시스템의 설계 철학 차이를 예제로 비교한다.</description>
+  </item>
+  <item>
+    <title>Adapter로 크롤러를 무한 확장하고, Backoff로 안 잘리기</title>
+    <link>https://lamgul.github.io/writing/adapter-and-backoff.html</link>
+    <guid>https://lamgul.github.io/writing/adapter-and-backoff.html</guid>
+    <pubDate>Fri, 01 Aug 2025 09:00:00 -0000</pubDate>
+    <description>사이트마다 다른 HTML을 Adapter 패턴으로 격리하고, Rate limit·봇 감지를 Exponential Backoff+지터로 우회한 크롤링 파이프라인의 두 축.</description>
+  </item>
+  <item>
+    <title>쿠버네티스 requests/limits — OOMKilled의 진짜 이유</title>
+    <link>https://lamgul.github.io/writing/kubernetes-oomkilled.html</link>
+    <guid>https://lamgul.github.io/writing/kubernetes-oomkilled.html</guid>
+    <pubDate>Fri, 11 Jul 2025 09:00:00 -0000</pubDate>
+    <description>메모리 limits와 cgroup의 관계를 실험 매니페스트로 확인하고, JVM 컨테이너가 죽는 전형적 패턴을 정리한다.</description>
+  </item>
+  <item>
+    <title>이 사이트를 배포하며 부딪힌 다섯 개의 벽</title>
+    <link>https://lamgul.github.io/writing/shipping-this-portfolio.html</link>
+    <guid>https://lamgul.github.io/writing/shipping-this-portfolio.html</guid>
+    <pubDate>Sat, 12 Jul 2025 09:00:00 -0000</pubDate>
+    <description>포트폴리오 사이트 하나를 GitHub Pages까지 올리며 실제로 막혔던 다섯 가지 문제와 해결 과정. 가변폰트, SVG arc, 타입 에러, .gitignore,…</description>
+  </item>
+  <item>
+    <title>데이터베이스 없이 상태를 버티기</title>
+    <link>https://lamgul.github.io/writing/state-without-a-database.html</link>
+    <guid>https://lamgul.github.io/writing/state-without-a-database.html</guid>
+    <pubDate>Thu, 12 Jun 2025 09:00:00 -0000</pubDate>
+    <description>실시간 투표를 만들며, 영속성을 빼면 무엇이 단순해지고 무엇이 무너지는지 따라가 본 기록.</description>
+  </item>
+  <item>
+    <title>반복 업무를 죽이는 자동화 — 보고서 생성을 절반으로</title>
+    <link>https://lamgul.github.io/writing/killing-repetitive-work.html</link>
+    <guid>https://lamgul.github.io/writing/killing-repetitive-work.html</guid>
+    <pubDate>Fri, 02 May 2025 09:00:00 -0000</pubDate>
+    <description>매주 손으로 만들던 Excel 보고서를 pandas·openpyxl로 자동화해 처리시간을 절반으로 줄인 이야기. 자동화가 만든 시간을 어디에 재투자했나.</description>
+  </item>
+  <item>
+    <title>정규식을 손으로 파싱하기</title>
+    <link>https://lamgul.github.io/writing/parsing-regex-by-hand.html</link>
+    <guid>https://lamgul.github.io/writing/parsing-regex-by-hand.html</guid>
+    <pubDate>Fri, 11 Apr 2025 09:00:00 -0000</pubDate>
+    <description>라이브러리 없이 재귀 하강 파서를 짜며 배운 것. 문법의 우선순위가 어떻게 그대로 함수가 되는가.</description>
+  </item>
+  <item>
+    <title>서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식</title>
+    <link>https://lamgul.github.io/writing/review-k8s-in-action.html</link>
+    <guid>https://lamgul.github.io/writing/review-k8s-in-action.html</guid>
+    <pubDate>Fri, 25 Apr 2025 09:00:00 -0000</pubDate>
+    <description>Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.</description>
+  </item>
+  <item>
+    <title>FastAPI 의존성 주입 — 크롤러 어댑터를 갈아끼우는 법</title>
+    <link>https://lamgul.github.io/writing/fastapi-dependency-injection.html</link>
+    <guid>https://lamgul.github.io/writing/fastapi-dependency-injection.html</guid>
+    <pubDate>Mon, 03 Feb 2025 09:00:00 -0000</pubDate>
+    <description>Depends의 동작 원리를 뜯어보고, 사이트별 크롤러 어댑터를 주입으로 교체하는 구조를 예제로 만든다.</description>
+  </item>
+  <item>
+    <title>가변 폰트로 UI에 숨을 불어넣기</title>
+    <link>https://lamgul.github.io/writing/variable-fonts-in-ui.html</link>
+    <guid>https://lamgul.github.io/writing/variable-fonts-in-ui.html</guid>
+    <pubDate>Sat, 15 Feb 2025 09:00:00 -0000</pubDate>
+    <description>font-variation-settings의 함정과 가능성. 글자 하나에 애니메이션을 넣는 일이 왜 생각보다 섬세한가.</description>
+  </item>
+  <item>
+    <title>웹 서버 하드닝 체크리스트 — ServerTokens부터 헤더까지</title>
+    <link>https://lamgul.github.io/writing/web-server-hardening.html</link>
+    <guid>https://lamgul.github.io/writing/web-server-hardening.html</guid>
+    <pubDate>Mon, 16 Dec 2024 09:00:00 -0000</pubDate>
+    <description>보안 감사에서 시작해 정리한 웹 서버 하드닝 실무 체크리스트. 버전 노출 제거, 보안 헤더, 불필요 메서드 차단 — 운영을 깨지 않으면서.</description>
+  </item>
+  <item>
+    <title>작은 팀의 AWS — EC2 한 대에서 시작하는 아키텍처</title>
+    <link>https://lamgul.github.io/writing/aws-small-team-architecture.html</link>
+    <guid>https://lamgul.github.io/writing/aws-small-team-architecture.html</guid>
+    <pubDate>Sun, 10 Nov 2024 09:00:00 -0000</pubDate>
+    <description>EC2 단일 인스턴스 → ALB+ASG → 관리형 서비스로 넓혀가는 단계별 선택 기준을 비용과 함께 정리한다.</description>
+  </item>
+</channel>
 </rss>

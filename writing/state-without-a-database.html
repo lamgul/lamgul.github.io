@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -87,6 +88,13 @@
     <p>이 모든 단순함에는 만료일이 있습니다. 프로세스를 하나 이상으로 늘리는 순간, 상태를 "프로세스가 소유한다"는 전제가 깨집니다. 그때는 Socket.IO의 Redis 어댑터로 방송을 공유하고, 표도 Redis로 옮겨야 합니다. 즉 <b>인메모리는 "지금은 이걸로 충분하다"는 선언</b>이지, 영원한 답이 아닙니다.</p>
     <p>그래도 저는 이 실험이 좋았습니다. "무조건 DB"라는 반사신경을 한 번 의심해봤고, 덜어낸 자리에서 코드가 얼마나 읽기 쉬워지는지를 봤으니까요. 다음에 진짜 제품에서 영속성이 필요할 땐, 적어도 <em>왜</em> 그게 필요한지 더 또렷하게 말할 수 있을 것 같습니다.</p>
 
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Node</a>
+      <a class="tag" href="index.html">Socket.IO</a>
+      <a class="tag" href="index.html">상태 설계</a>
+      <a class="tag" href="index.html">백엔드</a>
+    </div>
     <div class="post-cta">
       <span class="t">이 글의 코드가 실제로 도는 걸 보고 싶다면 → <b>Livepoll</b></span>
       <a class="chip primary" href="../projects/livepoll/">프로젝트 보기 ↗</a>
@@ -104,5 +112,6 @@
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

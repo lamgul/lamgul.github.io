@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -73,6 +74,13 @@ resolve(<span class="k">@Param</span>(<span class="s">'id'</span>) id: string, <
 
 <h2>상태와 이력은 한곳에서</h2>
 <p>근로자의 신고가 관리자의 처리로 이어지는 흐름에서, 상태 전이는 서비스의 단일 메서드를 거치게 했습니다. "신고됨 → 확인 → 처리완료"가 아무 데서나 바뀌면 정합성이 깨집니다. 전이 규칙을 한곳에 모으고, 각 전이에서 이력 레코드를 남깁니다. 안전 도메인에서 <b>"누가 언제 무엇을 했나"는 기능이 아니라 요구사항</b>입니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">백엔드</a>
+      <a class="tag" href="index.html">NestJS</a>
+      <a class="tag" href="index.html">Guard</a>
+      <a class="tag" href="index.html">권한</a>
+    </div>
     <div class="post-cta"><span class="t">이 구조가 담긴 프로젝트 → <b>SafeIn</b></span><a class="chip primary" href="../cases/safein.html">사례 보기 ↗</a></div>
   </article>
 
@@ -87,5 +95,6 @@ resolve(<span class="k">@Param</span>(<span class="s">'id'</span>) id: string, <
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

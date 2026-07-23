@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -73,6 +74,13 @@ df = df.drop(columns=[<span class="s">"rain"</span>, <span class="s">"nonelec_co
 <h2>시간과 건물의 결</h2>
 <p>전력에는 하루의 리듬이 있습니다(22–05 저점, 10–16 고점). 데이터를 평평하게 다루면 이 구조를 놓칩니다. 시간대와 건물을 축으로 분류해, 각자의 고유 패턴을 모델이 볼 수 있게 했습니다.</p>
 <div class="callout"><span class="mark">*</span><p>교훈은 분명했습니다 — <b>원시 데이터를 그대로 쓰는 게 아니라, 도메인 지식으로 가공한다.</b> 결과는 AI 부문 리더보드 10위였지만, 남은 건 순위보다 이 확신이었습니다.</p></div>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">ML</a>
+      <a class="tag" href="index.html">EDA</a>
+      <a class="tag" href="index.html">다중공선성</a>
+      <a class="tag" href="index.html">파생변수</a>
+    </div>
     <div class="post-cta"><span class="t">인터랙티브 시연이 있는 → <b>전력사용량 예측</b></span><a class="chip primary" href="../cases/power-forecast.html">사례 보기 ↗</a></div>
   </article>
 
@@ -87,5 +95,6 @@ df = df.drop(columns=[<span class="s">"rain"</span>, <span class="s">"nonelec_co
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서평: Clean Code — 규칙보다 태도 — 안성진</title>
+<meta name="description" content="Robert C. Martin의 Clean Code를 다시 읽으며, 규칙 목록이 아니라 '고치며 떠나기'라는 태도로서의 클린코드를 정리한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="서평: Clean Code — 규칙보다 태도">
+<meta property="og:description" content="Robert C. Martin의 Clean Code를 다시 읽으며, 규칙 목록이 아니라 '고치며 떠나기'라는 태도로서의 클린코드를 정리한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"서평: Clean Code — 규칙보다 태도","datePublished":"2021-08-25","dateModified":"2026-07-23","inLanguage":"ko","description":"Robert C. Martin의 Clean Code를 다시 읽으며, 규칙 목록이 아니라 '고치며 떠나기'라는 태도로서의 클린코드를 정리한다.","keywords":"서평 · 클린코드 · 리팩토링","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/review-clean-code.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / review-clean-code</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">서평 · 클린코드</p>
+    <h1>서평: Clean Code — 규칙보다 태도</h1>
+    <div class="post-meta">
+      <span>2021년 8월</span><span class="dot-sep">•</span>
+      <span>약 14분</span><span class="dot-sep">•</span>
+      <span>서평 · 클린코드 · 리팩토링</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">《Clean Code》를 처음 읽은 건 개발을 배우기 시작한 지 얼마 안 됐을 때였습니다. 그때 저는 이 책을 <b>규칙집</b>으로 읽었습니다 — 함수는 짧게, 인자는 적게, 주석은 되도록 쓰지 말 것. 규칙은 외웠지만 제 코드는 좀처럼 깨끗해지지 않았습니다. 정산 로직을 리팩토링하고 크롤링 파이프라인을 다시 설계해 본 지금 이 책을 다시 펼치니, 진짜 주제는 규칙이 아니라 <b>태도</b>였습니다 — "고치며 떠난다"는 태도 말입니다.</p>
+
+<h2>1. 규칙집으로 읽으면 실패한다</h2>
+<p>이 책이 규칙집처럼 읽히는 데는 이유가 있습니다. 마지막 장이 아예 "냄새와 휴리스틱"이라는 제목의 <b>목록</b>이고, 각 장도 "이렇게 하라"는 항목의 나열처럼 보이기 때문입니다. 그래서 많은 입문자가 이 책에서 규칙만 뽑아 체크리스트를 만듭니다. 저도 그랬습니다. 그런데 근거를 뺀 규칙은 <b>화물 숭배</b>가 됩니다 — 형태만 흉내 낼 뿐, 왜 그렇게 하는지를 모르니 상황이 조금만 달라져도 오히려 코드를 망칩니다.</p>
+<p>책의 척추는 목록이 아니라 1장에 있습니다. Robert C. Martin은 유명한 개발자들에게 "깨끗한 코드란 무엇인가"를 물었고, 답은 하나같이 규칙이 아니라 <b>읽는 경험</b>에 관한 것이었습니다. Grady Booch는 "잘 쓴 산문처럼 읽힌다"고 했고, Ward Cunningham은 "각 루틴이 당신이 예상한 그대로일 때"라고 했습니다. 같은 장에서 저자는 코드를 읽는 시간과 쓰는 시간의 비율이 <b>10 대 1을 훌쩍 넘는다</b>고 지적합니다. 코드는 결국 다음 사람이 읽으라고 쓰는 글이라는 뜻입니다.</p>
+<p>그러니 이 책이 실제로 던지는 질문은 "이 코드가 규칙을 지켰는가"가 아닙니다. <b>"다음 사람이 이 코드를 예상대로 읽을 수 있는가"</b>입니다. 이 한 문장으로 관점을 바꾸고 나면, 뒤따르는 모든 규칙이 목적이 아니라 수단으로 보이기 시작합니다. 이 글은 그렇게 다시 읽은 기록입니다.</p>
+
+<h2>2. 척추는 보이스카우트 규칙</h2>
+<p>책 전체를 한 문장으로 줄이라면 저는 1장의 <b>보이스카우트 규칙</b>을 고르겠습니다. "캠핑장은 처음 왔을 때보다 깨끗하게 하고 떠나라." 코드로 옮기면, 어떤 파일을 손댔다면 떠날 때 조금이라도 더 깨끗한 상태로 남기라는 것입니다. 전면 재작성이 아닙니다. 지나가는 김에 <b>이름 하나, 가드 하나</b>를 정리하는 정도의 작은 개선입니다.</p>
+<pre class="code"><span class="c">// 버그 하나 고치러 들어왔다가, 떠날 땐 조금 더 깨끗하게</span>
+<span class="c">// Before — 손대러 온 김에 눈에 밟히던 코드</span>
+<span class="k">public void</span> <span class="f">process</span>(Order o) {
+  <span class="k">if</span> (o.<span class="f">getS</span>() == 1) {            <span class="c">// 1 = 결제 완료</span>
+    <span class="c">// ...결제 완료 처리</span>
+  }
+}
+
+<span class="c">// After — 버그 수정과 함께 이름 하나, 가드 하나만</span>
+<span class="k">public void</span> <span class="f">process</span>(Order order) {
+  <span class="k">if</span> (<span class="f">isPaid</span>(order)) {
+    <span class="c">// ...결제 완료 처리</span>
+  }
+}
+<span class="k">private boolean</span> <span class="f">isPaid</span>(Order order) {
+  <span class="k">return</span> order.<span class="f">getStatus</span>() == OrderStatus.PAID;
+}</pre>
+<p>왜 거대한 리팩토링보다 이 작은 태도가 중요할까요. 같은 장에 나오는 <b>르블랑의 법칙</b>이 답합니다 — "나중은 결코 오지 않는다(Later equals never)." "언젠가 날 잡아 싹 정리하자"는 그 날은 오지 않고, 코드는 계속 썩습니다. 반대로 손댈 때마다 조금씩 개선하면 그 개선이 <b>복리로</b> 쌓입니다. 저자가 1장에서 "빠르게 가는 유일한 길은 코드를 계속 깨끗하게 유지하는 것"이라고 말하는 근거가 여기 있습니다.</p>
+<p>이 태도는 특히 유지보수 현장에서 유일하게 지속 가능한 자세였습니다. 대흥정보에서 SM 업무를 할 때는 제가 짜지 않았고 함부로 갈아엎을 수도 없는 <b>레거시</b>를 물려받았습니다. 그때 할 수 있는 건 보이스카우트 규칙뿐이었습니다. SafeIn의 정산 리팩토링도 처음부터 큰 프로젝트로 시작한 게 아니라, "온 김에 이것만"이라는 작은 정리를 반복하다 <b>중복의 지형</b>이 드러나면서 비로소 판이 커진 경우였습니다.</p>
+<div class="callout"><span class="mark">*</span><p><b>실무 팁</b> — 보이스카우트 규칙을 "온 김에 다 뜯어고치기"로 오해하면 안 됩니다. 버그 수정 커밋에 500줄짜리 리팩토링을 섞으면 리뷰어는 무엇이 <b>동작 변경</b>이고 무엇이 <b>단순 정리</b>인지 구분할 수 없고, 나중에 <code>git blame</code>도 엉킵니다. 정리는 작게, 그리고 가능하면 커밋을 분리하세요. "조금 더 깨끗하게"의 방점은 '조금'에 있습니다.</p></div>
+
+<h2>3. 이름 — 규칙이 아니라 의도</h2>
+<p>2장 "의미 있는 이름"은 규칙이 가장 많은 장입니다. 의도를 드러내라, 검색 가능하게 하라, 발음 가능하게 하라, 인코딩(헝가리안 표기)을 피하라 등등. 그런데 이 규칙들을 한 줄로 묶는 상위 목적이 있습니다. 바로 <b>의도를 드러내는 이름</b>입니다. 나머지는 그 목적에 봉사하는 수단입니다.</p>
+<pre class="code"><span class="c">// Before — 규칙(검색·발음 가능)은 지켰지만 의도가 없다</span>
+List&lt;Merchant&gt; ms = repo.<span class="f">findAll</span>();
+List&lt;Merchant&gt; ms2 = <span class="k">new</span> ArrayList&lt;&gt;();
+<span class="k">for</span> (Merchant m : ms)
+  <span class="k">if</span> (m.<span class="f">getType</span>() == 2) ms2.<span class="f">add</span>(m);   <span class="c">// 2 = 정산 대상</span>
+
+<span class="c">// After — 이름이 곧 이 루프가 하는 일의 설명이 된다</span>
+List&lt;Merchant&gt; allMerchants = merchantRepository.<span class="f">findAll</span>();
+List&lt;Merchant&gt; settlementTargets = allMerchants.<span class="f">stream</span>()
+    .<span class="f">filter</span>(Merchant::isSettlementTarget)
+    .<span class="f">toList</span>();</pre>
+<p>두 코드는 같은 일을 합니다. 차이는 <code>isSettlementTarget</code>이라는 <b>서술어 하나</b>가 "타입이 2인 것"이라는 정체불명의 조건에 이름을 붙였다는 것뿐입니다. 이것이 Booch가 말한 "산문처럼 읽힌다"의 실체입니다. 같은 장의 "개념 하나에 단어 하나(Pick One Word per Concept)" 규칙은 한 걸음 더 나아가 DDD의 <b>유비쿼터스 언어</b>와 맞닿습니다 — 팀이 회의에서 쓰는 단어를 코드에서도 똑같이 쓰자는 것이죠. 정산 리팩토링에서 가장 큰 문제도 사실 이름의 충돌, 즉 같은 개념이 <code>calcCharge</code>·<code>computeFee</code>·<code>getSettleAmt</code>로 흩어져 <code>grep</code>에도 잡히지 않던 것이었습니다.</p>
+<p>그래서 제가 이 장에서 가져가는 건 규칙 목록이 아니라 하나의 <b>시험</b>입니다 — "이 이름이 왜 존재하고, 무엇을 하고, 어떻게 쓰이는지를 스스로 답하는가?" 이 질문을 통과하지 못하면 나머지 규칙을 다 지켜도 소용없습니다. 이름 규칙을 나쁜 예→좋은 예로 하나하나 뜯은 이야기는 <a href="clean-code-naming.html">클린코드 · 이름 글</a>에 따로 정리해 두었습니다.</p>
+
+<h2>4. 함수 — "작게"의 진짜 뜻과 함정</h2>
+<p>3장에서 가장 자주 인용되는 문장은 이것입니다 — "함수의 첫 번째 규칙은 작아야 한다는 것이다. 두 번째 규칙은 <b>그보다 더 작아야</b> 한다는 것이다." 그리고 "함수는 <b>한 가지</b>를 해야 한다. 그것을 잘 해야 한다. 그것만 해야 한다." 여기서 진짜 판단 기준은 줄 수가 아니라 세 가지입니다 — 한 가지 일을 하는가, 한 수준의 추상화만 담는가, 위에서 아래로 이야기처럼 읽히는가(스텝다운 규칙).</p>
+<p>문제는 "작게"를 <b>줄 수 명령</b>으로 오해할 때 생깁니다. "쪼갤 수 있으면 끝까지 쪼개라"를 곧이곧대로 적용하면, 한 줄짜리 함수들이 덩굴처럼 얽혀 흐름 하나를 읽으려고 파일을 위아래로 헤매게 됩니다.</p>
+<pre class="code"><span class="c">// "작게"를 맹신한 결과 — 한 줄짜리 함수의 덩굴</span>
+<span class="k">public</span> Money <span class="f">settle</span>(Order order) {
+  <span class="k">return</span> <span class="f">applyFee</span>(<span class="f">applyDiscount</span>(<span class="f">baseAmount</span>(order)), order);
+}
+<span class="k">private</span> Money <span class="f">baseAmount</span>(Order o)        { <span class="k">return</span> o.<span class="f">getAmount</span>(); }
+<span class="k">private</span> Money <span class="f">applyDiscount</span>(Money m)    { <span class="k">return</span> m.<span class="f">minus</span>(<span class="f">discountOf</span>(m)); }
+<span class="k">private</span> Money <span class="f">discountOf</span>(Money m)       { <span class="k">return</span> m.<span class="f">times</span>(RATE); }
+<span class="k">private</span> Money <span class="f">applyFee</span>(Money m, Order o) { <span class="k">return</span> m.<span class="f">minus</span>(<span class="f">feeOf</span>(o)); }
+<span class="c">// ...흐름을 읽으려면 다섯 곳을 오르내려야 한다</span>
+
+<span class="c">// 한 단계 덜 쪼갠 편 — 한 화면에서 흐름이 읽힌다</span>
+<span class="k">public</span> Money <span class="f">settle</span>(Order order) {
+  Money base     = order.<span class="f">getAmount</span>();
+  Money discount = base.<span class="f">times</span>(DISCOUNT_RATE);
+  Money fee      = feePolicy.<span class="f">of</span>(order);
+  <span class="k">return</span> base.<span class="f">minus</span>(discount).<span class="f">minus</span>(fee);
+}</pre>
+<p>아래쪽이 더 깨끗합니다. 흐름이 한 화면에 담기고, <code>base → discount → fee</code>라는 이야기가 순서대로 읽히기 때문입니다. 위쪽은 규칙("작게")을 더 잘 지켰지만 오히려 <b>읽기 비용</b>을 늘렸습니다. 함수를 나누는 기준은 줄 수가 아니라 의미여야 한다는 걸, 이 두 코드가 보여줍니다.</p>
+<div class="callout"><span class="mark">!</span><p><b>함정</b> — "함수는 몇 줄 이하"라는 <b>마법의 숫자</b>는 이 책 어디에도 없습니다. 저자가 든 기준은 "한 가지 일 / 한 수준의 추상화"이지 줄 수가 아닙니다. 줄 수를 목표로 삼아 무리하게 추출하면, 정작 버그를 쫓을 때 호출 사슬을 다섯 겹씩 헤집게 됩니다. 추출은 (1) 개념에 이름을 붙일 때, (2) 중복을 없앨 때, (3) 추상화 수준을 한 단계 낮출 때만 — 숫자를 채우려고 하지 마세요.</p></div>
+<p>이 장의 나머지 조언 — 플래그 인자를 쓰지 말 것, 명령과 조회를 분리할 것(Command-Query Separation), 그리고 에러 코드보다 예외를 선호할 것 — 도 모두 "함수가 한 가지만, 예상대로 읽히게" 하려는 같은 목적의 변주입니다. 함수 규칙을 실전 리팩토링으로 더 파고든 이야기는 <a href="clean-code-functions.html">클린코드 · 함수 글</a>에 있습니다.</p>
+
+<h2>5. 주석과 에러 처리 — 표현의 실패</h2>
+<p>4장의 서두는 도발적입니다 — "주석은 잘해야 필요악이다." 이어서 저자는 핵심을 못 박습니다. <b>"주석의 올바른 용도는 코드로 의도를 표현하지 못한 우리의 실패를 메우는 것이다."</b> 그러니 주석을 달고 싶어질 때 먼저 물어야 합니다 — 이름과 함수로 표현할 수는 없었는가? 이름과 함수 장이 이 장보다 앞에 오는 이유가 여기 있습니다.</p>
+<p>다만 이 장은 자주 <b>오독</b>됩니다. "주석은 나쁘니 다 지워라"로요. 그러나 저자는 같은 장에서 <b>좋은 주석</b>도 분명히 나열합니다 — 의도 설명, 결과 경고, TODO, 법적 고지, 강조. 사라져야 할 건 <b>중복되거나 거짓말하는</b> 주석이지 모든 주석이 아닙니다. 특히 "왜"를 설명하는 주석은 이름이 대신할 수 없습니다. 코드는 "무엇을" 하는지까지만 말하고, "왜 하필 이 값인지"는 여전히 주석과 커밋 메시지의 몫이니까요.</p>
+<pre class="code"><span class="c">// Before — 에러 코드와 null이 호출부를 오염시킨다</span>
+Settlement s = settlementService.<span class="f">find</span>(id);
+<span class="k">if</span> (s == <span class="k">null</span>) <span class="k">return</span> ERROR_NOT_FOUND;   <span class="c">// 모든 호출부가 null을 기억해야</span>
+<span class="k">if</span> (s.<span class="f">getStatus</span>() == -1) { <span class="c">/* -1 = 실패, 매직 코드 */</span> }
+
+<span class="c">// After — 예외는 흐름에서 분리하고, 정상 경로만 남긴다</span>
+Settlement settlement = settlementService.<span class="f">findById</span>(id)
+    .<span class="f">orElseThrow</span>(() -&gt; <span class="k">new</span> <span class="f">SettlementNotFoundException</span>(id));
+
+<span class="c">// "결과 없음"이 정상이라면 null 대신 특수 케이스 객체(Null Object)</span>
+Payout payout = payoutRepository.<span class="f">findLatest</span>(merchantId)
+    .<span class="f">orElse</span>(Payout.NONE);            <span class="c">// 호출부에 if가 필요 없다</span></pre>
+<p>7장 "에러 처리"의 요지가 이 코드에 담겨 있습니다 — 에러 코드 대신 <b>예외</b>를, null 반환 대신 <b>특수 케이스 객체</b>를. 왜냐하면 에러 코드와 null은 <b>모든 호출부</b>에 방어 코드를 강요해서, 정작 중요한 정상 흐름을 잡음 속에 파묻기 때문입니다. 예외로 실패를 흐름에서 떼어내면 본문에는 "성공했을 때 할 일"만 남습니다. SafeIn 백엔드를 혼자 설계할 때, 이 <b>에러 계약</b>을 초반에 명확히 잡아 둔 것이 두고두고 이득이었습니다 — 설계를 쥐고 있는 사람이 저 하나뿐이었으니까요. 이 주제는 <a href="clean-code-errors.html">클린코드 · 에러 처리 글</a>에서 더 다뤘습니다.</p>
+
+<h2>6. 규칙을 맹신하면 — 이 책의 한계</h2>
+<p>좋은 책일수록 한계를 정직하게 봐야 오래 씁니다. 우선 이 책은 <b>2008년</b>에 나온, 예제가 온통 Java인 책입니다. 람다도 <code>Optional</code>도 없던 시절의 장황한 관용구가 예제에 그대로 남아 있어서, 어떤 조언은 언어와 시대의 <b>제약</b>을 그대로 반영합니다. 2026년의 Kotlin이나 TypeScript로 옮기면 성립하지 않는 세부도 있습니다.</p>
+<p>구체적으로 논쟁적인 대목도 있습니다. 저자는 함수를 "깨끗하게" 유지하려고 <b>인자를 인스턴스 필드로 옮기는</b> 기법을 종종 씁니다. 하지만 이는 인자 전달을 <b>숨은 가변 상태</b>로 바꾸는 거래라, 동시성 환경에서는 위험할 수 있습니다. 저도 공유되던 가변 상태에 동기화가 빠져 객체가 회수되지 못하던 누수를 힙덤프로 쫓은 적이 있어, 이 지점은 특히 경계합니다. DRY도 마찬가지입니다 — Sandi Metz가 남긴 "<b>잘못된 추상화보다 중복이 훨씬 싸다</b>"는 커뮤니티의 값진 교정입니다. 닮아 보이는 두 코드가 사실은 다른 개념일 때, 성급한 통합은 나중에 더 비싼 값을 치릅니다.</p>
+<p>그래서 오래 남는 독법은 이렇습니다. 규칙은 <b>맥락에 의존하는 휴리스틱</b>이고, 진짜 불변은 12장의 <b>단순 설계 4원칙</b>(모든 테스트를 통과할 것, 중복이 없을 것, 의도를 드러낼 것, 요소 수를 최소화할 것)과 그 밑에 흐르는 태도입니다. 이 책은 판단을 <b>대신해 주는</b> 매뉴얼이 아니라 판단을 <b>시작하게</b> 하는 출발점입니다. 규칙을 맹신하는 것 자체가 실은 클린하지 않습니다 — 클린코드는 읽는 사람을 위한 것인데, 도그마는 그 사람의 맥락을 무시하니까요.</p>
+
+<h2>7. 정리 — 규칙은 잊혀도 태도는 남는다</h2>
+<p>다시 읽고 제게 남은 것은 규칙 목록이 아니라 몇 가지 <b>태도</b>였습니다.</p>
+<ul>
+  <li><b>보이스카우트 규칙</b> — 손댄 코드는 조금이라도 더 깨끗하게 남기고 떠난다. '나중'은 오지 않는다.</li>
+  <li><b>코드는 읽는 사람에게 쓰는 글</b> — 판단 기준은 "규칙 준수"가 아니라 "다음 사람이 예상대로 읽는가".</li>
+  <li><b>규칙은 수단, 의도가 목적</b> — 이름·함수 규칙은 전부 "의도를 드러내라"에 봉사한다.</li>
+  <li><b>표현의 실패를 이름·함수로 메운다</b> — 그래도 "왜"는 주석·커밋에 남긴다.</li>
+  <li><b>예외로 정상 흐름을 지킨다</b> — 에러 코드와 null을 호출부에 흘리지 않는다.</li>
+  <li><b>규칙은 맥락, 태도는 불변</b> — 단순 설계 4원칙과 "읽는 사람" 원칙만 붙들면 나머지는 상황에 맞춰 조정한다.</li>
+</ul>
+<p>규칙은 언젠가 낡습니다. 2008년의 Java 관용구는 오늘의 언어에서 이미 어색하고, 앞으로도 계속 바뀔 것입니다. 그러나 <b>태도</b>는 낡지 않습니다. Michael Feathers가 1장에서 남긴 문장이 그 태도를 가장 짧게 요약합니다 — "깨끗한 코드는 언제나 <b>누군가 신경 써서 짠 것처럼</b> 보인다." 나머지를 다 버려야 한다면, 저는 이 한 문장을 남기겠습니다.</p>
+<p>대신 규칙의 실전 적용은 네 편으로 따로 정리했습니다 — <a href="clean-code-naming.html">이름</a>, <a href="clean-code-functions.html">함수</a>, <a href="clean-code-errors.html">에러 처리</a>, <a href="clean-code-tests.html">테스트</a>. 이 서평이 <b>척추</b>라면, 그 네 편은 척추에 붙는 갈비뼈입니다. 규칙이 필요할 때 그쪽을 펼치되, 규칙을 지키는 이유가 흐려질 때는 다시 이 태도로 돌아오면 됩니다.</p>
+
+    <div class="post-tags"><span class="pt-head">태그</span><a class="tag" href="index.html">서평</a><a class="tag" href="index.html">클린코드</a><a class="tag" href="index.html">리팩토링</a></div>
+    <div class="post-cta"><span class="t">규칙의 실전 적용 → <b>클린코드 · 이름</b></span><a class="chip primary" href="clean-code-naming.html">클린코드 · 이름 글 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="review-ddd-evans.html"><div class="np-key">← 이전 글</div><div class="np-title">도메인 주도 설계</div></a>
+    <a class="next" href="review-k8s-in-action.html"><div class="np-key">다음 글 →</div><div class="np-title">쿠버네티스 인 액션</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

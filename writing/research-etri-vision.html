@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연구 회고: ETRI에서 만난 Vision AI — 법학도가 객체탐지로 — 안성진</title>
+<meta name="description" content="ETRI 연구연수 시절 물류 드론 개인정보 주제에서 CNN 기반 객체탐지로 방향을 넓히며 AI·개발로 전향한 계기를 돌아본다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="연구 회고: ETRI에서 만난 Vision AI — 법학도가 객체탐지로">
+<meta property="og:description" content="ETRI 연구연수 시절 물류 드론 개인정보 주제에서 CNN 기반 객체탐지로 방향을 넓히며 AI·개발로 전향한 계기를 돌아본다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"연구 회고: ETRI에서 만난 Vision AI — 법학도가 객체탐지로","datePublished":"2020-02-11","dateModified":"2026-07-23","inLanguage":"ko","description":"ETRI 연구연수 시절 물류 드론 개인정보 주제에서 CNN 기반 객체탐지로 방향을 넓히며 AI·개발로 전향한 계기를 돌아본다.","keywords":"ETRI · Vision AI · CNN","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/research-etri-vision.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / research-etri-vision</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">회고 · 연구</p>
+    <h1>연구 회고: ETRI에서 만난 Vision AI — 법학도가 객체탐지로</h1>
+    <div class="post-meta">
+      <span>2020년 2월</span><span class="dot-sep">•</span>
+      <span>약 9분</span><span class="dot-sep">•</span>
+      <span>ETRI · Vision AI · CNN</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">드론이 하늘에서 무엇을 볼 수 있는가 — ETRI 연구연수는 그 물음에서 시작됐습니다. 물류 드론이 찍은 영상 속 개인정보를 어떻게 다뤄야 하는가, 법 쪽에서 던진 질문이었죠. 그런데 답하려면 결국 <b>기계가 무엇을 어떻게 식별하는가</b>를 알아야 했습니다. 법학도였던 제가 객체탐지 코드 앞에 앉게 된 계기를 돌아봅니다.</p>
+
+<h2>1. 법학도가 드론 프로젝트에 앉기까지</h2>
+<p>2020년부터 개발을 독학하던 시기, 저는 ETRI의 Vision AI 연구연수에 발을 들였습니다. 처음 맡은 결은 기술이 아니라 <b>제도</b> 쪽이었습니다. 물류 드론이 수집하는 영상에서 얼굴·번호판·사유지 같은 개인정보가 어떻게 노출되고 규율되어야 하는가 — 법학의 언어로 접근하는 문제였죠. 배경이 배경인지라 저에게는 익숙한 입구였습니다.</p>
+<p>문제는 그 경계를 그으려면 드론 카메라가 실제로 <b>무엇을 식별할 수 있는지</b>부터 알아야 했다는 것입니다. "촬영된 정보"와 "식별 가능한 정보"는 다르고, 그 차이를 가르는 건 결국 모델의 성능입니다. 규범을 말하려다 기술 문서를 펼쳤고, 어느새 코드 쪽으로 넘어가 있었습니다.</p>
+
+<h2>2. 개인정보 질문이 기술 질문으로</h2>
+<p>어느 순간 두 질문이 같은 질문이라는 게 보였습니다. "이 프레임 안에 사람이 있는가, 번호판이 있는가?"는 법적으로는 <b>개인정보 판단</b>이지만, 기술적으로는 정확히 <b>객체탐지</b> 문제였습니다. 개인정보를 가리려면(마스킹) 먼저 찾아야(detection) 하니, 규제의 출발점이 곧 검출의 출발점이었던 셈입니다.</p>
+<p>그 지점에서 제 무게중심이 "무엇을 금지할까"에서 "무엇을 어떻게 검출할까"로 넘어갔습니다. 이 시기에 학습 데이터를 다듬는 <b>데이터 가공</b> 일을 하면서, 모델이 무엇을 먹고 무엇을 배우는지 몸으로 알게 됐습니다. 라벨 하나를 잘못 붙이면 검출이 어디서 흔들리는지가 눈에 들어오기 시작했고, 그때부터는 되돌아갈 수 없었습니다.</p>
+
+<h2>3. 필터 — 이미지를 훑는 작은 창</h2>
+<p>가장 먼저 넘어야 할 개념이 <b>합성곱(convolution)</b>이었습니다. 이미지의 모든 픽셀을 완전연결로 잇는 방식은 파라미터가 폭발하고, 대상이 몇 픽셀만 움직여도 무너집니다. CNN은 대신 <b>작은 필터</b> 하나를 이미지 전체에 미끄러뜨리며 같은 가중치를 재사용합니다. 필터는 특정 무늬(세로 경계, 모서리)에 반응하는 작은 창이고, 그 반응을 위치마다 기록한 결과가 특징맵입니다.</p>
+<p>왜 이렇게 하냐면 — 찾는 것이 이미지 <b>어디에나</b> 나타날 수 있기 때문입니다. 왼쪽 위의 경계든 오른쪽 아래의 경계든 같은 필터 하나로 잡아야 효율적이죠. 세로 경계에 반응하는 필터를 numpy로 직접 밀어 보면 그 감각이 잡힙니다.</p>
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># 3×3 세로 경계 검출 필터 (Sobel의 뼈대)</span>
+kernel = np.array([[-<span class="s">1</span>, <span class="s">0</span>, <span class="s">1</span>],
+                   [-<span class="s">2</span>, <span class="s">0</span>, <span class="s">2</span>],
+                   [-<span class="s">1</span>, <span class="s">0</span>, <span class="s">1</span>]])
+
+<span class="k">def</span> <span class="f">conv2d</span>(img, k):
+    kh, kw = k.shape
+    oh, ow = img.shape[<span class="s">0</span>] - kh + <span class="s">1</span>, img.shape[<span class="s">1</span>] - kw + <span class="s">1</span>
+    out = np.zeros((oh, ow))
+    <span class="k">for</span> y <span class="k">in</span> range(oh):
+        <span class="k">for</span> x <span class="k">in</span> range(ow):
+            patch = img[y:y+kh, x:x+kw]        <span class="c"># 커널만 한 창을 떼어</span>
+            out[y, x] = np.sum(patch * k)      <span class="c"># 겹친 자리끼리 곱해 더한다</span>
+    <span class="k">return</span> out
+
+img = np.array([[<span class="s">0</span>, <span class="s">0</span>, <span class="s">0</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>],
+                [<span class="s">0</span>, <span class="s">0</span>, <span class="s">0</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>],
+                [<span class="s">0</span>, <span class="s">0</span>, <span class="s">0</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>]], dtype=float)  <span class="c"># 왼쪽 어둡고 오른쪽 밝은 면</span>
+print(conv2d(img, kernel))    <span class="c"># [[0 36 36 0]] — 평평한 면은 0, 경계에서만 반응</span></pre>
+<p>출력이 곧 특징맵입니다. 평평한 면에서는 0이고 세로 경계가 지나는 자리에서만 큰 값이 뜹니다 — 필터가 자기가 찾는 무늬를 만난 지점만 밝힌 것이죠. 학습이란 이 필터의 숫자들을 데이터로부터 스스로 맞춰 가는 과정일 뿐입니다.</p>
+
+<h2>4. 특징맵과 풀링 — 위치를 흐리게</h2>
+<p>특징맵을 그대로 다음 층에 넘기면 여전히 크고, 미세한 위치에 지나치게 예민합니다. <b>풀링(pooling)</b>은 작은 창에서 가장 센 반응만 남겨 크기를 줄이고, 덤으로 작은 이동에 둔감해지게 만듭니다. 고양이가 몇 픽셀 움직여도 "가장 강한 고양이 반응"은 그대로 살아남으니까요.</p>
+<p>왜 흐리게 만드는 게 이득일까요. <b>분류</b>에서는 "무엇이 있나"가 중요하지 "정확히 몇 픽셀에"는 덜 중요하기 때문입니다. 2×2 최대 풀링을 손으로 짜 보면 이 절충이 뭘 버리고 뭘 얻는지 분명해집니다.</p>
+<pre class="code"><span class="k">def</span> <span class="f">max_pool</span>(fmap, size=<span class="s">2</span>, stride=<span class="s">2</span>):
+    oh = (fmap.shape[<span class="s">0</span>] - size) // stride + <span class="s">1</span>
+    ow = (fmap.shape[<span class="s">1</span>] - size) // stride + <span class="s">1</span>
+    out = np.zeros((oh, ow))
+    <span class="k">for</span> y <span class="k">in</span> range(oh):
+        <span class="k">for</span> x <span class="k">in</span> range(ow):
+            patch = fmap[y*stride:y*stride+size, x*stride:x*stride+size]
+            out[y, x] = patch.max()            <span class="c"># 창 안에서 가장 센 반응만 남긴다</span>
+    <span class="k">return</span> out
+
+fmap = np.array([[<span class="s">1</span>, <span class="s">3</span>, <span class="s">2</span>, <span class="s">1</span>],
+                 [<span class="s">4</span>, <span class="s">6</span>, <span class="s">1</span>, <span class="s">0</span>],
+                 [<span class="s">0</span>, <span class="s">1</span>, <span class="s">5</span>, <span class="s">2</span>],
+                 [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>]], dtype=float)
+print(max_pool(fmap))         <span class="c"># [[6 2] [2 5]] — 크기 절반, 강한 특징만 생존</span></pre>
+<div class="callout"><span class="mark">*</span><p>여기 나중에 발목을 잡는 긴장이 숨어 있습니다. 풀링은 <b>정확한 위치</b>를 일부러 흐립니다 — 그게 분류에는 미덕이죠. 그런데 <b>탐지</b>는 "무엇이 어디에"를 답해야 하니, 풀링이 버린 위치를 되찾아야 합니다. 이 모순이 뒤에 나올 YOLO의 격자·앵커가 풀려던 바로 그 문제입니다.</p></div>
+
+<h2>5. 밑바닥부터 짜 보고서야 보였다</h2>
+<p>개념은 알겠는데 손에 잡히지 않던 시기, 붙든 책이 사이토 고키의 <b>『밑바닥부터 시작하는 딥러닝』</b>이었습니다. 프레임워크 없이 numpy만으로 퍼셉트론부터 오차역전파, CNN까지 직접 쌓아 올리는 책입니다. 계층 하나하나를 <code>forward</code>·<code>backward</code>를 가진 클래스로 구현하는 구성이라, 딥러닝이 마법이 아니라 <b>미분과 행렬곱의 조립</b>이라는 감각을 줍니다.</p>
+<p>CNN을 다루는 장의 핵심은 <b>im2col</b>이라는 트릭이었습니다. 앞의 <code>conv2d</code>처럼 반복문으로 창을 훑으면 느립니다. 대신 각 창을 한 줄로 펼쳐 쌓으면, 합성곱이 <b>행렬 한 번 곱하기</b>로 바뀝니다. 그 책이 왜 이 방식을 강조하는지는 직접 짜 보면 바로 납득됩니다.</p>
+<pre class="code"><span class="c"># 반복문으로 창을 훑는 대신, 창마다 한 줄로 펼쳐 쌓는다 (im2col)</span>
+<span class="k">def</span> <span class="f">im2col</span>(img, kh, kw):
+    oh, ow = img.shape[<span class="s">0</span>] - kh + <span class="s">1</span>, img.shape[<span class="s">1</span>] - kw + <span class="s">1</span>
+    cols = [img[y:y+kh, x:x+kw].flatten()      <span class="c"># 창 하나 = 한 줄</span>
+            <span class="k">for</span> y <span class="k">in</span> range(oh) <span class="k">for</span> x <span class="k">in</span> range(ow)]
+    <span class="k">return</span> np.array(cols)                        <span class="c"># (창 개수, kh*kw)</span>
+
+col = im2col(img, <span class="s">3</span>, <span class="s">3</span>)         <span class="c"># 3×6 이미지, 3×3 커널 → (4, 9)</span>
+out = col @ kernel.flatten()    <span class="c"># 합성곱이 '행렬 한 번 곱하기'가 된다</span>
+print(out.reshape(<span class="s">1</span>, <span class="s">4</span>))        <span class="c"># [[0 36 36 0]] — conv2d와 같은 결과, 반복문은 사라졌다</span></pre>
+<p>결과는 3절의 <code>conv2d</code>와 완전히 같은데 반복문은 증발했습니다. 이 책이 제게 남긴 건 특정 수식이 아니라 <b>태도</b>였습니다 — 라이브러리의 <code>Conv2D</code> 한 줄 뒤에 무엇이 돌아가는지 알고 부르는 것과 모르고 부르는 것은 다릅니다. ETRI에서 남이 짠 파이프라인을 손볼 때, 이 밑바닥 감각이 "어디를 만져야 하는지"를 알려 줬습니다.</p>
+
+<h2>6. 탐지로, 그리고 YOLO로</h2>
+<p>분류(이미지 한 장 = 라벨 하나)에서 탐지(어디에 무엇이 몇 개)로 넘어가면, 풀링이 흐려 버린 위치를 다시 세워야 합니다. ETRI에서 익힌 <b>필터 → 특징맵 → 풀링</b>이라는 문법은 그 뒤로 검출을 마주할 때마다 제 기준점이 됐습니다. 대흥정보에서 YOLO로 주차장 차량을 감지하는 일을 하든, 나중에 YOLO 원 논문을 다시 뜯어보든 마찬가지였습니다.</p>
+<p>격자가 왜 필요한지, 앵커가 무엇을 보정하는지는 결국 "합성곱은 위치에 강하고 풀링은 위치를 흐린다"는 이 지점에서 출발합니다. 기초 문법을 손으로 한 번 세워 두니, 검출 모델의 낯선 설계도 처음 보는 그림이 아니라 <b>익숙한 문장의 변형</b>으로 읽혔습니다. 개인정보라는 법적 물음에서 시작한 길이 여기까지 이어진 셈입니다.</p>
+<div class="callout"><span class="mark">*</span><p>돌이켜보면 전향은 극적인 결심이 아니라 <b>질문을 끝까지 따라간 결과</b>였습니다. "드론이 무엇을 식별하는가"를 놓지 못했고, 그 답을 좇다 보니 코드 앞이었습니다. 각도를 바꾼 건 새 목표가 아니라 오래 붙든 질문이었죠.</p></div>
+
+<h2>7. 정리 — 전공이 아니라 질문이 옮긴다</h2>
+<p>회고해 보면 저를 옮긴 건 전공이 아니라 질문이었습니다. 드론이 무엇을 보는가라는 <b>법적 질문</b>이 기계가 무엇을 보는가라는 <b>기술 질문</b>으로 이어졌고, 그 답을 좇다 개발자가 됐습니다. ETRI에서의 시간은 성과의 목록으로 남지 않았지만, 방향을 바꾼 계기로는 또렷합니다.</p>
+<ul>
+  <li><b>질문이 경계를 넘는다.</b> 개인정보라는 법적 물음과 객체탐지라는 기술 물음은 한 질문의 양면이었다 — 무언가를 가리려면 먼저 찾아야 하니까.</li>
+  <li><b>개념은 손으로 짤 때 잡힌다.</b> 필터·풀링·im2col을 numpy로 직접 짜 보고서야 프레임워크 한 줄이 읽혔다. 밑바닥 감각이 남의 파이프라인을 고칠 자신을 줬다.</li>
+  <li><b>기초 문법은 오래 남는다.</b> 필터→특징맵→풀링은 YOLO 차량감지까지 그대로 기준점이 됐다. 새 모델은 낯선 그림이 아니라 아는 문장의 변형이었다.</li>
+</ul>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">회고</a>
+      <a class="tag" href="index.html">ETRI</a>
+      <a class="tag" href="index.html">Vision AI</a>
+      <a class="tag" href="index.html">CNN</a>
+    </div>
+    <div class="post-cta"><span class="t">이 문법이 실무로 닿은 곳 → <b>YOLO 논문 분석 글</b></span><a class="chip primary" href="yolo-paper-analysis.html">글 읽기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="security-tls-reverse-proxy.html"><div class="np-key">← 이전 글</div><div class="np-title">TLS와 리버스 프록시</div></a>
+    <a class="next" href="learning-since-2020.html"><div class="np-key">다음 글 →</div><div class="np-title">2020년부터의 학습 지도</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

@@ -41,123 +41,324 @@
 
 <main id="main">
   <section class="writing-hero wrap">
-    <p class="eyebrow">Tech Blog · 총 15편</p>
+    <p class="eyebrow">Tech Blog · 총 47편</p>
     <h1>실무에서 배운 것을<br>구체적으로 남깁니다</h1>
     <p>코드를 짜다 "왜 이렇게 했지"를 스스로 설명해야 하는 순간, 그 설명을 글로 붙잡아 둡니다. LLM 서빙부터 JVM 힙덤프, 쿼리 튜닝, 보안까지 — 대부분 <a class="u-link" href="../cases/">실무 사례</a>의 뒷이야기이자 how-to입니다. <a class="u-link mono" href="/feed.xml" style="font-size:var(--t--1)">RSS ↗</a></p>
   </section>
 
   <section class="wrap" id="list">
-    <div class="w-filter" id="w-filter" role="tablist" aria-label="주제 필터">
-      <button class="active" data-tag="all" type="button">전체</button>
-      <button data-tag="백엔드" type="button">백엔드</button>
-      <button data-tag="AI·LLM" type="button">AI·LLM</button>
-      <button data-tag="데이터" type="button">데이터</button>
-      <button data-tag="트러블슈팅" type="button">트러블슈팅</button>
-      <button data-tag="아키텍처" type="button">아키텍처</button>
-      <button data-tag="보안" type="button">보안</button>
-      <button data-tag="프론트" type="button">프론트</button>
-    </div>
+    <!-- 필터 버튼은 .w-item의 data-cat에서 파생됩니다(스크립트가 개수와 함께 생성).
+         새 분류(예: 분석)는 글에 data-cat만 달면 자동으로 나타납니다. -->
+    <div class="w-filter" id="w-filter" role="tablist" aria-label="주제 필터"></div>
 
     <div class="w-list">
       <div class="w-group">
         <div class="w-yr">2026</div>
-        <a class="w-item" data-tag="AI·LLM" href="serving-llm-on-prem.html">
+        <a class="w-item" data-cat="회고" href="learning-since-2020.html">
+          <span class="w-date">2026 · 06<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>회고: 2020년부터의 학습 지도 — 무엇을 왜 공부했나</h2>
+            <p>2020년 데이터 가공에서 시작해 Spring·FastAPI·쿠버네티스·온프레미스 AI 서빙까지, 무엇을 왜 공부했는지 시간순으로 정리한다.</p></div>
+          <span class="w-tag">회고 · 학습</span>
+        </a>
+        <a class="w-item" data-cat="인프라" href="serving-llm-on-prem.html">
           <span class="w-date">2026 · 05<span class="w-read">약 9분</span></span>
           <div class="w-body"><h2>온프레미스에서 LLM을 서빙한다는 것 — vLLM과 양자화</h2>
-            <p>현장 데이터를 밖으로 못 보내는 제약 아래, PagedAttention·연속 배칭·양자화로 GPU에서 LLM을 운영 가능한 속도로.</p></div>
-          <span class="w-tag">vLLM · 인프라</span>
+            <p>현장 데이터를 밖으로 못 보내는 제약 아래, vLLM의 PagedAttention과 연속 배칭, 그리고 양자화로 온프레미스 GPU에서 LLM을 실제 운영 가능한 속도로 서빙…</p></div>
+          <span class="w-tag">vLLM · 양자화</span>
         </a>
-        <a class="w-item" data-tag="백엔드" href="nestjs-role-based-api.html">
+        <a class="w-item" data-cat="논문" href="pagedattention-paper.html">
+          <span class="w-date">2026 · 04<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>논문 분석: PagedAttention — vLLM이 빠른 진짜 이유</h2>
+            <p>KV 캐시를 OS 페이징처럼 관리하는 PagedAttention 논문을 분석하고, 실서빙에서 처리량이 왜 달라지는지 정리한다.</p></div>
+          <span class="w-tag">vLLM · PagedAttention</span>
+        </a>
+        <a class="w-item" data-cat="백엔드" href="nestjs-role-based-api.html">
           <span class="w-date">2026 · 03<span class="w-read">약 7분</span></span>
           <div class="w-body"><h2>관리자와 근로자는 같은 데이터를 다르게 쓴다 — NestJS 역할 분리</h2>
-            <p>모듈 분리·Guard·DTO로 API와 권한을 가르고, 상태·이력을 한곳에서 일관되게 관리한 법.</p></div>
-          <span class="w-tag">NestJS · 권한</span>
+            <p>같은 도메인을 관리자 Web과 근로자 App이 서로 다른 흐름으로 사용할 때, NestJS의 모듈·Guard·DTO로 API와 권한을 어떻게 갈랐는지.</p></div>
+          <span class="w-tag">NestJS · Guard</span>
+        </a>
+        <a class="w-item" data-cat="백엔드" href="prisma-transactions-n1.html">
+          <span class="w-date">2026 · 02<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>Prisma 트랜잭션과 N+1 — ORM이 숨기는 쿼리</h2>
+            <p>Prisma의 $transaction·include가 실제로 만드는 SQL을 로그로 확인하고, N+1을 잡는 세 가지 방법을 비교한다.</p></div>
+          <span class="w-tag">Prisma · NestJS</span>
         </a>
       </div>
 
       <div class="w-group">
         <div class="w-yr">2025</div>
-        <a class="w-item" data-tag="백엔드" href="postgres-slow-list.html">
+        <a class="w-item" data-cat="백엔드" href="postgres-slow-list.html">
           <span class="w-date">2025 · 11<span class="w-read">약 8분</span></span>
           <div class="w-body"><h2>PostgreSQL 느린 목록 화면 — 인덱스와 keyset 페이지네이션</h2>
-            <p>EXPLAIN ANALYZE로 병목을 읽고, 복합 인덱스 순서와 OFFSET→keyset 전환으로 어느 깊이든 일정하게.</p></div>
-          <span class="w-tag">PostgreSQL · 성능</span>
+            <p>EXPLAIN ANALYZE로 병목을 읽고, 복합 인덱스 순서와 OFFSET→keyset 페이지네이션으로 느린 목록 화면을 살린 실무 기록.</p></div>
+          <span class="w-tag">PostgreSQL · 인덱스</span>
         </a>
-        <a class="w-item" data-tag="아키텍처" href="docker-image-diet.html">
+        <a class="w-item" data-cat="인프라" href="docker-image-diet.html">
           <span class="w-date">2025 · 10<span class="w-read">약 6분</span></span>
           <div class="w-body"><h2>Docker 이미지를 반으로 — 멀티스테이지와 레이어 캐시</h2>
-            <p>빌드 도구까지 담긴 무거운 이미지를 런타임만 남기고, 레이어 캐시 순서로 재빌드를 몇 초로.</p></div>
-          <span class="w-tag">Docker · 인프라</span>
+            <p>빌드 도구까지 담긴 무거운 이미지를 멀티스테이지 빌드로 런타임만 남기고, 레이어 캐시 순서로 빌드 시간을 줄인 실무 노트.</p></div>
+          <span class="w-tag">Docker · 멀티스테이지</span>
         </a>
-        <a class="w-item" data-tag="트러블슈팅" href="reading-heap-dumps.html">
+        <a class="w-item" data-cat="트러블슈팅" href="reading-heap-dumps.html">
           <span class="w-date">2025 · 09<span class="w-read">약 8분</span></span>
           <div class="w-body"><h2>힙덤프 읽는 법 — MAT의 Dominator Tree로 범인 찾기</h2>
-            <p>덤프 뜨는 법부터 Retained Heap·Leak Suspects·Path to GC Roots까지, 몇 개의 화면만 보면 된다.</p></div>
-          <span class="w-tag">JVM · MAT</span>
+            <p>메모리 누수를 추적할 때 힙덤프를 어떻게 뜨고, Eclipse MAT의 Dominator Tree·Leak Suspects·GC Roots로 어떻게 범인을 좁히는지 실무 순…</p></div>
+          <span class="w-tag">Heap Dump · MAT</span>
         </a>
-        <a class="w-item" data-tag="아키텍처" href="adapter-and-backoff.html">
+        <a class="w-item" data-cat="회고" href="study-spring-vs-fastapi.html">
+          <span class="w-date">2025 · 09<span class="w-read">약 11분</span></span>
+          <div class="w-body"><h2>학습 노트: Spring과 FastAPI를 오가며 배운 것</h2>
+            <p>두 프레임워크를 실무에서 오가며 느낀 DI·검증·비동기·타입 시스템의 설계 철학 차이를 예제로 비교한다.</p></div>
+          <span class="w-tag">Spring · FastAPI</span>
+        </a>
+        <a class="w-item" data-cat="아키텍처" href="adapter-and-backoff.html">
           <span class="w-date">2025 · 08<span class="w-read">약 7분</span></span>
           <div class="w-body"><h2>Adapter로 크롤러를 무한 확장하고, Backoff로 안 잘리기</h2>
-            <p>사이트별 차이는 Adapter 뒤로, Rate limit은 지수 백오프+지터로. 무인 자동화의 조건은 관측 가능성.</p></div>
-          <span class="w-tag">패턴 · 크롤링</span>
+            <p>사이트마다 다른 HTML을 Adapter 패턴으로 격리하고, Rate limit·봇 감지를 Exponential Backoff+지터로 우회한 크롤링 파이프라인의 두 축.</p></div>
+          <span class="w-tag">Adapter · Backoff</span>
         </a>
-        <a class="w-item" data-tag="트러블슈팅" href="shipping-this-portfolio.html">
+        <a class="w-item" data-cat="인프라" href="kubernetes-oomkilled.html">
+          <span class="w-date">2025 · 07<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>쿠버네티스 requests/limits — OOMKilled의 진짜 이유</h2>
+            <p>메모리 limits와 cgroup의 관계를 실험 매니페스트로 확인하고, JVM 컨테이너가 죽는 전형적 패턴을 정리한다.</p></div>
+          <span class="w-tag">Kubernetes · 메모리</span>
+        </a>
+        <a class="w-item" data-cat="트러블슈팅" href="shipping-this-portfolio.html">
           <span class="w-date">2025 · 07<span class="w-read">약 8분</span></span>
           <div class="w-body"><h2>이 사이트를 배포하며 부딪힌 다섯 개의 벽</h2>
-            <p>가변폰트 리셋, SVG arc, 타입 에러, .gitignore, 옵저버 타이밍 — 실제 디버깅 기록.</p></div>
-          <span class="w-tag">디버깅</span>
+            <p>포트폴리오 사이트 하나를 GitHub Pages까지 올리며 실제로 막혔던 다섯 가지 문제와 해결 과정. 가변폰트, SVG arc, 타입 에러, .gitignore,…</p></div>
+          <span class="w-tag">디버깅 · 배포</span>
         </a>
-        <a class="w-item" data-tag="백엔드" href="state-without-a-database.html">
+        <a class="w-item" data-cat="백엔드" href="state-without-a-database.html">
           <span class="w-date">2025 · 06<span class="w-read">약 7분</span></span>
           <div class="w-body"><h2>데이터베이스 없이 상태를 버티기</h2>
-            <p>영속성을 빼면 무엇이 단순해지고 무엇이 무너지는지. 인메모리의 유효기간에 대하여.</p></div>
-          <span class="w-tag">실시간 · 상태</span>
+            <p>실시간 투표를 만들며, 영속성을 빼면 무엇이 단순해지고 무엇이 무너지는지 따라가 본 기록.</p></div>
+          <span class="w-tag">Node · Socket.IO</span>
         </a>
-        <a class="w-item" data-tag="백엔드" href="killing-repetitive-work.html">
+        <a class="w-item" data-cat="백엔드" href="killing-repetitive-work.html">
           <span class="w-date">2025 · 05<span class="w-read">약 6분</span></span>
           <div class="w-body"><h2>반복 업무를 죽이는 자동화 — 보고서 생성을 절반으로</h2>
-            <p>수작업 Excel 보고서를 pandas·openpyxl로. 자동화가 만든 시간을 어디에 재투자했나.</p></div>
-          <span class="w-tag">Python · 자동화</span>
+            <p>매주 손으로 만들던 Excel 보고서를 pandas·openpyxl로 자동화해 처리시간을 절반으로 줄인 이야기. 자동화가 만든 시간을 어디에 재투자했나.</p></div>
+          <span class="w-tag">pandas · openpyxl</span>
         </a>
-        <a class="w-item" data-tag="프론트" href="parsing-regex-by-hand.html">
+        <a class="w-item" data-cat="프론트" href="parsing-regex-by-hand.html">
           <span class="w-date">2025 · 04<span class="w-read">약 6분</span></span>
           <div class="w-body"><h2>정규식을 손으로 파싱하기</h2>
-            <p>라이브러리 없이 재귀 하강 파서를. 문법의 우선순위가 어떻게 그대로 함수가 되는가.</p></div>
-          <span class="w-tag">파서 · TS</span>
+            <p>라이브러리 없이 재귀 하강 파서를 짜며 배운 것. 문법의 우선순위가 어떻게 그대로 함수가 되는가.</p></div>
+          <span class="w-tag">TypeScript · 재귀 하강</span>
         </a>
-        <a class="w-item" data-tag="프론트" href="variable-fonts-in-ui.html">
+        <a class="w-item" data-cat="서평" href="review-k8s-in-action.html">
+          <span class="w-date">2025 · 04<span class="w-read">약 11분</span></span>
+          <div class="w-body"><h2>서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식</h2>
+            <p>Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.</p></div>
+          <span class="w-tag">서평 · Kubernetes</span>
+        </a>
+        <a class="w-item" data-cat="백엔드" href="fastapi-dependency-injection.html">
+          <span class="w-date">2025 · 02<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>FastAPI 의존성 주입 — 크롤러 어댑터를 갈아끼우는 법</h2>
+            <p>Depends의 동작 원리를 뜯어보고, 사이트별 크롤러 어댑터를 주입으로 교체하는 구조를 예제로 만든다.</p></div>
+          <span class="w-tag">FastAPI · Python</span>
+        </a>
+        <a class="w-item" data-cat="프론트" href="variable-fonts-in-ui.html">
           <span class="w-date">2025 · 02<span class="w-read">약 6분</span></span>
           <div class="w-body"><h2>가변 폰트로 UI에 숨을 불어넣기</h2>
-            <p><code>font-variation-settings</code>의 함정과 가능성. 글자에 애니메이션을 넣는 일의 섬세함.</p></div>
-          <span class="w-tag">CSS · 폰트</span>
+            <p>font-variation-settings의 함정과 가능성. 글자 하나에 애니메이션을 넣는 일이 왜 생각보다 섬세한가.</p></div>
+          <span class="w-tag">CSS · Variable Fonts</span>
         </a>
       </div>
 
       <div class="w-group">
         <div class="w-yr">2024</div>
-        <a class="w-item" data-tag="보안" href="web-server-hardening.html">
+        <a class="w-item" data-cat="보안" href="web-server-hardening.html">
           <span class="w-date">2024 · 12<span class="w-read">약 7분</span></span>
           <div class="w-body"><h2>웹 서버 하드닝 체크리스트 — ServerTokens부터 헤더까지</h2>
-            <p>버전 노출 제거, 보안 헤더 세트, 표면 줄이기 — 운영을 깨지 않으면서 하나씩 닫는 법.</p></div>
+            <p>보안 감사에서 시작해 정리한 웹 서버 하드닝 실무 체크리스트. 버전 노출 제거, 보안 헤더, 불필요 메서드 차단 — 운영을 깨지 않으면서.</p></div>
           <span class="w-tag">Apache · Nginx</span>
         </a>
-        <a class="w-item" data-tag="백엔드" href="redis-cache-invalidation.html">
+        <a class="w-item" data-cat="인프라" href="aws-small-team-architecture.html">
+          <span class="w-date">2024 · 11<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>작은 팀의 AWS — EC2 한 대에서 시작하는 아키텍처</h2>
+            <p>EC2 단일 인스턴스 → ALB+ASG → 관리형 서비스로 넓혀가는 단계별 선택 기준을 비용과 함께 정리한다.</p></div>
+          <span class="w-tag">AWS · 아키텍처</span>
+        </a>
+        <a class="w-item" data-cat="백엔드" href="redis-cache-invalidation.html">
           <span class="w-date">2024 · 09<span class="w-read">약 7분</span></span>
           <div class="w-body"><h2>Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</h2>
-            <p>cache-aside는 쉽다. 어려운 건 언제 버리느냐 — TTL, 스탬피드, 이벤트 기반 무효화.</p></div>
+            <p>cache-aside로 읽기를 빠르게 만드는 건 쉽다. 어려운 건 언제 어떻게 캐시를 버리느냐 — TTL, 스탬피드, 이벤트 기반 무효화까지.</p></div>
           <span class="w-tag">Redis · 캐시</span>
         </a>
-        <a class="w-item" data-tag="데이터" href="feature-engineering-in-practice.html">
+        <a class="w-item" data-cat="보안" href="security-tls-reverse-proxy.html">
+          <span class="w-date">2024 · 09<span class="w-read">약 11분</span></span>
+          <div class="w-body"><h2>보안: TLS와 리버스 프록시 — NGINX 앞단에서 끝내기</h2>
+            <p>TLS 핸드셰이크의 큰 그림과, NGINX 리버스 프록시에서 종단·헤더 보안·업스트림 보호를 설정하는 실전 구성을 정리한다.</p></div>
+          <span class="w-tag">TLS · NGINX</span>
+        </a>
+        <a class="w-item" data-cat="데이터·ML" href="feature-engineering-in-practice.html">
           <span class="w-date">2024 · 06<span class="w-read">약 7분</span></span>
           <div class="w-body"><h2>Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</h2>
-            <p>다중공선성(VIF)을 정리하고 도메인 지식으로 파생 변수를. 모델보다 데이터가 순위를 만든다.</p></div>
-          <span class="w-tag">EDA · ML</span>
+            <p>전력 예측 대회에서 원시 기상 데이터 대신 도메인 지식으로 파생 변수를 만들고 다중공선성을 정리한 과정. 모델보다 데이터가 순위를 만든 이야기.</p></div>
+          <span class="w-tag">EDA · 다중공선성</span>
         </a>
-        <a class="w-item" data-tag="트러블슈팅" href="observability-basics.html">
+        <a class="w-item" data-cat="보안" href="security-rate-limiting.html">
+          <span class="w-date">2024 · 06<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>보안: 레이트 리미팅 — 미들웨어로 그은 방어선</h2>
+            <p>토큰 버킷과 슬라이딩 윈도우 알고리즘을 비교하고, Redis INCR·Lua로 원자성을 지킨 분산 레이트 리미터를 NestJS 미들웨어로 구현한 실무 노트.</p></div>
+          <span class="w-tag">Rate Limiting · Redis</span>
+        </a>
+        <a class="w-item" data-cat="인프라" href="observability-basics.html">
           <span class="w-date">2024 · 03<span class="w-read">약 6분</span></span>
           <div class="w-body"><h2>관측 가능성 — 새벽에 안 깨려면 무엇을 남겨야 하나</h2>
-            <p>로그·메트릭·트레이스 세 기둥, 구조화 로깅과 상관 ID로 디버깅 시간을 줄이는 법.</p></div>
-          <span class="w-tag">로그 · APM</span>
+            <p>장애는 반드시 난다. 중요한 건 빨리 아는 것. 로그·메트릭·트레이스 세 기둥과 구조화 로깅·상관 ID로 디버깅 시간을 줄인 실무 노트.</p></div>
+          <span class="w-tag">로그 · 메트릭</span>
+        </a>
+        <a class="w-item" data-cat="보안" href="security-owasp-top10.html">
+          <span class="w-date">2024 · 03<span class="w-read">약 15분</span></span>
+          <div class="w-body"><h2>보안: OWASP Top 10 — 백엔드에서 실제로 막는 법</h2>
+            <p>OWASP Top 10 중 백엔드가 직접 책임지는 항목(인젝션·인증 실패·접근 통제)을 골라, ORM·검증·권한 체크로 막는 실전 코드를 정리한다.</p></div>
+          <span class="w-tag">OWASP · 인젝션</span>
+        </a>
+        <a class="w-item" data-cat="서평" href="review-clean-architecture.html">
+          <span class="w-date">2024 · 01<span class="w-read">약 13분</span></span>
+          <div class="w-body"><h2>서평: Clean Architecture — 의존성은 안쪽을 향한다</h2>
+            <p>Robert C. Martin의 Clean Architecture에서 의존성 규칙과 경계(boundary)의 의미를, 헥사고날·포트어댑터 실무 경험에 비추어 읽는다.</p></div>
+          <span class="w-tag">Clean Architecture · 의존성 규칙</span>
+        </a>
+      </div>
+
+      <div class="w-group">
+        <div class="w-yr">2023</div>
+        <a class="w-item" data-cat="서평" href="review-ddd-evans.html">
+          <span class="w-date">2023 · 10<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>서평: 도메인 주도 설계 — 유비쿼터스 언어의 힘</h2>
+            <p>Eric Evans의 DDD에서 유비쿼터스 언어·바운디드 컨텍스트·애그리거트를 읽고, 크롤링 파이프라인 도메인에 경계를 그은 경험과 대조한다.</p></div>
+          <span class="w-tag">서평 · DDD</span>
+        </a>
+        <a class="w-item" data-cat="아키텍처" href="ddd-aggregate-boundaries.html">
+          <span class="w-date">2023 · 08<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>DDD 애그리거트 경계 — 크롤링 파이프라인에 그은 선</h2>
+            <p>애그리거트를 트랜잭션 경계로 정의하는 이유를, 크롤링 파이프라인 도메인의 실제 경계 결정 과정으로 설명한다.</p></div>
+          <span class="w-tag">DDD · 설계</span>
+        </a>
+        <a class="w-item" data-cat="아키텍처" href="pattern-pipe-filter.html">
+          <span class="w-date">2023 · 06<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>아키텍처 패턴 · Pipe &amp;amp; Filter — 무수정 확장의 구조</h2>
+            <p>크롤러에 신규 소스를 코드 수정 없이 붙일 수 있었던 이유 — 파이프라인 인터페이스, 필터 합성, 어댑터 등록의 실제 구현.</p></div>
+          <span class="w-tag">아키텍처 · Pipe&amp;amp;Filter</span>
+        </a>
+        <a class="w-item" data-cat="서평" href="review-poeaa.html">
+          <span class="w-date">2023 · 03<span class="w-read">약 13분</span></span>
+          <div class="w-body"><h2>서평: 엔터프라이즈 애플리케이션 아키텍처 패턴 — 이름이 생기면 보인다</h2>
+            <p>Martin Fowler의 PoEAA를 읽고, Domain Model·Service Layer·Repository·Unit of Work 같은 패턴에 이름이 생겼을 때 설계…</p></div>
+          <span class="w-tag">PoEAA · Fowler</span>
+        </a>
+        <a class="w-item" data-cat="논문" href="yolo-paper-analysis.html">
+          <span class="w-date">2023 · 01<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>논문 분석: YOLO — 검출을 회귀 문제로 바꾼 한 발상</h2>
+            <p>You Only Look Once 원 논문을 다시 읽으며, two-stage 검출을 단일 회귀로 바꾼 설계와 그 대가(작은 객체·격자 한계)를 코드로 확인한다.</p></div>
+          <span class="w-tag">YOLO · Object Detection</span>
+        </a>
+      </div>
+
+      <div class="w-group">
+        <div class="w-yr">2022</div>
+        <a class="w-item" data-cat="아키텍처" href="pattern-usecase-repository.html">
+          <span class="w-date">2022 · 11<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>아키텍처 패턴 · UseCase와 Repository — 레거시에 경계 긋기</h2>
+            <p>전면 재작성 없이 레거시에 UseCase 계층을 도입하는 점진 전략 — 신뢰를 얻는 순서, 경계 인터페이스, 스트랭글러 패턴.</p></div>
+          <span class="w-tag">UseCase · Repository</span>
+        </a>
+        <a class="w-item" data-cat="백엔드" href="postgres-mvcc-vacuum.html">
+          <span class="w-date">2022 · 09<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>PostgreSQL MVCC — UPDATE가 사실은 INSERT인 이유</h2>
+            <p>튜플 버전과 VACUUM의 동작을 pageinspect로 직접 들여다보며, 느려지는 테이블의 원인을 구조에서 찾는다.</p></div>
+          <span class="w-tag">PostgreSQL · MVCC</span>
+        </a>
+        <a class="w-item" data-cat="보안" href="security-cors-csrf.html">
+          <span class="w-date">2022 · 07<span class="w-read">약 11분</span></span>
+          <div class="w-body"><h2>보안: CORS와 CSRF — 헷갈리는 둘을 정확히</h2>
+            <p>같은 출처 정책에서 출발해 CORS 프리플라이트와 CSRF 공격·방어를 구분하고, 미들웨어에서 무엇을 설정해야 하는지 예제로 정리한다.</p></div>
+          <span class="w-tag">CORS · CSRF</span>
+        </a>
+        <a class="w-item" data-cat="보안" href="security-jwt-auth.html">
+          <span class="w-date">2022 · 05<span class="w-read">약 11분</span></span>
+          <div class="w-body"><h2>보안: JWT 인증 미들웨어 — 토큰은 어디서 검증되는가</h2>
+            <p>JWT의 구조와 서명 검증을 뜯어보고, NestJS Guard·Strategy로 인증 경계를 한 곳에 모으는 실전 패턴을 예제로 만든다.</p></div>
+          <span class="w-tag">JWT · 서명 검증</span>
+        </a>
+        <a class="w-item" data-cat="백엔드" href="spring-transaction-propagation.html">
+          <span class="w-date">2022 · 02<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가</h2>
+            <p>@Transactional 전파 옵션별 커밋·롤백 경계를 실험 코드로 확인한다. 정산 시스템에서 부딪힌 전파 함정 포함.</p></div>
+          <span class="w-tag">Spring · Transaction</span>
+        </a>
+      </div>
+
+      <div class="w-group">
+        <div class="w-yr">2021</div>
+        <a class="w-item" data-cat="아키텍처" href="pattern-template-strategy.html">
+          <span class="w-date">2021 · 10<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합</h2>
+            <p>정산 시스템에서 복붙으로 늘어난 분기 코드를 Template Method(골격)와 Strategy(교체 지점)의 조합으로 정리한 실제 과정.</p></div>
+          <span class="w-tag">Template Method · Strategy</span>
+        </a>
+        <a class="w-item" data-cat="서평" href="review-clean-code.html">
+          <span class="w-date">2021 · 08<span class="w-read">약 14분</span></span>
+          <div class="w-body"><h2>서평: Clean Code — 규칙보다 태도</h2>
+            <p>Robert C. Martin의 Clean Code를 다시 읽으며, 규칙 목록이 아니라 &#x27;고치며 떠나기&#x27;라는 태도로서의 클린코드를 정리한다.</p></div>
+          <span class="w-tag">서평 · 클린코드</span>
+        </a>
+        <a class="w-item" data-cat="아키텍처" href="pattern-layered-hexagonal.html">
+          <span class="w-date">2021 · 05<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>아키텍처 패턴 · 레이어드에서 헥사고날로</h2>
+            <p>레이어드가 무너지는 전형적 순서와, 포트·어댑터로 의존 방향을 뒤집는 과정을 하나의 도메인으로 끝까지 따라간다.</p></div>
+          <span class="w-tag">레이어드 · 포트와 어댑터</span>
+        </a>
+        <a class="w-item" data-cat="논문" href="attention-paper-analysis.html">
+          <span class="w-date">2021 · 03<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>논문 분석: Attention Is All You Need — 수식을 손으로 풀다</h2>
+            <p>Scaled dot-product attention의 수식 하나를 numpy로 구현하며 Transformer가 RNN을 대체한 이유를 확인한다.</p></div>
+          <span class="w-tag">Transformer · Attention</span>
+        </a>
+        <a class="w-item" data-cat="클린코드" href="clean-code-tests.html">
+          <span class="w-date">2021 · 01<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>클린코드 · 테스트 — 테스트가 설계를 바꾼다</h2>
+            <p>테스트하기 어려운 코드는 설계 신호다. 시간·랜덤·IO 의존을 주입으로 밀어내고, 준비-실행-검증 리듬으로 테스트를 문서로 만드는 법.</p></div>
+          <span class="w-tag">클린코드 · 테스트</span>
+        </a>
+      </div>
+
+      <div class="w-group">
+        <div class="w-yr">2020</div>
+        <a class="w-item" data-cat="클린코드" href="clean-code-errors.html">
+          <span class="w-date">2020 · 11<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>클린코드 · 에러 — 예외를 삼키지 않는 법</h2>
+            <p>catch 후 로그만 찍고 지나가는 코드가 장애를 키운다. 예외 계층 설계, 경계에서의 변환, NestJS exception filter 실전 패턴.</p></div>
+          <span class="w-tag">클린코드 · 예외 처리</span>
+        </a>
+        <a class="w-item" data-cat="논문" href="raft-paper-analysis.html">
+          <span class="w-date">2020 · 09<span class="w-read">약 10분</span></span>
+          <div class="w-body"><h2>논문 분석: Raft — 이해할 수 있는 합의 알고리즘</h2>
+            <p>In Search of an Understandable Consensus Algorithm을 읽고 리더 선출·로그 복제를 상태 머신 코드로 재현한다.</p></div>
+          <span class="w-tag">Raft · 분산시스템</span>
+        </a>
+        <a class="w-item" data-cat="클린코드" href="clean-code-functions.html">
+          <span class="w-date">2020 · 06<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>클린코드 · 함수 — 한 가지 일의 실제 크기</h2>
+            <p>&quot;함수는 한 가지 일만&quot; 원칙을 실제 코드에 적용할 때의 기준 — 추상화 수준, 인자 개수, 부수효과 격리 — 를 단계별 리팩토링으로 보인다.</p></div>
+          <span class="w-tag">클린코드 · 함수 분리</span>
+        </a>
+        <a class="w-item" data-cat="클린코드" href="clean-code-naming.html">
+          <span class="w-date">2020 · 04<span class="w-read">약 12분</span></span>
+          <div class="w-body"><h2>클린코드 · 이름 — 변수명이 주석을 대신할 때</h2>
+            <p>의도를 드러내는 이름의 구체적 규칙을 나쁜 예→좋은 예 리팩토링으로 정리한다. 불리언·컬렉션·시간·단위 네이밍까지.</p></div>
+          <span class="w-tag">클린코드 · 네이밍</span>
+        </a>
+        <a class="w-item" data-cat="회고" href="research-etri-vision.html">
+          <span class="w-date">2020 · 02<span class="w-read">약 9분</span></span>
+          <div class="w-body"><h2>연구 회고: ETRI에서 만난 Vision AI — 법학도가 객체탐지로</h2>
+            <p>ETRI 연구연수 시절 물류 드론 개인정보 주제에서 CNN 기반 객체탐지로 방향을 넓히며 AI·개발로 전향한 계기를 돌아본다.</p></div>
+          <span class="w-tag">ETRI · Vision AI</span>
         </a>
       </div>
     </div>
@@ -175,25 +376,57 @@
   </div>
   <div class="colophon">
     <span>© <span data-year>2025</span> 안성진 (ann)</span>
-    <span>Set in Fraunces &amp; Pretendard.</span>
+    <span>2020–2026 학습 기록 · 흩어져 있던 글을 2026년에 정리해 다시 올렸습니다.</span>
   </div>
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
 <script>
   (function () {
-    var btns = Array.prototype.slice.call(document.querySelectorAll("#w-filter button"));
+    "use strict";
+    var bar = document.getElementById("w-filter");
     var items = Array.prototype.slice.call(document.querySelectorAll(".w-item"));
     var groups = Array.prototype.slice.call(document.querySelectorAll(".w-group"));
-    btns.forEach(function (b) {
-      b.addEventListener("click", function () {
-        btns.forEach(function (x) { x.classList.toggle("active", x === b); });
-        var t = b.dataset.tag;
-        items.forEach(function (it) { it.hidden = t !== "all" && it.dataset.tag !== t; });
-        groups.forEach(function (g) {
-          var any = Array.prototype.slice.call(g.querySelectorAll(".w-item")).some(function (it) { return !it.hidden; });
-          g.hidden = !any;
-        });
+    if (!bar || !items.length) return;
+
+    // 목록이 실제 가진 분류에서 버튼을 파생 — 개수 많은 순, 동률이면 등장 순
+    var counts = Object.create(null);
+    var order = [];
+    items.forEach(function (it) {
+      var c = it.dataset.cat;
+      if (!c) return;
+      if (!(c in counts)) { counts[c] = 0; order.push(c); }
+      counts[c] += 1;
+    });
+    var cats = order.slice().sort(function (a, b) {
+      return counts[b] - counts[a] || order.indexOf(a) - order.indexOf(b);
+    });
+
+    function makeBtn(cat, label, n, active) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.dataset.cat = cat;
+      if (active) b.classList.add("active");
+      b.appendChild(document.createTextNode(label + " "));
+      var cnt = document.createElement("span");
+      cnt.className = "cnt";
+      cnt.textContent = String(n);
+      b.appendChild(cnt);
+      bar.appendChild(b);
+      return b;
+    }
+    var btns = [makeBtn("all", "전체", items.length, true)];
+    cats.forEach(function (c) { btns.push(makeBtn(c, c, counts[c], false)); });
+
+    bar.addEventListener("click", function (ev) {
+      var b = ev.target.closest ? ev.target.closest("button") : null;
+      if (!b || !bar.contains(b)) return;
+      btns.forEach(function (x) { x.classList.toggle("active", x === b); });
+      var t = b.dataset.cat;
+      items.forEach(function (it) { it.hidden = t !== "all" && it.dataset.cat !== t; });
+      groups.forEach(function (g) {
+        var any = Array.prototype.slice.call(g.querySelectorAll(".w-item")).some(function (it) { return !it.hidden; });
+        g.hidden = !any;
       });
     });
   })();

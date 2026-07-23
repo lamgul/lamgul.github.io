@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>보안: CORS와 CSRF — 헷갈리는 둘을 정확히 — 안성진</title>
+<meta name="description" content="같은 출처 정책에서 출발해 CORS 프리플라이트와 CSRF 공격·방어를 구분하고, 미들웨어에서 무엇을 설정해야 하는지 예제로 정리한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="보안: CORS와 CSRF — 헷갈리는 둘을 정확히">
+<meta property="og:description" content="같은 출처 정책에서 출발해 CORS 프리플라이트와 CSRF 공격·방어를 구분하고, 미들웨어에서 무엇을 설정해야 하는지 예제로 정리한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"보안: CORS와 CSRF — 헷갈리는 둘을 정확히","datePublished":"2022-07-23","dateModified":"2026-07-23","inLanguage":"ko","description":"같은 출처 정책에서 출발해 CORS 프리플라이트와 CSRF 공격·방어를 구분하고, 미들웨어에서 무엇을 설정해야 하는지 예제로 정리한다.","keywords":"CORS · CSRF · SameSite","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/security-cors-csrf.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / security-cors-csrf</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 보안</p>
+    <h1>보안: CORS와 CSRF — 헷갈리는 둘을 정확히</h1>
+    <div class="post-meta">
+      <span>2022년 7월</span><span class="dot-sep">•</span>
+      <span>약 11분</span><span class="dot-sep">•</span>
+      <span>CORS · CSRF · SameSite</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">CORS 에러가 뜨면 손이 먼저 움직입니다. 스택오버플로를 뒤져 <code>origin: '*'</code>를 붙이고, 빨간 글씨가 사라지면 다음 일로 넘어가죠. 저도 오래 그랬습니다. 문제는 그 한 줄이 <b>에러를 지운 게 아니라 방어를 지웠다</b>는 것이었습니다. CORS와 CSRF는 이름도 비슷하고 늘 같이 등장하지만, 사실 정반대 방향을 봅니다. 이 글은 둘을 헷갈리지 않게 갈라 세우고, 미들웨어에서 무엇을 켜고 꺼야 하는지까지 정리합니다.</p>
+
+<h2>1. 같은 출처 정책은 하나가 아니다</h2>
+<p>CORS와 CSRF가 헷갈리는 건 이름 탓만이 아닙니다. 둘 다 <b>같은 출처 정책(Same-Origin Policy)</b> 위에 서 있기 때문입니다. 출처(origin)는 스킴·호스트·포트 세 가지로 정의되고, 셋 중 하나만 달라도 브라우저는 다른 출처로 봅니다. 경로(path)는 출처에 포함되지 않는다는 점이 자주 헷갈리는 지점입니다.</p>
+<pre class="code"><span class="c"># 출처(origin) = 스킴 + 호스트 + 포트, 셋 중 하나만 달라도 다른 출처</span>
+https://app.example.com          <span class="c"># 기준</span>
+https://app.example.com/admin    <span class="c"># 같은 출처 (경로는 무관)</span>
+http://app.example.com           <span class="c"># 다른 출처 (스킴 http↔https)</span>
+https://api.example.com          <span class="c"># 다른 출처 (호스트 app↔api)</span>
+https://app.example.com:8443     <span class="c"># 다른 출처 (포트)</span></pre>
+<p>핵심은 같은 출처 정책이 <b>무엇을 막느냐</b>입니다. 이 정책은 다른 출처의 응답을 스크립트가 <b>읽는 것</b>을 막지, 요청이 <b>나가는 것</b>을 막지 않습니다. 브라우저는 다른 출처로 쿠키를 실은 POST도 얼마든지 보냅니다 — 다만 그 응답을 호출한 자바스크립트에게 넘겨주지 않을 뿐입니다. 이 '보내기는 되고 읽기는 안 되는' 비대칭이 CORS와 CSRF가 갈라서는 지점입니다.</p>
+<p>그래서 둘은 정반대 방향을 봅니다. <b>CORS는 이 읽기 제한을 의도적으로 푸는 쪽</b>이고, <b>CSRF는 보내기가 애초에 안 막힌다는 점을 악용하는 쪽</b>입니다. 한쪽은 빗장을 풀고, 다른 쪽은 잠기지 않은 문을 노립니다. 이 문장 하나만 붙잡고 가면 나머지는 따라옵니다.</p>
+
+<h2>2. CORS는 방패가 아니라 빗장이다</h2>
+<p>CORS(Cross-Origin Resource Sharing)를 한 문장으로 줄이면 이렇습니다. 서버가 브라우저에게 <b>"이 출처한테는 내 응답을 보여줘도 된다"고 허락하는 프로토콜.</b> 잠금장치가 아니라 <b>허가증</b>입니다. 그래서 CORS 설정은 문을 잠그는 일이 아니라, 특정 손님에게만 문을 열어 주는 일에 가깝습니다.</p>
+<p>요청은 두 부류로 나뉩니다. GET이나 조건을 만족하는 단순한 POST 같은 <b>단순 요청</b>은 곧장 서버로 갑니다. 반면 <code>application/json</code> 본문이나 커스텀 헤더, PUT·DELETE·PATCH가 붙으면 브라우저가 본 요청 전에 <b>프리플라이트(preflight)</b>라는 OPTIONS 요청을 먼저 보내 허락을 구합니다.</p>
+<pre class="code"><span class="c"># 브라우저가 먼저 물어본다 (preflight) — 실제 요청 전에 자동 발생</span>
+OPTIONS /api/reports HTTP/1.1
+Origin: https://app.example.com
+Access-Control-Request-Method: PATCH
+Access-Control-Request-Headers: authorization, content-type
+
+<span class="c"># 서버의 허가 응답 — 이 조합을 허용한다고 답해야 본 요청이 나간다</span>
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: https://app.example.com
+Access-Control-Allow-Methods: GET, PATCH, DELETE
+Access-Control-Allow-Headers: authorization, content-type
+Access-Control-Max-Age: 600</pre>
+<p>여기서 가장 흔한 오해를 짚어야 합니다. <b>CORS를 강제하는 주체는 서버가 아니라 브라우저</b>입니다. curl이나 Postman, 다른 서버는 CORS 헤더를 그냥 무시하고 응답을 다 읽습니다. 즉 CORS는 API의 접근 제어가 아니라, <b>브라우저 사용자를 보호하는 장치</b>입니다. 인증·인가는 여전히 별도로 해야 합니다 — CORS를 열어 뒀다고 API가 뚫린 게 아니고, 닫아 뒀다고 안전한 것도 아닙니다.</p>
+
+<h2>3. 자격증명을 실으면 별표가 막힌다</h2>
+<p>쿠키나 <code>Authorization</code> 헤더 같은 <b>자격증명을 함께 실으면</b>(<code>credentials: 'include'</code>) 규칙이 갑자기 엄격해집니다. 브라우저는 자격증명이 붙은 요청에 대해 <code>Access-Control-Allow-Origin: *</code>를 <b>거부</b>합니다. 와일드카드 대신 <b>구체적인 출처 하나</b>를 돌려주고, <code>Access-Control-Allow-Credentials: true</code>를 붙이며, 캐시가 섞이지 않게 <code>Vary: Origin</code>까지 넣어야 합니다.</p>
+<p>문제는 여러 출처를 지원하려고 <b>들어온 Origin을 그대로 되돌려주는</b> 코드입니다. 화이트리스트 없이 반사하면, 그건 사실상 '아무 출처나 자격증명과 함께 허용'이 되어 스펙이 금지한 <code>*</code>+자격증명을 손으로 재현한 꼴입니다. 이 순간 <b>어떤 사이트든 로그인한 사용자를 흉내 내 인증된 응답을 읽어 갈 수 있습니다.</b> 전형적인 CORS 설정 취약점입니다.</p>
+<pre class="code"><span class="c">// 예전의 나 — 에러만 지우면 된다고 생각했다</span>
+app.<span class="f">enableCors</span>({ origin: <span class="s">'*'</span>, credentials: <span class="k">true</span> });
+<span class="c">// 브라우저는 이 조합을 거부한다. '되게' 하려고 origin을 요청 그대로 반사하면</span>
+<span class="c">// 그건 '아무 출처나 자격증명과 함께 허용'이 되어 오히려 더 위험하다.</span>
+
+<span class="c">// 지금 — 출처를 화이트리스트로 고정하고, 자격증명은 명시적으로</span>
+app.<span class="f">enableCors</span>({
+  origin: [<span class="s">'https://app.example.com'</span>, <span class="s">'https://admin.example.com'</span>],
+  credentials: <span class="k">true</span>,
+  methods: [<span class="s">'GET'</span>, <span class="s">'POST'</span>, <span class="s">'PATCH'</span>, <span class="s">'DELETE'</span>],
+  allowedHeaders: [<span class="s">'Authorization'</span>, <span class="s">'Content-Type'</span>],
+  maxAge: 600,
+});</pre>
+<p>부끄럽지만 예전 공개 레포에서 제가 이 실수를 했습니다. 쿠키 인증을 쓰면서 CORS 에러를 지우려고 출처를 열어 뒀고, 브라우저에서 '되니까' 문제없다고 여겼습니다. 자격증명 동반 요청의 규칙을 손으로 따라가 보고 나서야, 그게 <b>방어를 지운 설정</b>이었다는 걸 알았습니다.</p>
+<div class="callout"><span class="mark">!</span><p><b>함정</b> — <code>origin: '*'</code>는 자격증명과 함께 쓸 수 없다는 규칙을, '들어온 Origin을 그대로 되돌려주기'로 우회하는 코드를 조심하세요. 화이트리스트 없이 반사하면 <b>모든 사이트가 로그인한 사용자를 흉내 내 인증된 응답을 읽을 수 있습니다.</b> 허용 목록은 배열이나 함수로 명시하고, 목록에 없는 출처엔 CORS 헤더를 아예 붙이지 마세요.</p></div>
+
+<h2>4. CSRF는 쿠키 자동 첨부를 노린다</h2>
+<p>CSRF(Cross-Site Request Forgery)는 판을 뒤집습니다. 응답을 <b>읽으려 하지 않습니다</b> — 읽을 필요가 없으니까요. 대신 브라우저가 내 도메인으로 가는 요청에 <b>쿠키를 자동으로 실어 준다</b>는 성질을 악용합니다. 누가 그 요청을 유발했든 상관없이 말이죠. 같은 출처 정책은 응답을 가려 줄 뿐, 서버에서 일어난 <b>상태 변경은 이미 끝난 뒤</b>입니다.</p>
+<p>고전적인 시나리오는 이렇습니다. 피해자가 <code>bank.example.com</code>에 로그인한 상태(세션 쿠키 보유)로 <code>evil.com</code>을 방문합니다. 그 페이지엔 <code>bank.example.com/transfer</code>로 향하는 <b>자동 제출 폼</b>이 숨어 있습니다. 폼이 제출되면 브라우저는 세션 쿠키를 실어 보내고, 서버는 유효한 세션으로 보고 송금을 처리합니다.</p>
+<pre class="code"><span class="c">&lt;!-- evil.com에 심어 둔 자동 제출 폼 — 피해자의 쿠키가 자동으로 실린다 --&gt;</span>
+&lt;form action=<span class="s">"https://bank.example.com/transfer"</span> method=<span class="s">"POST"</span> id=<span class="s">"f"</span>&gt;
+  &lt;input type=<span class="s">"hidden"</span> name=<span class="s">"to"</span>     value=<span class="s">"attacker"</span>&gt;
+  &lt;input type=<span class="s">"hidden"</span> name=<span class="s">"amount"</span> value=<span class="s">"1000000"</span>&gt;
+&lt;/form&gt;
+&lt;script&gt;document.<span class="f">getElementById</span>(<span class="s">'f'</span>).<span class="f">submit</span>();&lt;/script&gt;</pre>
+<p>왜 CORS가 여기서 구해 주지 못할까요. 폼 POST는 <code>application/x-www-form-urlencoded</code> 본문이라 <b>단순 요청</b>이고, 단순 요청엔 프리플라이트가 없습니다. 요청은 그대로 나가서 처리되고, CORS는 기껏해야 <b>응답을 가려 줄</b> 뿐인데 공격자는 애초에 응답을 원하지 않았습니다. "우리 API는 CORS를 설정했으니 CSRF는 괜찮다"가 성립하지 않는 이유입니다.</p>
+
+<h2>5. 토큰과 SameSite — 두 겹의 방어</h2>
+<p>막는 방법은 두 겹입니다. 첫째는 <b>CSRF 토큰</b>입니다. 서버가 예측 불가능한 토큰을 발급해 같은 출처 코드만 읽을 수 있는 곳에 심어 두고, 상태 변경 요청마다 그 토큰을 되돌려받아 검증합니다. 공격자는 이 토큰을 <b>읽을 수 없습니다</b> — 같은 출처 정책이 유일하게 확실히 보장하는 게 바로 '교차 출처 읽기 차단'이니까요. 쿠키에 토큰을 두고 헤더로 같은 값을 함께 보내 일치를 확인하는 <b>이중 제출(double-submit)</b> 방식은 서버 상태 없이도 됩니다.</p>
+<p>둘째는 <b>SameSite 쿠키</b>입니다. <code>SameSite=Lax</code>(요즘 브라우저 기본값)는 교차 사이트에서 날아온 POST 같은 하위요청에 쿠키를 빼고 보냅니다 — 위조된 교차 사이트 POST가 세션 쿠키를 잃으니 고전적 CSRF가 대부분 무력화됩니다. <code>Strict</code>는 아예 교차 사이트에 안 보내고(로그인 복귀 흐름이 깨질 수 있음), <code>None</code>은 항상 보내되 <code>Secure</code>가 필수입니다.</p>
+<pre class="code"><span class="c">// 세션 쿠키: 브라우저 단에서 자동 첨부를 1차로 통제한다</span>
+res.<span class="f">cookie</span>(<span class="s">'sid'</span>, sessionId, {
+  httpOnly: <span class="k">true</span>,   <span class="c">// JS에서 못 읽음 → XSS 탈취를 어렵게</span>
+  secure:   <span class="k">true</span>,   <span class="c">// HTTPS에서만 전송</span>
+  sameSite: <span class="s">'lax'</span>,  <span class="c">// 교차 사이트 하위요청엔 쿠키를 빼고 보낸다</span>
+});
+
+<span class="c">// 상태 변경엔 토큰을 한 겹 더 — 공격자는 이 값을 읽을 수 없다(SOP)</span>
+<span class="k">@Post</span>(<span class="s">'transfer'</span>)
+<span class="f">transfer</span>(<span class="k">@Body</span>() dto: TransferDto, <span class="k">@Req</span>() req) {
+  <span class="k">if</span> (req.headers[<span class="s">'x-csrf-token'</span>] !== req.cookies.csrf) {
+    <span class="k">throw new</span> <span class="f">ForbiddenException</span>(<span class="s">'CSRF token mismatch'</span>);  <span class="c">// double-submit 검증</span>
+  }
+  <span class="k">return</span> <span class="k">this</span>.account.<span class="f">transfer</span>(dto);
+}</pre>
+<p>왜 두 겹을 다 두냐면, 어느 하나도 완전하지 않기 때문입니다. <code>SameSite=Lax</code>는 싸고 강력한 기본값이지만, <b>최상위 GET 내비게이션에는 쿠키가 실립니다</b> — 상태를 바꾸는 GET을 두면 Lax도 못 막으니, 상태 변경은 반드시 POST·PATCH 등으로 해야 합니다. 서드파티 임베드처럼 <code>SameSite=None</code>이 필요한 맥락도 있고, 그때는 토큰이 빈자리를 메웁니다. <b>다층 방어</b>가 원칙입니다.</p>
+<p>축을 하나 더 짚자면, 순수 API에서 자격증명을 <b>쿠키 대신 <code>Authorization: Bearer</code> 헤더</b>로 실으면 CSRF 표면 자체가 줄어듭니다. 헤더 토큰은 브라우저가 자동으로 붙여 주지 않으므로, 공격자의 위조 요청엔 자격증명이 실리지 않습니다. 앞 글에서 다룬 JWT 인증이 세션 쿠키보다 CSRF에 강한 이유가 이것입니다 — 물론 쿠키는 <code>HttpOnly</code>로 XSS 탈취를 막는 장점이 있어, 무엇이 낫다기보다 <b>트레이드오프</b>입니다.</p>
+
+<h2>6. The Tangled Web가 바꾼 시선</h2>
+<p>제가 오랫동안 CORS와 CSRF를 헷갈린 진짜 이유는, <b>하나의 같은 출처 정책</b>을 찾고 있었기 때문입니다. Michal Zalewski의 <em>The Tangled Web: A Guide to Securing Modern Web Applications</em>(No Starch Press, 2011)가 그 습관을 깨 준 책입니다. 저자는 AFL 퍼저로 유명한 보안 연구자이고, 이 책은 브라우저 보안 모델을 정면으로 해부합니다.</p>
+<p>책의 핵심 논지는 이렇습니다. 웹 플랫폼의 보안은 <b>설계된 게 아니라 쌓여 온 것</b>이라, 단 하나의 같은 출처 정책이란 존재하지 않는다 — DOM, 쿠키, XMLHttpRequest, 이미지와 프레임에 <b>제각기 다르게</b> 적용되는 느슨한 규칙들의 묶음일 뿐이라는 것입니다. 같은 단어가 구석마다 다르게 행동합니다. 이 지도를 머릿속에 넣고 나니 CORS와 CSRF가 깨끗하게 갈라졌습니다 — CORS는 fetch의 <b>읽기</b> 규칙을 협상하고, 쿠키는 <b>자기만의 첨부 규칙</b>을 따르며(그래서 쿠키 쪽 레버는 CORS가 아니라 SameSite입니다), 둘은 처음부터 다른 축이었습니다.</p>
+<p>책에서 가져온 구체적 습관도 있습니다. 각 장은 <b>"Security Engineering Cheat Sheet"</b>로 끝나는데, 그 장의 결론을 '이렇게 하라'는 짧은 목록으로 압축해 줍니다. 저는 CORS·CSRF를 매번 원리로 다시 유도하려던 걸 그만두고 제 체크리스트를 적었습니다(그게 다음 절입니다). 이 플랫폼은 머릿속으로만 붙들기엔 너무 엉켜 있으니 규칙을 문서로 굳히라는 태도가, 제 경험과 정확히 맞았습니다.</p>
+<p>정직하게 덧붙이면, 2011년 책이라 세부는 옮겨 갔습니다. <code>SameSite=Lax</code> 기본값, 와일드카드+자격증명 금지의 명문화, CSP 레벨 같은 건 이후의 변화입니다. 하지만 <b>틀</b> — 같은 출처 정책을 패치워크로 보고, 방어를 '메커니즘 하나하나를 지도로 그리는 일'로 대하는 관점 — 은 완벽하게 나이 들었습니다. 저는 헤더 문법이 아니라 <b>사고 모델</b>을 얻으려 이 책을 읽었습니다.</p>
+<div class="callout"><span class="mark">*</span><p>Zalewski의 관점을 한 줄로 줄이면 이렇습니다. <b>'같은 출처 정책'을 찾지 말고, 각 메커니즘이 무엇을 읽고 무엇을 보내는지를 따로 적어라.</b> fetch의 읽기 규칙(CORS), 쿠키의 첨부 규칙(SameSite), 자격증명의 동반 규칙 — 축이 다른 세 가지를 하나의 스위치로 다루려 할 때 구멍이 생깁니다.</p></div>
+
+<h2>7. 정리 — 무엇을 켜고 끌 것인가</h2>
+<p>결국 두 축을 떼어 놓으면 전부 한 페이지에 들어옵니다. 미들웨어를 만질 때 실제로 확인하는 순서대로 적습니다.</p>
+<ul>
+  <li><b>CORS는 보안이 아니다</b> — 브라우저의 읽기 제한을 의도적으로 푸는 스위치. 인증·인가는 별개로 둔다.</li>
+  <li><b><code>origin: '*'</code>와 자격증명은 공존 불가</b> — 출처는 화이트리스트로 고정하고, 목록에 없으면 CORS 헤더를 붙이지 않는다. 반사(reflect) 금지.</li>
+  <li><b>자격증명 응답 3종 세트</b> — 구체적 Origin + <code>Access-Control-Allow-Credentials: true</code> + <code>Vary: Origin</code>.</li>
+  <li><b>CSRF는 CORS로 못 막는다</b> — 폼 POST는 단순 요청이라 프리플라이트가 없다.</li>
+  <li><b>쿠키 세션이면 두 겹</b> — <code>SameSite=Lax</code>(기본) + CSRF 토큰(동기화/이중 제출)을 함께.</li>
+  <li><b>순수 API라면 헤더 토큰</b> — 자격증명을 쿠키 대신 <code>Authorization: Bearer</code>로. 자동 첨부가 없어 CSRF 표면이 준다.</li>
+  <li><b>한 곳에서만 일관되게</b> — 같은 CORS 헤더를 엣지(NGINX)와 앱(NestJS) 양쪽에서 중복으로 붙이면 값이 겹쳐 되레 깨진다.</li>
+</ul>
+<pre class="code"><span class="c"># NGINX 엣지 — 허용 출처만 화이트리스트로 매핑(목록에 없으면 빈 값 → 헤더 안 붙음)</span>
+map $http_origin $cors_origin {
+  default                     <span class="s">""</span>;
+  <span class="s">"https://app.example.com"</span>   $http_origin;
+  <span class="s">"https://admin.example.com"</span> $http_origin;
+}
+
+server {
+  location /api/ {
+    <span class="c"># 프리플라이트(OPTIONS)는 엣지에서 바로 끊는다</span>
+    <span class="k">if</span> ($request_method = OPTIONS) {
+      add_header Access-Control-Allow-Origin      $cors_origin always;
+      add_header Access-Control-Allow-Methods     <span class="s">"GET, POST, PATCH, DELETE"</span> always;
+      add_header Access-Control-Allow-Headers     <span class="s">"Authorization, Content-Type"</span> always;
+      add_header Access-Control-Allow-Credentials <span class="s">"true"</span> always;
+      add_header Access-Control-Max-Age           600 always;
+      add_header Vary Origin always;
+      <span class="k">return</span> 204;
+    }
+    add_header Access-Control-Allow-Origin      $cors_origin always;
+    add_header Access-Control-Allow-Credentials <span class="s">"true"</span> always;
+    add_header Vary Origin always;              <span class="c"># 출처별로 캐시가 갈리도록</span>
+    proxy_pass http://app_upstream;
+  }
+}</pre>
+<p>예전의 저는 <code>origin: '*'</code> 한 줄로 에러를 지웠지만, 실은 방어를 지우고 있었습니다. CORS와 CSRF를 한 축으로 뭉뚱그린 탓이었죠. 둘을 <b>'읽기를 푸는 쪽'과 '보내기를 막는 쪽'</b>으로 갈라 세우고 나면, 미들웨어 설정은 더 이상 주술이 아니라 체크리스트가 됩니다. 여기에 보안 헤더 하드닝까지 이으면, 서버 앞단의 방어가 하나의 그림으로 맞춰집니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">보안</a>
+      <a class="tag" href="index.html">CORS</a>
+      <a class="tag" href="index.html">CSRF</a>
+      <a class="tag" href="index.html">미들웨어</a>
+    </div>
+    <div class="post-cta"><span class="t">서버 앞단 방어를 이어서 → <b>웹 서버 하드닝 글</b></span><a class="chip primary" href="web-server-hardening.html">이어 읽기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="security-jwt-auth.html"><div class="np-key">← 이전 글</div><div class="np-title">JWT 인증 미들웨어</div></a>
+    <a class="next" href="security-rate-limiting.html"><div class="np-key">다음 글 →</div><div class="np-title">레이트 리미팅</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

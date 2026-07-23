@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -71,7 +72,13 @@
 <h2>이벤트 기반 무효화</h2>
 <p>TTL로 못 버티는 정합성이 필요하면, 데이터가 바뀌는 <b>바로 그 순간</b> 캐시를 지웁니다. 쓰기 경로에서 관련 키를 <code>DEL</code>하거나, 도메인 이벤트를 구독해 무효화 워커가 처리하게 합니다. 핵심은 <b>무효화 지점을 한곳에 모으는 것</b> — 쓰기 로직 여기저기 <code>redis.del</code>이 흩어지면, 그게 바로 다음 버그의 씨앗입니다.</p>
 <div class="callout"><span class="mark">*</span><p>캐시는 성능을 위해 <b>정합성을 조금 파는</b> 거래입니다. 얼마나 낡아도 되는지를 도메인에 먼저 물어야, 무효화 전략이 정해집니다. 기술이 아니라 요구사항의 문제입니다.</p></div>
-    
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Redis</a>
+      <a class="tag" href="index.html">캐시</a>
+      <a class="tag" href="index.html">무효화</a>
+      <a class="tag" href="index.html">성능</a>
+    </div>
   </article>
 
   <nav class="proj-nav wrap" aria-label="글 이동">
@@ -85,5 +92,6 @@
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

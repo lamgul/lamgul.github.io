@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가 — 안성진</title>
+<meta name="description" content="@Transactional 전파 옵션별 커밋·롤백 경계를 실험 코드로 확인한다. 정산 시스템에서 부딪힌 전파 함정 포함.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가">
+<meta property="og:description" content="@Transactional 전파 옵션별 커밋·롤백 경계를 실험 코드로 확인한다. 정산 시스템에서 부딪힌 전파 함정 포함.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가","datePublished":"2022-02-03","dateModified":"2026-07-23","inLanguage":"ko","description":"@Transactional 전파 옵션별 커밋·롤백 경계를 실험 코드로 확인한다. 정산 시스템에서 부딪힌 전파 함정 포함.","keywords":"Spring · Transaction · JPA","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/spring-transaction-propagation.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / spring-transaction-propagation</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 백엔드</p>
+    <h1>Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가</h1>
+    <div class="post-meta">
+      <span>2022년 2월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>Spring · Transaction · JPA</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">다섯 곳에 흩어진 정산 로직을 한 곳으로 모으고 나니 다음 질문이 따라왔습니다. <b>정산 저장과 이력 저장은 같이 롤백되어야 하는가?</b> 답은 <code>@Transactional</code>의 전파(propagation) 옵션이 정하는데, 문서만 읽어서는 커밋·롤백 경계가 눈에 안 보입니다. REQUIRED · REQUIRES_NEW · NESTED 세 옵션을 실험 코드와 로그로 확인합니다.</p>
+
+<h2>1. 전파는 "경계를 어떻게 이어붙일 것인가"의 문제</h2>
+<p><code>@Transactional</code> 메서드가 또 다른 <code>@Transactional</code> 메서드를 호출할 때, 두 번째 메서드가 첫 번째의 트랜잭션에 <b>참여할지, 새로 만들지, 중첩할지</b>를 정하는 규칙이 전파 옵션입니다. 이때 두 개념을 구분해야 사고가 정리됩니다.</p>
+<p><b>논리 트랜잭션</b>은 <code>@Transactional</code> 스코프 하나하나이고, <b>물리 트랜잭션</b>은 실제 DB 커넥션 위에서 도는 <code>BEGIN … COMMIT</code>입니다. REQUIRED는 여러 논리 트랜잭션을 하나의 물리 트랜잭션에 태우고, REQUIRES_NEW는 물리 트랜잭션을 하나 더 만듭니다. 롤백 관련 사고는 대부분 이 둘을 혼동할 때 생깁니다.</p>
+
+<h2>2. 실험 준비 — 경계를 로그로 보이게 만든다</h2>
+<p>트랜잭션 매니저의 DEBUG 로그를 켜면 트랜잭션이 언제 만들어지고, 참여하고, 정지(suspend)되는지 전부 찍힙니다. 이 글의 모든 로그는 이 설정으로 뽑았습니다.</p>
+<pre class="code"><span class="c"># application.yml — 트랜잭션 경계를 로그로 확인</span>
+<span class="k">logging</span>:
+  <span class="k">level</span>:
+    <span class="f">org.springframework.orm.jpa.JpaTransactionManager</span>: DEBUG
+    <span class="f">org.springframework.transaction.interceptor</span>: TRACE</pre>
+<p>실험 시나리오는 정산 시스템에서 그대로 가져왔습니다. <code>SettlementService.settle()</code>이 정산을 저장하고, <code>HistoryService.record()</code>가 정산 이력을 남깁니다. 이력 저장이 실패했을 때 정산까지 함께 롤백되는지가 관전 포인트입니다.</p>
+<pre class="code"><span class="k">@Service</span>
+<span class="k">public class</span> <span class="f">SettlementService</span> {
+  <span class="k">private final</span> SettlementRepository repository;
+  <span class="k">private final</span> HistoryService historyService;
+
+  <span class="k">@Transactional</span>  <span class="c">// propagation 기본값 = REQUIRED</span>
+  <span class="k">public void</span> <span class="f">settle</span>(Order order) {
+    repository.save(Settlement.of(order));
+    <span class="k">try</span> {
+      historyService.record(order);  <span class="c">// 이력 저장 — 실패할 수 있다</span>
+    } <span class="k">catch</span> (RuntimeException e) {
+      log.warn(<span class="s">"이력 저장 실패 — 정산은 살리고 싶다"</span>, e);
+    }
+  }
+}</pre>
+
+<h2>3. REQUIRED — 함께 살고, 함께 죽는다</h2>
+<p><code>record()</code>가 REQUIRED(기본값)이고 내부에서 <code>RuntimeException</code>이 터지면, 바깥에서 <code>try-catch</code>로 잡았으니 정산은 커밋될 것 같습니다. 실제로는 <b>정산까지 전부 롤백되고, 커밋을 시도한 바깥이 <code>UnexpectedRollbackException</code>을 받습니다.</b></p>
+<pre class="code">JpaTransactionManager : Creating new transaction with name
+  [..SettlementService.settle]: <span class="k">PROPAGATION_REQUIRED</span>,ISOLATION_DEFAULT
+JpaTransactionManager : <span class="k">Participating in existing transaction</span>
+JpaTransactionManager : Participating transaction failed
+  - <span class="k">marking existing transaction as rollback-only</span>
+JpaTransactionManager : Global transaction is marked as rollback-only
+  but transactional code requested commit
+
+<span class="c">-- 바깥으로 던져지는 예외 --</span>
+UnexpectedRollbackException: Transaction rolled back because
+  it has been marked as <span class="k">rollback-only</span></pre>
+<p>이유는 로그 세 번째 줄에 있습니다. REQUIRED로 참여한 논리 트랜잭션이 예외로 끝나는 순간, 스프링은 공유 중인 물리 트랜잭션에 <b>rollback-only 마크</b>를 찍습니다. 바깥이 예외를 잡아도 마크는 지워지지 않으니, 커밋 시점에 "커밋해 달라더니 롤백 예약이 돼 있다"며 예외가 나는 겁니다. <code>try-catch</code>는 예외 전파만 막을 뿐 트랜잭션의 운명은 못 바꿉니다.</p>
+<p>참고로 이 롤백 규칙은 기본적으로 <code>RuntimeException</code>과 <code>Error</code>에만 적용됩니다. 체크 예외는 기본값으로는 롤백을 일으키지 않으므로, 필요하면 <code>@Transactional(rollbackFor = …)</code>로 명시해야 합니다.</p>
+
+<h2>4. REQUIRES_NEW — 따로 커밋되지만, 예외는 남는다</h2>
+<p>이력은 정산과 운명을 같이할 필요가 없다고 판단하면 <code>record()</code>를 REQUIRES_NEW로 바꿉니다.</p>
+<pre class="code"><span class="k">@Service</span>
+<span class="k">public class</span> <span class="f">HistoryService</span> {
+  <span class="k">private final</span> HistoryRepository historyRepository;
+
+  <span class="k">@Transactional</span>(propagation = Propagation.<span class="k">REQUIRES_NEW</span>)
+  <span class="k">public void</span> <span class="f">record</span>(Order order) {
+    historyRepository.save(History.of(order));
+  }
+}</pre>
+<pre class="code">JpaTransactionManager : <span class="k">Suspending current transaction</span>, creating
+  new transaction with name [..HistoryService.record]
+JpaTransactionManager : Committing JPA transaction on EntityManager [..]
+JpaTransactionManager : <span class="k">Resuming suspended transaction</span> after
+  completion of inner transaction</pre>
+<p>바깥 트랜잭션은 정지되고, <b>새 커넥션 위에 새 물리 트랜잭션</b>이 열립니다. 이제 제목의 질문에 답할 수 있습니다. <b>REQUIRES_NEW는 자기 스코프 안에서 예외가 던져질 때, 그때만 롤백됩니다.</b> 방향을 나눠 보면:</p>
+<p><b>안쪽이 실패하면</b> — 안쪽 물리 트랜잭션만 롤백됩니다. 다만 예외 객체 자체는 그대로 바깥으로 던져지므로, 바깥이 안 잡으면 바깥도 (자기 예외로) 롤백됩니다. 잡으면 바깥은 무사히 커밋됩니다. REQUIRED와 달리 rollback-only 마크가 바깥에 찍히지 않기 때문에, 이번에는 <code>try-catch</code>가 진짜로 통합니다.</p>
+<p><b>바깥이 실패하면</b> — 안쪽이 이미 커밋된 뒤라면 <b>되돌릴 방법이 없습니다.</b> 정산은 롤백됐는데 "정산 완료" 이력만 남는, 데이터가 서로를 부정하는 상태가 됩니다. 독립 커밋은 공짜가 아니라, "바깥이 죽어도 이 기록은 남아야 하는가"라는 업무 질문에 예라고 답했을 때만 쓰는 도구입니다. 감사 로그나 실패 기록처럼 <b>실패했다는 사실 자체를 남기고 싶을 때</b> 적합합니다.</p>
+<div class="callout"><span class="mark">*</span><p>REQUIRES_NEW는 바깥 커넥션을 반납하지 않은 채 <b>커넥션을 하나 더</b> 잡습니다. 요청 하나가 커넥션 두 개를 점유하므로, 풀 크기가 빠듯하면 서로가 서로의 반납을 기다리는 교착으로 풀이 말라붙을 수 있습니다. REQUIRES_NEW를 늘릴 때는 HikariCP <code>maximum-pool-size</code>를 같이 봐야 합니다.</p></div>
+
+<h2>5. NESTED — 세이브포인트, 그리고 JPA의 벽</h2>
+<p>NESTED는 새 물리 트랜잭션을 만들지 않습니다. 대신 바깥 물리 트랜잭션 안에 JDBC <b>세이브포인트</b>를 찍고, 안쪽이 실패하면 그 지점까지만 부분 롤백합니다. 안쪽이 성공해도 독립 커밋은 없고, 최종 커밋은 바깥과 함께 일어납니다. "안쪽 실패가 바깥을 죽이면 안 되지만, 바깥이 죽으면 안쪽도 같이 사라져야 한다"는 요구에 정확히 맞는 옵션입니다.</p>
+<p>다만 JPA에서는 벽에 부딪힙니다. <code>JpaTransactionManager</code>는 세이브포인트 기반 중첩 트랜잭션을 지원하지 않아서, NESTED를 걸면 시작조차 못 하고 예외가 납니다.</p>
+<pre class="code"><span class="k">@Transactional</span>(propagation = Propagation.<span class="k">NESTED</span>)
+<span class="k">public void</span> <span class="f">record</span>(Order order) { .. }
+
+<span class="c">-- JpaTransactionManager 환경에서의 결과 --</span>
+NestedTransactionNotSupportedException:
+  JpaDialect does not support savepoints
+  - check your JPA provider's capabilities</pre>
+<p>JdbcTemplate이나 MyBatis처럼 <code>DataSourceTransactionManager</code>를 쓰는 환경에서는 NESTED가 세이브포인트로 동작합니다. 정리하면, <b>JPA 위에서는 사실상 REQUIRED와 REQUIRES_NEW의 양자택일</b>이고, 부분 롤백이 꼭 필요하면 해당 작업만 JDBC 경로로 내리는 식의 우회가 필요합니다.</p>
+
+<h2>6. 정산 코드에서 부딪힌 함정 — 프록시를 거치지 않는 호출</h2>
+<p>정산 로직을 한 곳으로 모으는 리팩토링 중에 부딪힌 함정입니다. 이력 저장을 같은 클래스의 메서드로 옮기고 REQUIRES_NEW를 걸었는데, 로그에 <code>Suspending current transaction</code>이 한 번도 안 찍혔습니다.</p>
+<pre class="code"><span class="k">@Service</span>
+<span class="k">public class</span> <span class="f">SettlementService</span> {
+  <span class="k">@Transactional</span>
+  <span class="k">public void</span> <span class="f">settle</span>(Order order) {
+    repository.save(Settlement.of(order));
+    record(order);  <span class="c">// this.record() — 프록시를 거치지 않는다!</span>
+  }
+
+  <span class="k">@Transactional</span>(propagation = Propagation.<span class="k">REQUIRES_NEW</span>)
+  <span class="k">public void</span> <span class="f">record</span>(Order order) {
+    historyRepository.save(History.of(order));  <span class="c">// 그냥 REQUIRED처럼 동작</span>
+  }
+}</pre>
+<p><code>@Transactional</code>은 프록시 기반 AOP입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 있는데, 같은 클래스 안에서의 <code>this.record()</code> 호출은 프록시를 우회해 원본 객체로 직행합니다. 그래서 <code>record()</code>의 전파 설정은 <b>조용히 무시되고</b>, 호출자의 트랜잭션에 그대로 묻어갑니다. 예외도 로그도 없이 의도와 다르게 동작하니 알아채기 어렵습니다. 해법은 위 실험처럼 <b>별도 빈으로 분리</b>하거나, 경계를 코드로 직접 긋는 <code>TransactionTemplate</code>을 쓰는 것입니다.</p>
+<div class="callout"><span class="mark">*</span><p>전파 옵션은 기술이 아니라 업무 요구가 정합니다. "이력은 정산이 실패해도 남아야 하는가?"에 답할 수 있어야 옵션을 고를 수 있습니다 — 같이 죽어야 하면 <b>REQUIRED</b>, 바깥과 무관하게 남아야 하면 <b>REQUIRES_NEW</b>, 부분 롤백이 필요하고 JDBC라면 <b>NESTED</b>.</p></div>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Spring</a>
+      <a class="tag" href="index.html">Transaction</a>
+      <a class="tag" href="index.html">JPA</a>
+    </div>
+    <div class="post-cta"><span class="t">이 트랜잭션 경계를 그린 리팩토링 → <b>정산 시스템 모듈화 사례</b></span><a class="chip primary" href="../cases/settlement-refactor.html">사례 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="raft-paper-analysis.html"><div class="np-key">← 이전 글</div><div class="np-title">논문 분석: Raft</div></a>
+    <a class="next" href="postgres-mvcc-vacuum.html"><div class="np-key">다음 글 →</div><div class="np-title">PostgreSQL MVCC</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDD 애그리거트 경계 — 크롤링 파이프라인에 그은 선 — 안성진</title>
+<meta name="description" content="애그리거트를 트랜잭션 경계로 정의하는 이유를, 크롤링 파이프라인 도메인의 실제 경계 결정 과정으로 설명한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DDD 애그리거트 경계 — 크롤링 파이프라인에 그은 선">
+<meta property="og:description" content="애그리거트를 트랜잭션 경계로 정의하는 이유를, 크롤링 파이프라인 도메인의 실제 경계 결정 과정으로 설명한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"DDD 애그리거트 경계 — 크롤링 파이프라인에 그은 선","datePublished":"2023-08-19","dateModified":"2026-07-23","inLanguage":"ko","description":"애그리거트를 트랜잭션 경계로 정의하는 이유를, 크롤링 파이프라인 도메인의 실제 경계 결정 과정으로 설명한다.","keywords":"DDD · 설계 · 애그리거트","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/ddd-aggregate-boundaries.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / ddd-aggregate-boundaries</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 백엔드</p>
+    <h1>DDD 애그리거트 경계 — 크롤링 파이프라인에 그은 선</h1>
+    <div class="post-meta">
+      <span>2023년 8월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>DDD · 설계 · 애그리거트</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">크롤링 파이프라인을 DDD로 재설계하면서 가장 오래 붙잡고 있던 질문은 클래스 이름도, 레이어 구조도 아니었습니다. <b>"어디까지가 하나의 애그리거트인가"</b>였습니다. 이 선을 잘못 그으면 코드가 아니라 트랜잭션이 무너집니다. 잘못 그었던 선과, 다시 그은 선을 기록합니다.</p>
+
+<h2>1. 애그리거트는 폴더가 아니라 트랜잭션 경계다</h2>
+<p>애그리거트를 "관련 있는 객체 묶음"으로 이해하면 경계를 그을 기준이 없어집니다. 크롤링 도메인에서는 잡·페이지·결과·로그가 전부 서로 관련 있으니까요. 에릭 에반스의 정의에서 실무적으로 중요한 부분은 묶음이 아니라 <b>일관성 경계(consistency boundary)</b>라는 쪽입니다. 애그리거트란 <b>하나의 트랜잭션이 커밋되는 순간, 반드시 함께 참이어야 하는 불변식(invariant)의 범위</b>입니다.</p>
+<p>여기서 실전 규칙 세 가지가 따라 나옵니다. 반 버논(Vaughn Vernon)이 정리한 것과 같습니다.</p>
+<p>첫째, <b>한 트랜잭션은 한 애그리거트만 수정한다.</b> 둘째, 그래서 <b>애그리거트는 작게</b> 만든다. 셋째, 다른 애그리거트는 객체가 아니라 <b>ID로 참조</b>하고, 애그리거트 사이의 일관성은 <b>결과적 일관성(eventual consistency)</b>으로 맞춘다. 이 규칙이 왜 필요한지는 규칙을 어겨보면 가장 잘 보입니다. 제가 그랬습니다.</p>
+
+<h2>2. 잘못 그은 선 — 모든 것을 품은 CrawlJob</h2>
+<p>처음 모델은 직관적이었습니다. 잡이 페이지를 만들고 결과를 받으니, 잡이 전부 가지면 된다고 생각했습니다.</p>
+<pre class="code"><span class="c">// crawl-job.ts — 잘못 그은 경계: 잡이 모든 것을 품는다</span>
+<span class="k">export class</span> CrawlJob {
+  <span class="k">private</span> status: JobStatus = <span class="s">'QUEUED'</span>;
+  <span class="k">private readonly</span> pages: PageTask[] = [];  <span class="c">// 잡 하나에 수천 건이 매달린다</span>
+
+  <span class="f">addPage</span>(url: <span class="k">string</span>) {
+    <span class="k">if</span> (<span class="k">this</span>.status === <span class="s">'COMPLETED'</span>) <span class="k">throw new</span> DomainError(<span class="s">'완료된 잡'</span>);
+    <span class="k">this</span>.pages.<span class="f">push</span>(PageTask.<span class="f">queued</span>(url));
+  }
+
+  <span class="f">recordResult</span>(url: <span class="k">string</span>, result: FetchResult) {
+    <span class="k">const</span> page = <span class="k">this</span>.pages.<span class="f">find</span>((p) =&gt; p.url === url);
+    <span class="k">if</span> (!page) <span class="k">throw new</span> DomainError(<span class="s">'등록되지 않은 페이지'</span>);
+    page.<span class="f">complete</span>(result);
+    <span class="k">if</span> (<span class="k">this</span>.pages.<span class="f">every</span>((p) =&gt; p.<span class="f">isTerminal</span>())) <span class="k">this</span>.status = <span class="s">'COMPLETED'</span>;
+  }
+}
+
+<span class="c">// 워커 쪽 — 결과 하나를 쓰려고 잡 전체를 든다</span>
+<span class="k">const</span> job = <span class="k">await</span> jobRepo.<span class="f">findById</span>(jobId);  <span class="c">// 페이지 수천 건 로드</span>
+job.<span class="f">recordResult</span>(url, result);
+<span class="k">await</span> jobRepo.<span class="f">save</span>(job);  <span class="c">// 낙관적 잠금 버전 충돌 — 다른 워커도 같은 잡을 고치는 중</span></pre>
+<p>단위 테스트에서는 아름답게 통과합니다. 문제는 워커를 여러 개 띄우는 순간입니다. 애그리거트는 저장소에서 <b>통째로 읽고 통째로 저장</b>하는 단위이므로, 워커 열 개가 페이지 열 개를 각각 완료해도 전부 <b>같은 CrawlJob 하나</b>를 놓고 경합합니다. 낙관적 잠금이면 버전 충돌과 재시도가 쏟아지고, 비관적 잠금이면 워커들이 한 줄로 서서 순서를 기다립니다. 병렬로 긁으라고 만든 파이프라인이 잡 단위로 직렬화되는 것입니다.</p>
+<p>증상은 동시성만이 아닙니다. 페이지 하나를 갱신하려고 수천 건을 로드하니 메모리와 쿼리가 낭비되고, "잡을 완료 처리하는 규칙"과 "페이지 하나를 재시도하는 규칙"이 한 클래스에 섞여 코드도 함께 비대해집니다. 경계가 크면 전부 같이 무거워집니다.</p>
+
+<h2>3. 진짜 불변식 찾기 — "지금 당장 참이어야 하는가"</h2>
+<p>경계를 다시 긋는 기준은 하나였습니다. <b>이 규칙은 커밋 순간에 반드시 참이어야 하는가, 아니면 잠시 어긋나도 괜찮은가.</b> 크롤링 도메인의 규칙들을 이 질문으로 분류해 봤습니다.</p>
+<p>커밋 순간에 참이어야 하는 것 — <b>페이지 태스크의 상태 전이</b>입니다. <code>FETCHING</code>이 아닌 태스크에 결과가 붙으면 안 되고, 재시도 횟수는 상한을 넘으면 안 됩니다. 마찬가지로 <b>잡의 상태 전이</b>(<code>QUEUED → RUNNING → COMPLETED/CANCELED</code>)도 순간마다 유효해야 합니다. 이런 것이 트랜잭션 일관성의 대상입니다.</p>
+<p>잠시 어긋나도 되는 것 — <b>"잡의 완료 카운트 = 완료된 페이지 수"</b> 같은 집계입니다. 페이지가 완료된 뒤 잡의 진행률에 반영되기까지 몇백 밀리초가 걸려도 아무도 다치지 않습니다. 진행률은 대시보드가 보는 숫자이지, 도메인이 그 순간에 걸고 넘어져야 할 규칙이 아닙니다. 이것이 결과적 일관성의 대상입니다.</p>
+<p>이렇게 나누고 보니 처음 모델의 문제가 선명해졌습니다. 저는 <b>결과적 일관성으로 충분한 집계 규칙</b>(모든 페이지가 끝나면 잡을 완료로)을 트랜잭션 불변식으로 승격시켰고, 그 대가로 애그리거트가 도메인 전체를 삼킨 것입니다.</p>
+<div class="callout"><span class="mark">*</span><p>경계를 검증하는 실무 신호 두 가지. <b>서로 다른 워커·사용자가 동시에 수정하는 두 객체가 한 애그리거트 안에 있다면 경계가 너무 큽니다.</b> 반대로 <b>두 애그리거트를 한 트랜잭션에서 함께 고쳐야 하는 요구가 반복된다면 경계가 너무 잘게 잘렸거나 잘못 잘린 것</b>입니다. 저는 정산 리팩토링에서도 같은 질문을 반복했는데, 도메인이 달라도 신호는 같았습니다.</p></div>
+
+<h2>4. 다시 그은 선 — 작게 나누고 ID로 참조한다</h2>
+<p>불변식 분류를 그대로 모델에 옮기면 애그리거트는 둘로 나뉩니다. 잡은 자신의 상태 전이만, 태스크는 자신의 상태 전이만 책임집니다.</p>
+<pre class="code"><span class="c">// page-task.ts — 워커가 잠그는 것은 이제 태스크 하나뿐이다</span>
+<span class="k">export class</span> PageTask {
+  <span class="k">constructor</span>(
+    <span class="k">readonly</span> id: PageTaskId,
+    <span class="k">readonly</span> jobId: CrawlJobId,  <span class="c">// 객체가 아니라 ID로 참조</span>
+    <span class="k">private</span> status: TaskStatus,
+    <span class="k">private</span> attempts: <span class="k">number</span>,
+  ) {}
+
+  <span class="f">complete</span>(result: FetchResult) {
+    <span class="k">if</span> (<span class="k">this</span>.status !== <span class="s">'FETCHING'</span>)
+      <span class="k">throw new</span> DomainError(<span class="s">`${this.status}에서 완료 불가`</span>);
+    <span class="k">this</span>.status = <span class="s">'DONE'</span>;
+    <span class="k">this</span>.<span class="f">record</span>(<span class="k">new</span> PageTaskCompleted(<span class="k">this</span>.id, <span class="k">this</span>.jobId));  <span class="c">// 도메인 이벤트</span>
+  }
+
+  <span class="f">fail</span>(maxAttempts: <span class="k">number</span>) {
+    <span class="k">this</span>.attempts += <span class="s">1</span>;  <span class="c">// 불변식: attempts는 상한을 넘지 않는다</span>
+    <span class="k">this</span>.status = <span class="k">this</span>.attempts &gt;= maxAttempts ? <span class="s">'FAILED'</span> : <span class="s">'QUEUED'</span>;
+  }
+}
+
+<span class="c">// crawl-job.ts — 페이지 목록이 사라졌다</span>
+<span class="k">export class</span> CrawlJob {
+  <span class="k">private</span> status: JobStatus = <span class="s">'QUEUED'</span>;
+
+  <span class="f">start</span>() {
+    <span class="k">if</span> (<span class="k">this</span>.status !== <span class="s">'QUEUED'</span>) <span class="k">throw new</span> DomainError(<span class="s">'이미 시작된 잡'</span>);
+    <span class="k">this</span>.status = <span class="s">'RUNNING'</span>;
+  }
+
+  <span class="f">cancel</span>() {
+    <span class="k">if</span> (<span class="k">this</span>.status === <span class="s">'COMPLETED'</span>) <span class="k">throw new</span> DomainError(<span class="s">'완료된 잡은 취소 불가'</span>);
+    <span class="k">this</span>.status = <span class="s">'CANCELED'</span>;
+  }
+}</pre>
+<p>바뀐 것을 정리하면 이렇습니다. 워커가 결과 하나를 기록할 때 로드하고 저장하는 것은 <b>PageTask 한 건</b>입니다. 워커 수십 개가 서로 다른 태스크를 물고 있으면 트랜잭션은 전혀 겹치지 않습니다. 잡 전체를 직렬화하던 경합이, 태스크 단위의 독립적인 커밋으로 바뀝니다. 애그리거트를 작게 만들라는 규칙은 미학이 아니라 <b>동시성 설계</b>였던 것입니다.</p>
+<p><code>jobId</code>를 객체 참조가 아니라 ID로 든 것도 같은 이유입니다. 객체를 직접 참조하면 "편하니까" 상대 애그리거트를 그 자리에서 수정하게 되고, 트랜잭션이 슬그머니 두 애그리거트를 넘나들기 시작합니다. ID 참조는 그 유혹을 컴파일 타임에 끊는 장치입니다.</p>
+
+<h2>5. 애그리거트 사이 — 도메인 이벤트와 결과적 일관성</h2>
+<p>남은 숙제는 잘라낸 쪽입니다. "모든 태스크가 끝나면 잡은 완료된다"는 여전히 지켜야 할 규칙이고, 이제 두 애그리거트에 걸쳐 있습니다. 이 틈을 잇는 것이 도메인 이벤트입니다. <code>PageTask.complete()</code>가 기록한 <code>PageTaskCompleted</code>를 태스크 커밋 뒤에 발행하고, 핸들러가 <b>별도의 트랜잭션</b>으로 잡의 진행률을 갱신합니다.</p>
+<pre class="code"><span class="c"># progress_handler.py — 애그리거트 사이는 이벤트로 잇는다</span>
+<span class="k">class</span> PageTaskCompletedHandler:
+    <span class="k">def</span> <span class="f">handle</span>(self, event: PageTaskCompleted) -&gt; <span class="k">None</span>:
+        <span class="k">with</span> self.uow:  <span class="c"># 여기서도 트랜잭션은 잡 하나만 만진다</span>
+            <span class="k">if</span> self.uow.processed.<span class="f">contains</span>(event.event_id):
+                <span class="k">return</span>  <span class="c"># 이벤트 재전송 대비 — 멱등 처리</span>
+            self.uow.jobs.<span class="f">apply_task_done</span>(event.job_id)
+            self.uow.processed.<span class="f">add</span>(event.event_id)
+            self.uow.<span class="f">commit</span>()</pre>
+<p>여기서 두 가지가 결과적 일관성의 품질을 결정합니다. 첫째는 <b>멱등성</b>입니다. 이벤트는 브로커 재전송이든 워커 재시작이든 언젠가 두 번 옵니다. 처리한 이벤트 ID를 같은 트랜잭션에서 기록해 두 번째 도착을 무시해야 카운트가 두 번 오르지 않습니다. 둘째는 <b>갱신 자체의 원자성</b>입니다. 진행률을 읽고–더하고–쓰는 세 단계로 짜면 핸들러끼리 또 경합합니다. 저는 카운터 증가와 완료 판정을 UPDATE 한 문장으로 밀어 넣었습니다.</p>
+<pre class="code"><span class="c"># job_repository.py 내부 — 읽고-더하고-쓰기 대신 UPDATE 한 문장</span>
+SQL = <span class="s">"""
+UPDATE crawl_job
+   SET done_count = done_count + 1,
+       status = CASE
+                  WHEN done_count + 1 + failed_count = total_count
+                  THEN 'COMPLETED' ELSE status
+                END
+ WHERE id = %(job_id)s
+   AND status = 'RUNNING'
+"""</span>
+
+<span class="k">def</span> <span class="f">apply_task_done</span>(self, job_id: JobId) -&gt; <span class="k">None</span>:
+    self.session.<span class="f">execute</span>(SQL, {<span class="s">"job_id"</span>: job_id})</pre>
+<p>마지막 태스크의 이벤트가 처리되는 순간 같은 문장 안에서 잡이 <code>COMPLETED</code>로 넘어가므로, "완료 판정을 누가 하나"라는 레이스도 데이터베이스의 행 잠금 안에서 정리됩니다. 이벤트 발행 자체의 유실이 걱정되는 지점에는 아웃박스 패턴 — 이벤트를 도메인 변경과 같은 트랜잭션으로 테이블에 적재하고 별도 프로세스가 발행 — 을 씁니다. 요컨대 결과적 일관성은 "대충 맞는다"가 아니라, <b>멱등성과 원자적 갱신으로 언젠가 반드시 맞는다</b>를 설계하는 일입니다.</p>
+
+<h2>6. 경계를 검증하는 세 가지 질문</h2>
+<p>이 경계로 재설계한 파이프라인은 어댑터를 늘려 사이트를 확장해도 트랜잭션 구조가 흔들리지 않았습니다. 워커를 늘리는 일이 잠금 경합을 늘리는 일이 아니게 되었기 때문입니다. 새 도메인을 모델링할 때마다 저는 이제 세 질문으로 경계를 검증합니다.</p>
+<p><b>이 규칙은 커밋 순간에 참이어야 하는가?</b> 아니라면 애그리거트 밖으로 — 이벤트와 결과적 일관성으로 보냅니다. <b>이 두 객체를 서로 다른 주체가 동시에 수정하는가?</b> 그렇다면 같은 애그리거트에 두지 않습니다. <b>트랜잭션이 두 애그리거트를 함께 수정하고 있는가?</b> 그렇다면 경계를 다시 봅니다 — 둘이 하나이거나, 둘 사이에 이벤트가 빠진 것입니다.</p>
+<p>애그리거트 경계는 클래스 다이어그램에 긋는 선이 아니라 <b>트랜잭션과 잠금에 긋는 선</b>입니다. 선을 어디에 긋느냐가 코드의 모양보다 시스템의 동시성 성격을 먼저 결정합니다. 이 결정이 실제 파이프라인에서 어떻게 굴러갔는지는 아래 사례에 정리해 두었습니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">DDD</a>
+      <a class="tag" href="index.html">설계</a>
+      <a class="tag" href="index.html">애그리거트</a>
+    </div>
+    <div class="post-cta"><span class="t">이 경계 결정의 전말 → <b>DDD 크롤링 파이프라인 사례</b></span><a class="chip primary" href="../cases/crawling-pipeline.html">사례 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="aws-small-team-architecture.html"><div class="np-key">← 이전 글</div><div class="np-title">작은 팀의 AWS</div></a>
+    <a class="next" href="index.html"><div class="np-key">글 목록 →</div><div class="np-title">전체 보기</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

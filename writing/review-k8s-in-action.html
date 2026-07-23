@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식 — 안성진</title>
+<meta name="description" content="Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식">
+<meta property="og:description" content="Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식","datePublished":"2025-04-25","dateModified":"2026-07-23","inLanguage":"ko","description":"Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.","keywords":"서평 · Kubernetes · 선언형","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/review-k8s-in-action.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / review-k8s-in-action</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">서평 · 인프라</p>
+    <h1>서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식</h1>
+    <div class="post-meta">
+      <span>2025년 4월</span><span class="dot-sep">•</span>
+      <span>약 11분</span><span class="dot-sep">•</span>
+      <span>서평 · Kubernetes · 선언형</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead"><code>kubectl run</code> 한 줄로 파드가 뜨는 걸 보고, 저는 쿠버네티스를 '안다'고 생각했습니다. Marko Lukša의 <b>쿠버네티스 인 액션</b>은 그게 명령형 표면일 뿐이었음을 알려줬습니다. 이 책의 진짜 주제는 API 사용법이 아니라, 명령을 내리던 머리를 <b>원하는 상태를 선언하는</b> 머리로 바꾸는 일이었습니다.</p>
+
+<h2>1. 명령형으로 배운 사람의 습관</h2>
+<p>2020년에 개발을 시작한 뒤 제가 익힌 인프라는 대체로 명령형이었습니다. 서버에 <code>ssh</code>로 들어가 스크립트를 돌리고, <code>docker run</code>으로 컨테이너를 띄우고, 문제가 생기면 손으로 고쳤습니다. 이 방식은 한 대를 다룰 땐 충분하지만, 대수가 늘고 배포가 잦아지면 서버마다 상태가 미묘하게 갈리는 <b>스노우플레이크</b> 문제로 무너집니다.</p>
+<p>Lukša의 책은 그 습관을 정면으로 흔듭니다. Red Hat 엔지니어인 저자가 쓴 이 책은 3부 18장으로, 1부에서 전체 그림을, 2부에서 Pod부터 StatefulSet까지 핵심 오브젝트를, 3부에서 내부 동작과 운영을 다룹니다. <code>kubia</code>라는 작은 Node.js 앱 하나를 처음부터 끝까지 굴리며 개념을 쌓아가는 구성이라, 예제를 따라 치다 보면 문장이 손끝에 남습니다.</p>
+<p>책 전체를 관통하는 한 문장은 이것입니다 — 당신은 <b>원하는 상태(desired state)</b>를 적어 제출하고, 컨트롤 루프가 실제 상태를 거기에 끊임없이 맞춘다. 명령형 스크립트는 '무엇을 하라'의 목록이라 한 번 어긋나면 그대로 썩지만, 선언형 매니페스트는 '무엇이어야 한다'의 정의라 몇 번을 적용해도 결과가 같고(멱등), 어긋나면 시스템이 스스로 되돌립니다. 이 차이가 이 책이 가르치는 전부라고 해도 지나치지 않습니다.</p>
+<div class="callout"><span class="mark">*</span><p>같은 철학이 명령어에도 그대로 있습니다. <code>kubectl create -f</code>는 '이걸 만들어라'는 명령형이라 같은 파일에 두 번 쓰면 이미 있다고 실패합니다. <code>kubectl apply -f</code>는 '이 파일이 곧 원하는 상태다'라는 선언형이라, 몇 번을 적용하든 결과가 같고 차이나는 만큼만 바꿉니다. 실무에서 <code>apply</code> 하나로 통일한 순간부터 배포가 조용해졌습니다.</p></div>
+
+<h2>2. 왜 컨테이너가 아니라 파드인가</h2>
+<p>쿠버네티스의 최소 배포 단위는 컨테이너가 아니라 <b>파드</b>입니다. 책이 가장 먼저 교정해 준 오해가 이것이었습니다. 파드는 한 개 이상의 컨테이너를 감싸는 껍데기인데, 왜 굳이 껍데기를 하나 더 씌울까요.</p>
+<p>이유는 <b>공유</b>에 있습니다. 한 파드 안의 컨테이너들은 네트워크 네임스페이스를 공유해 같은 IP를 쓰고 서로를 <code>localhost</code>로 부르며, 볼륨을 나눠 파일로 대화할 수 있습니다. 그래서 메인 컨테이너 옆에 로그 수집기나 프록시를 붙이는 <b>사이드카</b> 패턴이 자연스럽게 성립합니다. 함께 스케줄되고 함께 사는 '가장 작은 배포 단위'가 필요했던 것이죠.</p>
+<pre class="code"><span class="c"># kubia-pod.yaml — 컨테이너 하나를 감싼 최소 파드</span>
+<span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Pod
+<span class="k">metadata:</span>
+  <span class="k">name:</span> kubia
+  <span class="k">labels:</span>
+    <span class="k">app:</span> kubia
+<span class="k">spec:</span>
+  <span class="k">containers:</span>
+  - <span class="k">name:</span> kubia
+    <span class="k">image:</span> luksa/kubia
+    <span class="k">ports:</span>
+    - <span class="k">containerPort:</span> 8080</pre>
+<p>여기서 사고방식이 한 번 더 꺾입니다. 파드는 <b>일회용</b>입니다. 아파 보인다고 <code>ssh</code>로 들어가 고치는 대상이 아니라, 컨트롤러가 낡은 것을 버리고 새로 세우는 대상입니다. 애완동물이 아니라 <b>가축</b>으로 다루라는 유명한 비유가 여기서 피부로 와닿았습니다 — 다음 재스케줄이면 손으로 고친 흔적은 어차피 사라지니까요.</p>
+
+<h2>3. 레이블과 셀렉터라는 접착제</h2>
+<p>이 책을 읽고 가장 인상 깊게 다시 본 개념은 화려한 오브젝트가 아니라 <b>레이블과 셀렉터</b>였습니다. 쿠버네티스에서 오브젝트들은 이름이나 IP로 서로를 참조하지 않습니다. 대신 <code>app: kubia</code> 같은 레이블을 붙이고, 그 레이블을 고르는 <b>셀렉터</b>로 연결됩니다.</p>
+<p>이게 왜 중요할까요. ReplicaSet은 '이 셀렉터에 맞는 파드가 N개'를 유지하고, Service는 '이 셀렉터에 맞는 파드로' 트래픽을 흘립니다. 둘 다 특정 파드의 정체를 몰라도 되므로, 아래에서 파드를 통째로 갈아 끼워도 위는 눈치채지 못합니다. 이 <b>느슨한 결합</b>이 곧 선언형 사고입니다 — 대상을 '정체'가 아니라 '속성'으로 지목하는 것이죠.</p>
+<pre class="code"><span class="c"># 레이블로 고르고(-l), 레이블을 붙이고, 다시 고른다</span>
+$ kubectl get pods -l app=kubia -o wide
+$ kubectl label pod kubia release=canary
+$ kubectl get pods -l <span class="s">'app=kubia,release=canary'</span></pre>
+<p>카나리 배포가 특별한 기능이 아니라 <b>레이블 한 줄</b>로 성립한다는 걸 보고, 이 접착제의 힘을 이해했습니다. 새 버전 파드에 <code>release=canary</code>를 붙였다가 셀렉터를 좁히거나 넓히는 것만으로 트래픽의 몫이 갈리니까요.</p>
+
+<h2>4. ReplicaSet에서 Deployment로</h2>
+<p>컨트롤 루프를 가장 선명하게 보여주는 오브젝트가 <b>ReplicaSet</b>입니다. 하는 일은 한 문장 — '이 셀렉터에 맞는 파드를 항상 N개로 유지한다'. 파드를 하나 지워 보면 즉시 새것이 태어납니다. 실제 상태와 원하는 상태의 차이를 컨트롤러가 계속 메우는, 책이 반복해서 그리는 그 루프입니다.</p>
+<p>하지만 ReplicaSet을 직접 쓰는 일은 드뭅니다. 그 위에 <b>Deployment</b>가 앉아 선언형 업데이트를 맡기 때문입니다. 스펙의 이미지 태그만 바꿔 적용하면, Deployment가 새 ReplicaSet을 만들어 새 파드를 늘리고 옛 파드를 줄이는 <b>롤링 업데이트</b>를 알아서 진행하고, 이전 리비전을 남겨 롤백까지 가능하게 합니다.</p>
+<pre class="code"><span class="c"># kubia-deploy.yaml — 원하는 상태: 3개, 무중단 롤링 업데이트</span>
+<span class="k">apiVersion:</span> apps/v1
+<span class="k">kind:</span> Deployment
+<span class="k">metadata:</span>
+  <span class="k">name:</span> kubia
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> 3
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span>
+      <span class="k">app:</span> kubia
+  <span class="k">strategy:</span>
+    <span class="k">type:</span> RollingUpdate
+    <span class="k">rollingUpdate:</span>
+      <span class="k">maxSurge:</span> 1
+      <span class="k">maxUnavailable:</span> 0
+  <span class="k">template:</span>
+    <span class="k">metadata:</span>
+      <span class="k">labels:</span>
+        <span class="k">app:</span> kubia
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span> kubia
+        <span class="k">image:</span> luksa/kubia:v2
+        <span class="k">ports:</span>
+        - <span class="k">containerPort:</span> 8080</pre>
+<p><code>kubectl rollout undo</code> 한 줄이 '이전에 원하던 상태로 되돌려라'가 되는 걸 보면, 배포와 롤백이 결국 <b>원하는 상태를 편집하는 일</b>로 통일됩니다. 명령형이라면 '새 버전 올리고, 헬스 확인하고, 옛것 내리고…'를 손으로 순서대로 밟아야 했을 일입니다.</p>
+
+<h2>5. 움직이는 표적에 고정 주소를</h2>
+<p>파드가 일회용이라는 사실은 곧바로 문제를 낳습니다. 재스케줄될 때마다 <b>IP가 바뀌고</b>, 개수도 오르내립니다. 이렇게 움직이는 표적을 클라이언트가 어떻게 안정적으로 부를까요.</p>
+<p>답이 <b>Service</b>입니다. Service는 셀렉터에 맞는 파드들 앞에 변하지 않는 <b>가상 IP(ClusterIP)</b>를 세우고, 들어오는 요청을 그 파드들로 로드밸런싱합니다. 뒤에서 파드가 뜨고 지는 것은 Endpoints가 계속 추적하니, 클라이언트는 안정된 이름 하나만 알면 됩니다.</p>
+<pre class="code"><span class="c"># kubia-svc.yaml — 셀렉터로 파드를 묶는 고정 주소</span>
+<span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Service
+<span class="k">metadata:</span>
+  <span class="k">name:</span> kubia
+<span class="k">spec:</span>
+  <span class="k">selector:</span>
+    <span class="k">app:</span> kubia
+  <span class="k">ports:</span>
+  - <span class="k">port:</span> 80
+    <span class="k">targetPort:</span> 8080</pre>
+<p>클러스터 밖으로 열 때는 NodePort나 LoadBalancer 타입을 쓰고, HTTP 라우팅이 필요하면 <b>Ingress</b>가 호스트·경로별로 여러 Service를 하나의 입구 뒤에 모읍니다. 어느 쪽이든 원리는 같습니다 — 고정된 이름 뒤에서 움직이는 파드를 시스템이 대신 추적합니다. 3절의 레이블 접착제가 여기서도 그대로 일하고 있는 것이죠.</p>
+
+<h2>6. 프로브 — 건강을 선언으로 정의한다</h2>
+<p>선언형이 운영까지 내려오는 지점이 <b>프로브</b>입니다. 컨트롤 루프가 파드를 되살리려면 '살아있음'과 '준비됨'이 무엇인지 알아야 하는데, 그 정의를 우리가 직접 선언합니다.</p>
+<p><b>Liveness 프로브</b>는 실패하면 컨테이너를 재시작합니다. '이 응답이 없으면 죽은 것으로 간주하고 다시 세워라'를 <code>httpGet</code>·<code>exec</code>·<code>tcpSocket</code>으로 적어 두는 것이죠. <b>Readiness 프로브</b>는 실패해도 재시작하지 않고, 대신 파드를 <b>Service 엔드포인트에서 빼서</b> 트래픽만 끊습니다. '아직 준비 안 됐으니 잠시 요청 보내지 마라'는 뜻입니다.</p>
+<pre class="code"><span class="c"># 컨테이너 스펙 — 건강의 정의와 자원 예산을 함께 선언</span>
+<span class="k">containers:</span>
+- <span class="k">name:</span> kubia
+  <span class="k">image:</span> luksa/kubia:v2
+  <span class="k">livenessProbe:</span>
+    <span class="k">httpGet:</span>
+      <span class="k">path:</span> /healthz
+      <span class="k">port:</span> 8080
+    <span class="k">initialDelaySeconds:</span> 10
+    <span class="k">periodSeconds:</span> 5
+  <span class="k">readinessProbe:</span>
+    <span class="k">httpGet:</span>
+      <span class="k">path:</span> /ready
+      <span class="k">port:</span> 8080
+  <span class="k">resources:</span>
+    <span class="k">requests:</span>
+      <span class="k">memory:</span> <span class="s">"128Mi"</span>
+      <span class="k">cpu:</span> <span class="s">"100m"</span>
+    <span class="k">limits:</span>
+      <span class="k">memory:</span> <span class="s">"256Mi"</span></pre>
+<div class="callout"><span class="mark">*</span><p>두 프로브를 헷갈리면 사고가 납니다. 시작이 느린 의존성(DB 연결 대기 같은)에 <b>liveness</b>를 걸면, 준비되기도 전에 계속 재시작되는 부팅 루프에 빠집니다. 그건 <b>readiness</b>의 일입니다 — 죽이지 말고 트래픽만 잠시 끊는 것. 'liveness는 되살리는 스위치, readiness는 트래픽 밸브'로 기억하면 어긋나지 않습니다.</p></div>
+<p>같은 컨테이너 스펙에 붙는 <code>resources</code>도 결국 선언입니다. <b>requests</b>로 예약을, <b>limits</b>로 한도를 적어 두면 스케줄러와 커널이 그 예산을 집행합니다. 다만 이 선언은 지키지 못하면 조용히 끝나지 않습니다 — 메모리 한도를 넘긴 컨테이너는 <b>OOMKilled</b>로 사라지는데, 그 한 단어 뒤에서 실제로 무슨 일이 벌어지는지는 따로 정리해 두었습니다.</p>
+
+<h2>7. 정리 — 선언형이 바꾼 것</h2>
+<p>책을 덮고 실제로 바뀐 건 명령어 목록이 아니라 <b>문제를 보는 순서</b>였습니다. 예전엔 '무엇을 실행할까'를 먼저 떠올렸다면, 이제는 '무엇이어야 하는가'를 먼저 적고 나머지를 컨트롤 루프에 맡깁니다. 운영이 절차의 나열에서 <b>상태의 선언</b>으로 옮겨간 것이죠.</p>
+<p>이 감각은 쿠버네티스 밖에서도 통했습니다. 온프레미스에서 vLLM을 서빙하며 GPU 메모리와 동시 슬롯의 예산을 정하던 일, SafeIn 백엔드를 혼자 설계하며 배포 단위를 나누던 일 모두 '원하는 상태를 정하고 그 안에서 실측한다'는 같은 리듬이었습니다. 자원이 VRAM이든 cgroup이든 순서는 같습니다.</p>
+<p>물론 한계도 분명합니다. 이 책은 나온 지 여러 해가 지나 그사이 API가 몇 번 바뀌었고(ReplicationController나 예전 Ingress 표기 등), GitOps처럼 이후에 자리 잡은 흐름은 담기지 않았습니다. 그럼에도 이 책을 여전히 '첫 책'으로 권하는 이유는, 손이 기억하는 <b>사고방식</b>은 버전을 타지 않기 때문입니다.</p>
+<p>그리고 선언은 시작일 뿐입니다. <code>limits</code> 한 줄은 쉽게 적지만, 그 한도를 넘겨 컨테이너가 <code>137</code>로 죽는 순간부터는 다시 맨땅의 디버깅입니다. 그 이야기는 아래 글에서 이어집니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">서평</a>
+      <a class="tag" href="index.html">Kubernetes</a>
+      <a class="tag" href="index.html">선언형</a>
+    </div>
+    <div class="post-cta"><span class="t">한도를 넘긴 컨테이너가 죽는 이유 → <b>쿠버네티스 OOMKilled 글</b></span><a class="chip primary" href="kubernetes-oomkilled.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="review-clean-code.html"><div class="np-key">← 이전 글</div><div class="np-title">Clean Code</div></a>
+    <a class="next" href="security-jwt-auth.html"><div class="np-key">다음 글 →</div><div class="np-title">JWT 인증 미들웨어</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

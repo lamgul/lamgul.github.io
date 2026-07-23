@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: PagedAttention — vLLM이 빠른 진짜 이유 — 안성진</title>
+<meta name="description" content="KV 캐시를 OS 페이징처럼 관리하는 PagedAttention 논문을 분석하고, 실서빙에서 처리량이 왜 달라지는지 정리한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: PagedAttention — vLLM이 빠른 진짜 이유">
+<meta property="og:description" content="KV 캐시를 OS 페이징처럼 관리하는 PagedAttention 논문을 분석하고, 실서빙에서 처리량이 왜 달라지는지 정리한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: PagedAttention — vLLM이 빠른 진짜 이유","datePublished":"2026-04-02","dateModified":"2026-07-23","inLanguage":"ko","description":"KV 캐시를 OS 페이징처럼 관리하는 PagedAttention 논문을 분석하고, 실서빙에서 처리량이 왜 달라지는지 정리한다.","keywords":"vLLM · PagedAttention · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/pagedattention-paper.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / pagedattention-paper</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: PagedAttention — vLLM이 빠른 진짜 이유</h1>
+    <div class="post-meta">
+      <span>2026년 4월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>vLLM · PagedAttention · 논문</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">온프레미스에서 vLLM으로 서빙하면서 <code>gpu_memory_utilization</code> 숫자 하나에 동시 처리량이 널뛰는 것을 봤습니다. 왜 그런지 제대로 알고 싶어서 vLLM의 근간이 된 논문 — <b>Efficient Memory Management for Large Language Model Serving with PagedAttention</b>(Kwon et al., SOSP 2023) — 을 읽었습니다. 결론부터 말하면 이건 어텐션 논문이 아니라 <b>메모리 관리 논문</b>입니다. 그리고 그게 핵심입니다.</p>
+
+<h2>1. KV 캐시 — 가중치보다 다루기 어려운 메모리</h2>
+<p>디코딩은 토큰을 하나씩 생성합니다. 매 스텝 새 토큰의 쿼리 <code>q</code>는 <b>이전 모든 토큰의 키·값</b>과 어텐션을 계산해야 하는데, 이걸 매번 다시 계산하면 낭비이므로 각 토큰의 K·V 벡터를 레이어마다 저장해 둡니다. 이것이 <b>KV 캐시</b>입니다. 토큰 하나가 먹는 양은 정확히 계산됩니다.</p>
+<pre class="code"><span class="c"># KV 캐시가 토큰 하나에 차지하는 메모리 (논문의 예시: OPT-13B, FP16)</span>
+n_layers, hidden, dtype_bytes = <span class="s">40</span>, <span class="s">5120</span>, <span class="s">2</span>
+kv_per_token = <span class="s">2</span> * n_layers * hidden * dtype_bytes  <span class="c"># 2 = K와 V</span>
+<span class="f">print</span>(<span class="s">f"{kv_per_token / 1024:.0f} KiB"</span>)             <span class="c"># 800 KiB</span>
+
+<span class="c"># 최대 길이 2048토큰을 요청마다 미리 잡아두면</span>
+<span class="f">print</span>(<span class="s">f"{kv_per_token * 2048 / 2**30:.2f} GiB"</span>)     <span class="c"># 요청 하나에 1.56 GiB</span></pre>
+<p>논문의 수치로, OPT-13B를 A100 40GB에 올리면 가중치가 약 26GB(65%)를 차지하고 KV 캐시에 쓸 수 있는 공간은 30% 남짓입니다. 가중치는 고정이니, <b>동시에 몇 개의 요청을 배치에 태울 수 있는가</b>는 결국 이 30%를 얼마나 알뜰하게 쓰느냐가 결정합니다. 서빙 처리량의 병목이 연산이 아니라 메모리라는 것 — 논문의 출발점입니다.</p>
+
+<h2>2. 문제: 연속 할당이 만드는 세 가지 낭비</h2>
+<p>기존 시스템들은 KV 캐시를 <b>연속된 텐서</b>로 다뤘습니다. 시퀀스 길이를 미리 알 수 없으니 요청이 들어오면 최대 길이(예: 2048토큰)만큼을 한 덩어리로 예약하는 방식입니다. 논문은 여기서 생기는 낭비를 세 가지로 분해합니다.</p>
+<ul>
+  <li><b>내부 단편화</b> — 2048칸을 예약했는데 답변이 37토큰에서 끝나면 나머지는 그냥 버려진 공간입니다.</li>
+  <li><b>예약 낭비</b> — 아직 생성되지 않은 미래 토큰의 자리는 지금 비어 있지만, 다른 요청이 쓸 수 없습니다.</li>
+  <li><b>외부 단편화</b> — 요청마다 예약 크기가 달라서, 할당기(버디 할당기류)가 쪼개 놓은 틈새 메모리는 어느 요청에도 못 들어갑니다.</li>
+</ul>
+<p>논문의 측정으로는, 기존 시스템에서 KV 캐시 메모리 중 <b>실제 토큰 상태를 담고 있는 비율이 20.4%~38.2%</b>에 그칩니다. 확보한 캐시 공간의 6~8할을 버리고 있었다는 뜻입니다. vLLM은 이 낭비를 4% 미만으로 줄였다고 보고합니다.</p>
+
+<h2>3. 발상: 블록 테이블 — KV 캐시의 가상 메모리</h2>
+<p>해법은 OS 수업에서 본 그것입니다. 가상 메모리가 프로세스의 주소 공간을 <b>페이지</b>로 쪼개 물리 메모리 아무 곳에나 흩뿌리듯, PagedAttention은 시퀀스의 KV 캐시를 고정 크기 <b>블록</b>(vLLM 기본값 16토큰)으로 쪼갭니다. 대응 관계가 정확합니다 — 블록은 페이지, 토큰은 바이트, 시퀀스는 프로세스. 시퀀스마다 <b>블록 테이블</b>이 논리 블록 번호를 물리 블록 번호로 매핑하고, 블록은 <b>토큰이 실제로 채워질 때</b> 하나씩 할당됩니다.</p>
+<pre class="code"><span class="c"># 블록 테이블의 동작을 최소한으로 재현한 시뮬레이션</span>
+BLOCK = <span class="s">16</span>                                <span class="c"># vLLM 기본 블록 크기(토큰)</span>
+
+<span class="k">class</span> <span class="f">BlockTable</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(self, pool):
+        self.pool = pool                  <span class="c"># 비어 있는 물리 블록 번호 풀</span>
+        self.blocks = []                  <span class="c"># 논리 순서 → 물리 블록 번호</span>
+
+    <span class="k">def</span> <span class="f">grow_to</span>(self, n_tokens):
+        need = (n_tokens + BLOCK - <span class="s">1</span>) // BLOCK
+        <span class="k">while</span> <span class="f">len</span>(self.blocks) &lt; need:     <span class="c"># 마지막 블록이 찼을 때만 할당</span>
+            self.blocks.append(self.pool.pop())
+
+    <span class="k">def</span> <span class="f">free</span>(self):
+        self.pool.extend(self.blocks); self.blocks.clear()
+
+pool = <span class="f">list</span>(<span class="f">range</span>(<span class="s">1024</span>))
+seq = BlockTable(pool)
+seq.grow_to(<span class="s">37</span>)          <span class="c"># 37토큰 → 블록 3개. 낭비는 마지막 블록의 11칸뿐</span>
+<span class="f">print</span>(seq.blocks)        <span class="c"># [1023, 1022, 1021] — 물리적으로는 불연속</span></pre>
+<p>이러면 어텐션 커널이 달라져야 합니다. K·V가 연속 텐서가 아니니까요. 어텐션의 정의 자체는 그대로입니다 — 출력은 <code>o_i = Σ_j softmax(q_i·Kᵀ/√d)_j · v_j</code> — 다만 PagedAttention 커널은 이 합을 <b>블록 단위로 순회</b>하며 계산합니다. 블록 테이블에서 물리 블록 주소를 찾아 K 블록·V 블록을 하나씩 가져와 부분 어텐션을 누적하는 식입니다. 논문은 이 간접 참조 때문에 커널 지연이 소폭 늘어난다는 것도 숨기지 않는데, 그 비용을 내고 메모리 낭비를 없애 <b>배치를 키우는 쪽이 처리량에서 압도적으로 이득</b>이라는 게 논문의 계산입니다. 초록의 주장 그대로, 동일 지연 수준에서 기존 최고 시스템(FasterTransformer, Orca) 대비 <b>처리량 2~4배</b>. 시퀀스가 길수록, 모델이 클수록 격차는 더 벌어집니다.</p>
+
+<h2>4. 공유와 copy-on-write — 페이징이 공짜로 주는 것</h2>
+<p>페이징을 도입하면 OS가 그랬듯 공유도 따라옵니다. 한 프롬프트에서 후보 답변을 <code>n</code>개 뽑는 병렬 샘플링을 생각해 보면, 프롬프트 구간의 KV 캐시는 <code>n</code>개 시퀀스가 완전히 동일합니다. vLLM은 물리 블록에 <b>참조 카운트</b>를 두고 프롬프트 블록을 그대로 공유하다가, 시퀀스가 갈라져 공유 블록에 새 토큰을 써야 하는 순간에만 그 블록 하나를 복사합니다. 정확히 <b>copy-on-write</b>이고, 단위는 블록입니다. 빔 서치처럼 후보들이 긴 앞부분을 공유하는 디코딩일수록 절감 폭이 커지고, 여러 요청이 같은 시스템 프롬프트를 쓰는 경우에도 같은 원리가 적용됩니다.</p>
+<pre class="code"><span class="c"># 병렬 샘플링 — 프롬프트 블록은 4개 시퀀스가 공유한다</span>
+<span class="k">from</span> vllm <span class="k">import</span> LLM, SamplingParams
+
+llm = LLM(<span class="s">"Qwen2.5-7B-Instruct-AWQ"</span>, gpu_memory_utilization=<span class="s">0.90</span>)
+params = SamplingParams(n=<span class="s">4</span>, temperature=<span class="s">0.8</span>, max_tokens=<span class="s">256</span>)
+
+<span class="c"># 프롬프트 KV는 물리 블록 한 벌 + 참조 카운트 4.</span>
+<span class="c"># 갈라지는 블록만 copy-on-write로 복사된다.</span>
+outs = llm.generate([<span class="s">"다음 공지를 세 문장으로 요약하라: ..."</span>], params)</pre>
+
+<h2>5. 블록이 바닥나면 — 선점과 스왑</h2>
+<p>블록을 미리 예약하지 않는 대신, 트래픽이 몰리면 풀이 진짜로 바닥날 수 있습니다. 이때 vLLM 스케줄러는 나중에 온 시퀀스를 <b>선점(preemption)</b>합니다. 흥미로운 설계가 하나 있는데, 시퀀스의 블록을 일부만 내리는 게 아니라 <b>전부 내리거나 전부 유지</b>합니다. 어차피 다음 스텝에 그 시퀀스의 모든 블록이 함께 필요하기 때문입니다. 내리는 방법은 두 가지입니다 — 블록을 CPU 메모리로 옮겨 두는 <b>스왑</b>(<code>--swap-space</code>가 이 공간), 아니면 블록을 그냥 버리고 나중에 프롬프트+생성분을 한 번의 배치 연산으로 다시 계산하는 <b>재계산</b>. 재계산이 직관과 달리 더 빠른 경우도 있습니다. 디코딩 때는 토큰을 하나씩 만들었지만 복원할 때는 이미 아는 토큰들이라 한 방에 처리되기 때문입니다.</p>
+
+<h2>6. 실서빙과 연결 — gpu_memory_utilization의 진짜 의미</h2>
+<p>여기까지 읽고 나니, 제가 산업안전 서비스에서 번역·요약용 모델을 서빙하며 만졌던 설정들이 전부 다시 보였습니다. vLLM은 기동 시 <code>gpu_memory_utilization</code>만큼의 VRAM을 확보한 뒤, 가중치와 활성값 작업 공간을 빼고 <b>남는 전부를 KV 블록 풀로</b> 만듭니다. 즉 이 숫자는 "GPU를 얼마나 쓸까"가 아니라 사실상 <b>동시 처리 가능한 토큰 총량</b>을 정하는 다이얼입니다.</p>
+<pre class="code"><span class="c"># 실제 서빙에서 쓰던 형태의 기동 옵션</span>
+vllm serve Qwen2.5-7B-Instruct-AWQ \
+  --quantization awq \
+  --gpu-memory-utilization <span class="s">0.90</span> \  <span class="c"># 가중치를 뺀 나머지가 KV 블록 풀</span>
+  --max-model-len <span class="s">4096</span> \           <span class="c"># 이제 "예약"이 아니라 상한일 뿐</span>
+  --max-num-seqs <span class="s">64</span> \
+  --swap-space <span class="s">8</span>                   <span class="c"># 선점 시 블록을 옮길 CPU 공간(GiB)</span>
+
+<span class="c"># 기동 로그에서 이 줄을 봐야 한다 — 풀의 실제 크기</span>
+<span class="c"># INFO ... # GPU blocks: 9490, # CPU blocks: 2048</span>
+<span class="c"># 동시 수용 가능한 토큰 ≈ 9490 × 16 (블록 크기)</span></pre>
+<p>연속 할당 방식이었다면 <code>max-model-len 4096</code>은 요청마다 4096칸 예약을 뜻했을 겁니다. PagedAttention 아래에서는 상한일 뿐이라, 평균 수백 토큰짜리 요청이 대부분인 워크로드에서 동시성이 확 올라갑니다. 제가 겪었던 "<code>gpu-memory-utilization</code>과 <code>max-num-seqs</code>의 균형 잡기"도 결국 블록 풀 크기와 슬롯 수의 균형 문제였던 것이고, 슬롯을 과하게 늘렸을 때 터지던 OOM은 풀이 바닥나 선점·스왑이 연쇄되던 상황이었습니다. 논문을 읽고 나서야 로그의 어떤 줄을 봐야 하는지 알게 됐습니다.</p>
+<div class="callout"><span class="mark">*</span><p>vLLM 로그에 <code>preempted</code> 경고가 반복되면 블록 풀이 모자란다는 신호입니다. 처리량이 조용히 무너지기 전에 — <code>max_num_seqs</code>를 낮추거나, <code>max_model_len</code>을 워크로드의 실제 상한으로 줄이거나, 더 센 양자화로 가중치를 줄여 풀을 키우세요. 기동 로그의 <code># GPU blocks</code> 줄과 운영 중 KV 캐시 사용률 지표를 함께 보면 어느 쪽 다이얼을 돌려야 할지 보입니다.</p></div>
+
+<h2>7. 남는 것</h2>
+<p>이 논문에서 새로 발명된 알고리즘은 사실상 없습니다. 페이징, 블록 테이블, copy-on-write, 스왑 — 전부 수십 년 된 OS 기법입니다. 통찰은 <b>LLM 서빙의 병목을 정확히 진단한 것</b>입니다. 병목이 연산이 아니라 KV 캐시 메모리라는 걸 숫자로 보인 뒤, 그 문제 모양에 맞는 오래된 해법을 정확히 가져다 붙였습니다. 좋은 시스템 논문의 전형이고, "빠른 추론 엔진"이라는 인상과 달리 vLLM이 빠른 진짜 이유는 <b>버리는 메모리가 없어서 배치가 크기 때문</b>이라는 것 — 서빙을 운영하는 입장에서 가장 쓸모 있는 결론이었습니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">vLLM</a>
+      <a class="tag" href="index.html">PagedAttention</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">이 논문을 실제로 굴려본 기록 → <b>온프레미스 LLM 서빙 글</b></span><a class="chip primary" href="serving-llm-on-prem.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="attention-paper-analysis.html"><div class="np-key">← 이전 글</div><div class="np-title">논문 분석: Attention Is All You Need</div></a>
+    <a class="next" href="raft-paper-analysis.html"><div class="np-key">다음 글 →</div><div class="np-title">논문 분석: Raft</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

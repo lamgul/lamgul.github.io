@@ -296,3 +296,50 @@ html { scroll-behavior: smooth; }
 .to-top.show { opacity: 1; transform: none; pointer-events: auto; }
 .to-top:hover { background: var(--accent); color: var(--on-accent); }
 @media print { .to-top, .read-progress { display: none !important; } }
+
+/* =============================== shared chrome ===============================
+   Header icon button, theme toggle, and the generic footer shell.
+   Moved here from home.css so every page (home, writing, cases, about)
+   gets identical chrome without loading home.css. Page CSS loads after
+   base.css and may extend these (e.g. .footer-cta in home.css). */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  border-radius: 100px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s;
+}
+.icon-btn:hover { color: var(--ink); border-color: var(--ink-3); transform: rotate(-18deg); }
+
+.theme-toggle { display: inline-flex; align-items: center; gap: 0.5em; }
+.theme-toggle .sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .moon { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .sun { display: block; }
+  :root:not([data-theme="light"]) .theme-toggle .moon { display: none; }
+}
+
+.site-footer {
+  margin-top: var(--sp-7);
+  border-top: 1px solid var(--line);
+  padding-block: var(--sp-6) var(--sp-5);
+}
+.colophon {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  font-family: var(--mono);
+  font-size: var(--t--1);
+  color: var(--ink-3);
+}
+.colophon a { color: var(--ink-2); }
+.colophon a:hover { color: var(--accent); }
+/* footers without a cta above the colophon shouldn't double the border */
+.site-footer .colophon:first-child { margin-top: 0; padding-top: 0; border-top: 0; }

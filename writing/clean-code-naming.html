@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>클린코드 · 이름 — 변수명이 주석을 대신할 때 — 안성진</title>
+<meta name="description" content="의도를 드러내는 이름의 구체적 규칙을 나쁜 예→좋은 예 리팩토링으로 정리한다. 불리언·컬렉션·시간·단위 네이밍까지.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="클린코드 · 이름 — 변수명이 주석을 대신할 때">
+<meta property="og:description" content="의도를 드러내는 이름의 구체적 규칙을 나쁜 예→좋은 예 리팩토링으로 정리한다. 불리언·컬렉션·시간·단위 네이밍까지.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"클린코드 · 이름 — 변수명이 주석을 대신할 때","datePublished":"2020-04-01","dateModified":"2026-07-23","inLanguage":"ko","description":"의도를 드러내는 이름의 구체적 규칙을 나쁜 예→좋은 예 리팩토링으로 정리한다. 불리언·컬렉션·시간·단위 네이밍까지.","keywords":"클린코드 · 네이밍 · 가독성","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/clean-code-naming.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / clean-code-naming</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 클린코드</p>
+    <h1>클린코드 · 이름 — 변수명이 주석을 대신할 때</h1>
+    <div class="post-meta">
+      <span>2020년 4월</span><span class="dot-sep">•</span>
+      <span>약 12분</span><span class="dot-sep">•</span>
+      <span>클린코드 · 네이밍 · 가독성</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">정산 로직이 5곳에 중복돼 있던 시스템을 리팩토링할 때, 가장 오래 걸린 일은 패턴 적용이 아니라 <b>중복을 찾는 것</b>이었습니다. 같은 계산이 <code>calcCharge</code>, <code>computeFee</code>, <code>getSettleAmt</code> 같은 제각각의 이름으로 흩어져 있어 검색으로는 잡히지 않았기 때문입니다. 그때 배웠습니다 — 이름은 취향의 문제가 아니라 <b>비용의 문제</b>라는 것을. 이 글은 그 비용을 줄이는 구체적인 규칙을, 나쁜 예를 좋은 예로 고쳐가며 정리합니다.</p>
+
+<h2>1. 주석이 필요한 이름은 이미 실패한 이름</h2>
+<p>흔히 "이름이 좀 짧아도 주석을 달면 되지 않나"라고 합니다. 실제로 많이 보는 코드가 이렇습니다.</p>
+<pre class="code"><span class="c">// Before — 이름이 못 하는 말을 주석이 대신한다</span>
+<span class="k">const</span> list = <span class="f">getData</span>(mid);          <span class="c">// mid: 가맹점 ID</span>
+<span class="k">let</span> amt = 0;                        <span class="c">// 정산 기준 금액(원)</span>
+<span class="k">for</span> (<span class="k">const</span> t <span class="k">of</span> list) {
+  <span class="k">if</span> (t.st === 2) amt += t.v;       <span class="c">// 2 = 결제 완료, v = 금액</span>
+}
+
+<span class="c">// After — 주석이 하던 말을 이름이 한다</span>
+<span class="k">const</span> transactions = <span class="f">findTransactionsByMerchantId</span>(merchantId);
+<span class="k">let</span> settlementBaseAmountWon = 0;
+<span class="k">for</span> (<span class="k">const</span> tx <span class="k">of</span> transactions) {
+  <span class="k">if</span> (tx.status === TransactionStatus.Completed) {
+    settlementBaseAmountWon += tx.amountWon;
+  }
+}</pre>
+<p>왜 주석보다 이름이어야 할까요. 논거는 두 가지입니다. 첫째, <b>주석은 선언 지점에만 있고, 이름은 모든 사용 지점에 따라다닙니다.</b> <code>amt</code>를 선언부에서 30줄 아래에서 만나면 주석을 찾아 다시 올라가야 하지만, <code>settlementBaseAmountWon</code>은 만나는 자리에서 바로 읽힙니다. 이름은 사용처마다 자동으로 복사되는 주석인 셈입니다. 둘째, <b>주석은 컴파일러가 검증하지 않습니다.</b> 코드가 바뀌어도 주석은 조용히 낡아가고, 어느 순간부터 거짓말을 합니다. 반면 이름은 IDE의 rename 리팩토링으로 모든 사용처가 함께 바뀝니다. 즉 이름은 <b>도구가 관리해 주는 문서</b>이고, 주석은 사람이 기억해서 관리해야 하는 문서입니다. 같은 정보라면 관리 비용이 낮은 쪽에 두는 것이 맞습니다.</p>
+<p>그래서 저는 코드 리뷰에서 "여기 주석 좀 달아주세요"라고 말하고 싶어질 때마다 먼저 자문합니다. <b>이 주석이 필요해진 건, 이름이 일을 안 하고 있어서 아닌가?</b> 대부분은 그렇습니다.</p>
+
+<h2>2. 축약어와 헝가리안 — 규칙이 아니라 유물</h2>
+<p><code>strDt</code>, <code>arrList</code>, <code>iCnt</code> 같은 이름은 아직도 레거시 Java 코드에서 자주 만납니다. 이런 표기가 <b>한때는 합리적이었다</b>는 사실을 먼저 인정해야 설득이 됩니다. 타입 정보가 약한 언어에서, 선언부를 보려면 종이 출력물을 뒤져야 하던 시절에는 이름에 타입을 새기는 것(헝가리안 표기법)이 실제로 읽기 비용을 줄였습니다. 문제는 <b>그 전제가 전부 사라졌다</b>는 것입니다. 지금은 타입 시스템이 타입을 보증하고, IDE가 마우스만 올려도 타입을 보여줍니다.</p>
+<pre class="code"><span class="c">// Before — 타입을 이름에 새기던 시절의 습관</span>
+String strDt = ord.<span class="f">getDt</span>();             <span class="c">// 정산 일자… 인데 String?</span>
+List arrList = repo.<span class="f">findAll</span>();          <span class="c">// 뭐가 들었는지 이름은 침묵</span>
+<span class="k">int</span> iCnt = 0;                           <span class="c">// 무엇의 개수인가</span>
+
+<span class="c">// After — 타입은 타입 시스템에게, 이름은 의미에게</span>
+LocalDate settlementDate = order.<span class="f">getSettlementDate</span>();
+List&lt;Settlement&gt; pendingSettlements = settlementRepository.<span class="f">findAllPending</span>();
+<span class="k">int</span> payoutRetryCount = 0;</pre>
+<p>전제가 사라진 표기법은 비용만 남깁니다. <code>strDt</code>를 <code>LocalDate</code>로 바꾸는 순간 이름이 거짓말을 시작하고, 정보가 타입과 이름에 이중으로 적혀 있으니 하나가 바뀔 때마다 불일치 위험이 생깁니다. 축약도 같은 구조입니다. 축약이 아끼는 것은 <b>쓰는 사람의 타이핑</b>인데, 자동완성 시대에 타이핑 비용은 0에 수렴합니다. 반면 읽는 비용 — <code>Dt</code>가 date인지 detail인지 추측하는 비용 — 은 읽을 때마다 매번 발생합니다. 코드는 한 번 쓰이고 수십 번 읽히므로, 이 거래는 항상 손해입니다.</p>
+<div class="callout"><span class="mark">*</span><p><b>실무 팁</b> — rename은 IDE가 제공하는 가장 안전한 리팩토링입니다(IntelliJ <code>Shift+F6</code>, VS Code <code>F2</code>). 테스트가 없어도 안전하게 돌릴 수 있는 거의 유일한 변경이니, 나쁜 이름을 발견하면 "나중에 크게 고칠 때"로 미루지 말고 그 자리에서 바꾸세요. PR에서 이름을 다듬는 것은 가장 싸게 사는 품질입니다.</p></div>
+
+<h2>3. 불리언 — 조건문이 문장이 되게</h2>
+<p>불리언 이름의 목표는 하나입니다. <b><code>if</code> 문을 소리 내어 읽었을 때 자연어 문장이 될 것.</b> <code>flag</code>, <code>check</code>, <code>status</code>는 이 시험을 통과하지 못합니다. "만약 플래그라면"은 문장이 아니니까요.</p>
+<pre class="code"><span class="c">// Before — flag는 아무것도 말하지 않는다</span>
+<span class="k">let</span> flag = <span class="k">false</span>;
+<span class="k">if</span> (!<span class="f">chkHoliday</span>(dt) &amp;&amp; u.state != 0 &amp;&amp; !u.noAcct) {
+  flag = <span class="k">true</span>;
+}
+
+<span class="c">// After — 조건 자체가 문장이 된다</span>
+<span class="k">const</span> isBusinessDay    = !<span class="f">isHoliday</span>(settlementDate);
+<span class="k">const</span> isActiveMerchant = merchant.status === MerchantStatus.Active;
+<span class="k">const</span> hasBankAccount   = merchant.bankAccount !== <span class="k">null</span>;
+
+<span class="k">const</span> canReceivePayout = isBusinessDay &amp;&amp; isActiveMerchant &amp;&amp; hasBankAccount;</pre>
+<p>규칙은 세 가지로 정리됩니다. 첫째, 접두사는 <code>is</code>(상태) · <code>has</code>(보유) · <code>can</code>(가능) · <code>should</code>(정책)로 통일합니다. 접두사가 곧 그 불리언의 <b>범주</b>를 알려주기 때문입니다. 둘째, <b>긍정형으로 짓습니다.</b> Before의 <code>u.noAcct</code>를 보세요 — 부정형 이름은 반드시 <code>!u.noAcct</code> 같은 이중 부정을 낳고, 이중 부정은 사람이 머릿속에서 한 번 뒤집어 읽어야 하는 인지 비용입니다. <code>hasBankAccount</code>로 뒤집어 두면 부정이 필요한 쪽에서만 <code>!</code>를 쓰면 됩니다. 셋째, 복합 조건에는 <b>중간 이름을 부여합니다.</b> After에서 <code>canReceivePayout</code> 한 줄이 추가된 대가로, 조건이 틀렸을 때 "어느 항이 틀렸는가"를 디버거 없이 이름 단위로 좁힐 수 있게 됐습니다. NestJS 권한 가드처럼 조건이 정책인 코드에서 특히 효과가 큽니다.</p>
+
+<h2>4. 컬렉션·시간·단위 — 형태가 정해주는 이름</h2>
+<p>값의 형태마다 검증된 관례가 있습니다. 관례를 따르는 이유는 미학이 아니라, <b>읽는 사람의 추측을 없애기 위해서</b>입니다.</p>
+<pre class="code"><span class="c">// Before — 숫자 3의 단위를 아는 사람은 작성자뿐</span>
+<span class="k">const</span> data = <span class="f">getList</span>(mid);
+<span class="k">const</span> total = data.map(x =&gt; x.amount).reduce((a, b) =&gt; a + b, 0);
+<span class="f">schedule</span>(total, 3);                      <span class="c">// 3… 일? 시간? 퍼센트?</span>
+
+<span class="c">// After — 복수형·xByY·~At·~Date·단위 접미사</span>
+<span class="k">const</span> settlements = <span class="f">findSettlementsByMerchantId</span>(merchantId);
+<span class="k">const</span> settlementByOrderId = <span class="k">new</span> Map(settlements.map(s =&gt; [s.orderId, s]));
+<span class="k">const</span> netAmountWon = <span class="f">sumWon</span>(settlements.map(s =&gt; s.netAmountWon));
+
+<span class="f">schedulePayout</span>({
+  amountWon:   netAmountWon,
+  requestedAt: clock.<span class="f">now</span>(),              <span class="c">// 시각(순간)은 ~At</span>
+  payoutDate:  <span class="f">nextBusinessDay</span>(today),   <span class="c">// 날짜는 ~Date</span>
+  holdDays:    3,                        <span class="c">// 기간은 단위를 이름에</span>
+});</pre>
+<p>하나씩 근거를 보겠습니다. <b>컬렉션은 복수형</b>(<code>settlements</code>)으로 — <code>list</code>, <code>data</code>는 "여러 개"라는 것만 말하고 "무엇의 여러 개"인지는 숨깁니다. <b>Map은 <code>valueByKey</code></b>(<code>settlementByOrderId</code>) 형태로 — 이 관례 하나로 "키가 뭐지?"라는 질문이 사라지고, <code>settlementByOrderId.get(orderId)</code>처럼 사용부가 자기 검증 문장이 됩니다. <b>시간은 시각과 기간을 구분</b>합니다. <code>settledAt</code>은 순간(timestamp), <code>settlementDate</code>는 달력상 날짜, <code>holdDays</code>·<code>timeoutMs</code>는 길이입니다. 이 셋을 전부 <code>time</code>이라 부르는 코드에서 시차 버그가 나옵니다. 마지막으로 <b>돈에는 반드시 단위와 성격</b>을 붙입니다. 정산 도메인에서 <code>amount</code> 하나만 있는 필드는 사실상 지뢰입니다 — 수수료 공제 전(<code>grossAmount</code>)인지 후(<code>netAmount</code>)인지에 따라 가맹점에 입금되는 금액이 달라지니까요.</p>
+<div class="callout"><span class="mark">!</span><p><b>함정</b> — 단위 없는 돈은 이름의 문제로 끝나지 않습니다. 결제 수단마다 요금이 달랐던 정산 버그를 추적할 때, 어떤 코드는 수수료 포함 금액을, 어떤 코드는 공제 후 금액을 같은 이름 <code>amount</code>로 주고받고 있었습니다. 이름을 <code>grossAmountWon</code> / <code>netAmountWon</code>으로 갈라 놓기만 해도 잘못된 값을 넘기는 코드가 <b>리뷰에서 눈에 띄기 시작합니다.</b> 여기서 한 걸음 더 가면 <code>Money</code> 타입으로 컴파일러에게 감시를 맡길 수 있습니다.</p></div>
+
+<h2>5. 유비쿼터스 언어 — 팀의 사전이 곧 코드</h2>
+<p>지금까지는 이름 하나를 잘 짓는 규칙이었습니다. 그런데 실무에서 더 큰 사고는 <b>이름들 사이의 불일치</b>에서 납니다. 서두의 정산 리팩토링이 정확히 그 사례였습니다. 웹 결제·키오스크·카카오페이·월정액·관리자 정산, 다섯 곳이 같은 계산을 각자의 이름으로 갖고 있었고, 이름이 다르니 <code>grep</code>으로도 잡히지 않았습니다. 할인 정책이 바뀔 때 다섯 곳 중 몇 곳만 수정되는 사고는 이 지형에서 필연이었습니다.</p>
+<pre class="code"><span class="c">// Before — 같은 개념이 세 가지 이름으로 흩어져 있다</span>
+webPayment.<span class="f">calcCharge</span>(order);       <span class="c">// 웹 결제의 "정산"</span>
+kiosk.<span class="f">computeFee</span>(order);            <span class="c">// 키오스크의 "정산"</span>
+adminBatch.<span class="f">getSettleAmt</span>(order);     <span class="c">// 수동 정산의 "정산"</span>
+
+<span class="c">// After — 용어집의 단어가 그대로 타입과 메서드가 된다</span>
+Settlement settlement = settlementPolicy.<span class="f">settle</span>(order);   <span class="c">// 정산: 금액 확정</span>
+Payout payout = payoutScheduler.<span class="f">schedule</span>(settlement);     <span class="c">// 지급: 실제 송금</span></pre>
+<p>DDD가 말하는 <b>유비쿼터스 언어</b>는 거창한 것이 아닙니다. 도메인 전문가와 개발자가 합의한 용어집을 만들고, 그 단어를 회의·문서·코드에서 <b>똑같이</b> 쓰자는 약속입니다. 정산 도메인이라면 이렇게 됩니다 — <b>정산(Settlement)</b>은 주기 단위로 금액을 확정하는 일, <b>지급(Payout)</b>은 확정된 금액을 실제 송금하는 일, <b>수수료(Fee)</b>는 공제 항목, <b>보류(Hold)</b>는 지급을 미루는 상태. 이 네 단어가 코드의 클래스명·메서드명과 1:1로 대응하면, 기획자가 "지급 보류 조건을 바꿔주세요"라고 말한 순간 수정할 클래스가 이미 특정됩니다. 크롤링 파이프라인을 DDD로 재설계했을 때도 효과의 절반은 아키텍처가 아니라 이 <b>언어 통일</b>에서 왔습니다.</p>
+<p>규칙은 대칭 쌍으로 기억하면 좋습니다. <b>하나의 개념에 하나의 단어</b>(같은 것을 <code>settle</code>/<code>calc</code>/<code>compute</code>로 부르지 않기), 그리고 <b>하나의 단어에 하나의 개념</b>(<code>fee</code>가 어디서는 수수료, 어디서는 요금 전체를 뜻하지 않기). 전자가 깨지면 검색이 안 되고, 후자가 깨지면 검색 결과를 믿을 수 없게 됩니다.</p>
+
+<h2>6. 규칙이 깨지는 곳 — 짧은 이름이 옳을 때</h2>
+<p>여기까지 읽으면 "이름은 무조건 길고 자세하게"로 오해하기 쉽습니다. 그러나 위 규칙들이 성립한 근거를 다시 보면 — 이름은 사용처마다 따라다니는 주석이다 — <b>사용처가 코앞 한 줄뿐이라면 긴 이름의 근거도 사라집니다.</b> 이름 길이는 스코프 길이에 비례해야 합니다.</p>
+<pre class="code"><span class="c">// 이 s는 좋은 이름이다 — 수명이 화살표 함수 한 줄이니까</span>
+<span class="k">const</span> totalNetWon = settlements.reduce((sum, s) =&gt; sum + s.netAmountWon, 0);
+
+<span class="c">// 오히려 과잉 이름이 신호를 잡음으로 덮는다</span>
+<span class="k">const</span> totalNetWon2 = settlements.reduce(
+  (accumulatedNetAmountWon, settlementListItem) =&gt;
+    accumulatedNetAmountWon + settlementListItem.netAmountWon, 0);
+
+<span class="c">// 같은 한 글자라도 수명이 모듈 전체라면 폭탄이 된다</span>
+<span class="k">export let</span> c = <span class="f">loadConfig</span>();   <span class="c">// 6개월 뒤의 c는 아무도 못 읽는다</span></pre>
+<p>람다 매개변수의 <code>s</code>, 두 줄짜리 루프의 <code>i</code>는 선언과 사용이 한 시야에 들어오므로 추측 비용이 0입니다. 이때 <code>settlementListItem</code> 같은 이름은 정보를 더하는 게 아니라 <b>패턴 인식을 방해</b>합니다. 팀 사전에 등록된 관례적 축약 — <code>id</code>, <code>url</code>, Express/NestJS의 <code>req</code>/<code>res</code> — 도 같은 이유로 허용됩니다. 이미 모두가 아는 단어는 축약이 아니라 어휘입니다.</p>
+<p>한 가지 한계도 정직하게 적어둡니다. 이름은 "무엇"까지만 말할 수 있고 <b>"왜"는 말하지 못합니다.</b> <code>holdDays: 3</code>이라는 이름은 3일이 보류 기간이라는 사실은 전하지만, 왜 3일인지 — 카드사 취소 가능 기간 때문인지, 정산 주기 협약 때문인지 — 는 전하지 못합니다. 그 "왜"는 여전히 주석과 커밋 메시지, 설계 문서의 몫입니다. 변수명이 주석을 대신하는 범위는 딱 "무엇"까지입니다. 이 경계를 인정해야 "주석 무용론" 같은 극단으로 가지 않습니다.</p>
+
+<h2>7. 정리 — 이름 리뷰 체크리스트</h2>
+<p>PR을 리뷰할 때 실제로 쓰는 순서대로 정리합니다.</p>
+<ul>
+  <li><b>주석 테스트</b> — 이 변수에 주석이 필요한가? 필요하다면 이름이 일을 안 하는 것. 주석의 내용을 이름으로 옮긴다.</li>
+  <li><b>축약·헝가리안 금지</b> — 타입 정보는 타입 시스템에게. 단, 팀 사전에 등록된 축약(<code>id</code>, <code>url</code>, <code>req</code>/<code>res</code>)은 어휘로 인정.</li>
+  <li><b>불리언은 문장으로</b> — <code>is</code>/<code>has</code>/<code>can</code>/<code>should</code> + 긍정형. 이중 부정이 보이면 이름을 뒤집는다. 복합 조건엔 중간 이름을.</li>
+  <li><b>컬렉션은 복수형, Map은 <code>valueByKey</code></b> — 필터된 결과라면 조건까지 이름에(<code>pendingSettlements</code>).</li>
+  <li><b>시간은 세 갈래</b> — 시각은 <code>~At</code>, 날짜는 <code>~Date</code>, 기간은 단위 접미사(<code>~Days</code>, <code>~Ms</code>).</li>
+  <li><b>돈에는 성격과 단위</b> — <code>gross</code>/<code>net</code>/<code>fee</code> 구분, 통화 단위 명시. 가능하면 타입으로 승격.</li>
+  <li><b>하나의 개념 = 하나의 단어</b> — 용어집을 먼저 합의하고, 회의에서 쓰는 단어를 코드에 그대로 쓴다.</li>
+  <li><b>이름 길이 ∝ 스코프 길이</b> — 한 줄 람다의 한 글자는 무죄, 모듈 전역의 한 글자는 유죄.</li>
+  <li><b>"왜"는 이름 밖에</b> — 이름은 "무엇"까지. 이유는 주석·커밋·문서에 남긴다.</li>
+</ul>
+<p>다음 글에서는 이 이름들이 모여 사는 곳 — <b>함수</b>를 다룹니다. 좋은 이름의 함수가 왜 짧아질 수밖에 없는지가 이 글의 자연스러운 다음 장입니다.</p>
+
+    <div class="post-tags"><span class="pt-head">태그</span><a class="tag" href="index.html">클린코드</a><a class="tag" href="index.html">네이밍</a><a class="tag" href="index.html">가독성</a></div>
+    <div class="post-cta"><span class="t">이 원칙이 실전에서 → <b>정산 시스템 모듈화 사례</b></span><a class="chip primary" href="../cases/settlement-refactor.html">사례 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="index.html"><div class="np-key">← 글 목록</div><div class="np-title">전체 보기</div></a>
+    <a class="next" href="clean-code-functions.html"><div class="np-key">다음 글 →</div><div class="np-title">클린코드 · 함수</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

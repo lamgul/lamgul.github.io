@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠버네티스 requests/limits — OOMKilled의 진짜 이유 — 안성진</title>
+<meta name="description" content="메모리 limits와 cgroup의 관계를 실험 매니페스트로 확인하고, JVM 컨테이너가 죽는 전형적 패턴을 정리한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="쿠버네티스 requests/limits — OOMKilled의 진짜 이유">
+<meta property="og:description" content="메모리 limits와 cgroup의 관계를 실험 매니페스트로 확인하고, JVM 컨테이너가 죽는 전형적 패턴을 정리한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"쿠버네티스 requests/limits — OOMKilled의 진짜 이유","datePublished":"2025-07-11","dateModified":"2026-07-23","inLanguage":"ko","description":"메모리 limits와 cgroup의 관계를 실험 매니페스트로 확인하고, JVM 컨테이너가 죽는 전형적 패턴을 정리한다.","keywords":"Kubernetes · 메모리 · 운영","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/kubernetes-oomkilled.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / kubernetes-oomkilled</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 인프라</p>
+    <h1>쿠버네티스 requests/limits — OOMKilled의 진짜 이유</h1>
+    <div class="post-meta">
+      <span>2025년 7월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>Kubernetes · 메모리 · 운영</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead"><code>kubectl describe</code>에 찍힌 <b>OOMKilled</b>는 쿠버네티스가 내린 판결처럼 보입니다. 하지만 실제로 프로세스를 죽인 것은 리눅스 커널입니다. limits가 어떻게 cgroup 값이 되는지 작은 실험 매니페스트로 눈으로 확인하고, 그 위에서 JVM 컨테이너가 유독 잘 죽는 전형적 패턴을 정리합니다.</p>
+
+<h2>1. requests와 limits는 다른 기계를 움직인다</h2>
+<p>둘은 한 쌍처럼 쓰이지만 작동하는 층이 다릅니다. <b>requests</b>는 스케줄러의 언어입니다. "이 파드를 어느 노드에 놓을까"를 계산할 때 쓰는 예약값이고, 런타임에 사용량을 막지 않습니다. requests가 100Mi인 파드도 노드에 여유가 있으면 그 이상을 씁니다. 반면 <b>limits</b>는 커널의 언어입니다. kubelet이 컨테이너 런타임을 거쳐 <b>cgroup에 기록하는 강제 한도</b>이고, 스케줄러는 이 값을 보지 않습니다.</p>
+<p>그리고 자원의 성격에 따라 초과의 결과가 다릅니다. CPU limits를 넘으면 <b>스로틀링</b>으로 느려질 뿐이지만, 메모리는 압축할 수 없는 자원이라 limits를 넘는 순간 커널 OOM killer가 프로세스를 <b>죽입니다</b>. 이 비대칭이 이 글 전체의 핵심입니다. 실험에 쓸 매니페스트는 이렇습니다.</p>
+<pre class="code"><span class="c"># memory-demo.yaml — limits 안쪽(150M)만 쓰는 얌전한 파드</span>
+<span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Pod
+<span class="k">metadata:</span>
+  <span class="k">name:</span> memory-demo
+<span class="k">spec:</span>
+  <span class="k">containers:</span>
+  - <span class="k">name:</span> stress
+    <span class="k">image:</span> polinux/stress
+    <span class="k">resources:</span>
+      <span class="k">requests:</span>
+        <span class="k">memory:</span> <span class="s">"100Mi"</span>
+      <span class="k">limits:</span>
+        <span class="k">memory:</span> <span class="s">"200Mi"</span>
+    <span class="k">command:</span> [<span class="s">"stress"</span>]
+    <span class="k">args:</span> [<span class="s">"--vm"</span>, <span class="s">"1"</span>, <span class="s">"--vm-bytes"</span>, <span class="s">"150M"</span>, <span class="s">"--vm-hang"</span>, <span class="s">"1"</span>]</pre>
+<p>kind든 minikube든 로컬 클러스터면 충분합니다. <code>stress</code>가 150M를 할당한 채 버티므로, limits 200Mi 안에서 멀쩡히 돌아갑니다.</p>
+
+<h2>2. limits는 cgroup 파일이 된다 — 눈으로 확인</h2>
+<p>이 파드에 들어가 cgroup 파일을 읽어보면, YAML에 적은 문자열이 커널 설정값이 되어 있는 것을 그대로 볼 수 있습니다.</p>
+<pre class="code">$ kubectl apply -f memory-demo.yaml
+$ kubectl exec memory-demo -- cat /sys/fs/cgroup/memory.max
+209715200        <span class="c"># = 200Mi (200 × 1024 × 1024), cgroup v2</span>
+
+<span class="c"># cgroup v1 노드라면 경로가 다릅니다</span>
+$ kubectl exec memory-demo -- cat /sys/fs/cgroup/memory/memory.limit_in_bytes
+209715200</pre>
+<p>전달 경로는 단순합니다. <b>YAML의 limits → kubelet → 컨테이너 런타임 → cgroup의 <code>memory.max</code></b>. 여기까지 오고 나면 쿠버네티스의 역할은 끝났습니다. 이후 이 한도를 집행하는 것은 순수하게 리눅스 커널입니다. cgroup의 메모리 사용량이 <code>memory.max</code>에 닿으면 커널이 그 cgroup 안에서 희생자를 골라 <code>SIGKILL</code>을 보내고, kubelet은 <b>사후에</b> 그 결과를 읽어 파드 상태에 <code>OOMKilled</code>라고 적어줄 뿐입니다. "쿠버네티스가 죽였다"는 말은 절반만 맞는 셈입니다.</p>
+
+<h2>3. 일부러 죽여본다 — 137이라는 서명</h2>
+<p>이제 같은 매니페스트에서 <code>--vm-bytes</code>만 <code>250M</code>으로 올려 limits(200Mi)를 넘겨봅니다. 컨테이너는 곧바로 죽고, describe에 전형적인 흔적이 남습니다.</p>
+<pre class="code">$ kubectl describe pod memory-demo
+    ...
+    Last State:     Terminated
+      <span class="k">Reason:       OOMKilled</span>
+      <span class="k">Exit Code:    137</span>
+    Restart Count:  3
+    ...
+Events:
+  Warning  BackOff  ...  Back-off restarting failed container</pre>
+<p><b>137 = 128 + 9</b>. 시그널 9번, 즉 <code>SIGKILL</code>로 죽었다는 뜻입니다. 이 숫자가 중요한 이유는 <code>SIGKILL</code>은 <b>가로챌 수 없는 시그널</b>이기 때문입니다. 애플리케이션은 종료 훅도, 마지막 로그 한 줄도, graceful shutdown도 수행하지 못합니다. 로그가 아무 예고 없이 뚝 끊기고 재시작 카운트만 올라가 있다면, 가장 먼저 의심할 것이 이 경로입니다.</p>
+
+<h2>4. JVM 컨테이너가 죽는 전형적 패턴</h2>
+<p>이 무대 위에서 JVM은 두 가지 방향으로 자주 미끄러집니다. 요즘 JVM(JDK 8u191+, JDK 10+)은 <code>UseContainerSupport</code>가 기본이라 cgroup 한도를 "가용 메모리"로 올바르게 인식하지만, 문제는 그다음의 <b>기본 비율</b>입니다. 최대 힙의 기본값은 가용 메모리의 <b>25%</b>(<code>MaxRAMPercentage=25</code>)입니다.</p>
+<pre class="code">$ kubectl exec jvm-app -- java -XX:+PrintFlagsFinal -version | grep -i maxheapsize
+   size_t MaxHeapSize = 268435456    {ergonomic}
+<span class="c"># limits.memory가 1Gi인데 힙은 256Mi — 기본 25%의 결과</span></pre>
+<p><b>실패 1 — 기본값 방치.</b> 1Gi를 예약해 놓고 힙은 256Mi만 쓰는 상태입니다. 나머지는 놀고, 힙이 좁아 GC가 일찍부터 바빠집니다. 그래서 <code>-XX:MaxRAMPercentage=75.0</code>처럼 비율을 올리는 것이 컨테이너의 정석입니다.</p>
+<p><b>실패 2 — 힙만 계산에 넣는 것.</b> 반대로 90% 이상으로 올리면 이번엔 커널에게 죽습니다. cgroup이 세는 것은 힙이 아니라 <b>프로세스 전체</b>이기 때문입니다. 힙 밖에도 메타스페이스, 스레드 스택(64비트 리눅스 기본 1MB × 스레드 수), 코드 캐시, 다이렉트 버퍼, GC 오버헤드가 삽니다. 힙이 한도의 90%를 차지하면 이 나머지가 10%를 넘는 순간 — 힙은 멀쩡한데도 — 컨테이너가 137로 사라집니다. 75%는 이 "힙 밖 세입자들"의 몫을 남겨두는 경험칙입니다.</p>
+<pre class="code"><span class="c"># Deployment 컨테이너 스펙 — 힙 비율과 힙덤프 준비를 함께</span>
+<span class="k">containers:</span>
+- <span class="k">name:</span> api
+  <span class="k">image:</span> registry.example.com/api:1.4.2
+  <span class="k">env:</span>
+  - <span class="k">name:</span> JAVA_TOOL_OPTIONS
+    <span class="k">value:</span> <span class="s">&gt;-
+      -XX:MaxRAMPercentage=75.0
+      -XX:+HeapDumpOnOutOfMemoryError
+      -XX:HeapDumpPath=/var/log/app/heap.hprof</span>
+  <span class="k">resources:</span>
+    <span class="k">requests:</span>
+      <span class="k">memory:</span> <span class="s">"1Gi"</span>
+    <span class="k">limits:</span>
+      <span class="k">memory:</span> <span class="s">"1Gi"</span></pre>
+<div class="callout"><span class="mark">*</span><p>죽음의 종류를 먼저 구분하세요. 로그에 <code>java.lang.OutOfMemoryError</code>가 있으면 <b>힙 문제</b>이고 <code>HeapDumpOnOutOfMemoryError</code>가 힙덤프를 남겨줍니다. 로그 없이 exit code <b>137</b>이면 <b>컨테이너 예산 문제</b>이고, <code>SIGKILL</code>이라 힙덤프도 남지 않습니다. 137 앞에서 힙덤프 파일을 찾아 헤매는 것이 가장 흔한 시간 낭비입니다.</p></div>
+
+<h2>5. 운영에서의 결론 — 예산을 정하고, 실측한다</h2>
+<p>메모리에 한해서는 <b>requests = limits</b>로 맞추는 편을 권합니다. 메모리는 CPU처럼 잠깐 양보할 수 있는 자원이 아니어서, 오버커밋된 노드가 압박을 받으면 파드 축출로 이어집니다. requests와 limits를 같게 두면 스케줄러가 예약한 만큼만 쓰는 정직한 파드가 되고, CPU까지 같게 맞추면 QoS도 Guaranteed가 됩니다. 그리고 75%든 얼마든 비율은 출발점일 뿐이라, 실제 부하에서 <code>container_memory_working_set_bytes</code>를 보며 한도와의 여유를 실측해야 합니다.</p>
+<p>이 감각은 온프레미스에서 vLLM을 서빙하며 <code>gpu-memory-utilization</code>과 동시 슬롯 수의 균형을 잡던 일과 정확히 같은 종류였습니다. 예산을 정하고, 예산 안의 세입자를 전부 세고, 실제 트래픽으로 스윗스팟을 확인한다 — 자원이 VRAM이든 cgroup 메모리든 순서는 같습니다. 그리고 한도가 아니라 애플리케이션 안쪽이 문제로 판명되면, 그때부터는 힙덤프를 읽는 일이 시작됩니다. 7일마다 죽던 서버를 추적했던 순서를 아래 글에 정리해 두었습니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Kubernetes</a>
+      <a class="tag" href="index.html">메모리</a>
+      <a class="tag" href="index.html">운영</a>
+    </div>
+    <div class="post-cta"><span class="t">컨테이너가 아니라 힙이 문제라면 → <b>힙덤프 읽는 법 글</b></span><a class="chip primary" href="reading-heap-dumps.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="fastapi-dependency-injection.html"><div class="np-key">← 이전 글</div><div class="np-title">FastAPI 의존성 주입</div></a>
+    <a class="next" href="index.html"><div class="np-key">글 목록 →</div><div class="np-title">전체 보기</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

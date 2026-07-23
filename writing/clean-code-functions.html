@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>클린코드 · 함수 — 한 가지 일의 실제 크기 — 안성진</title>
+<meta name="description" content="&quot;함수는 한 가지 일만&quot; 원칙을 실제 코드에 적용할 때의 기준 — 추상화 수준, 인자 개수, 부수효과 격리 — 를 단계별 리팩토링으로 보인다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="클린코드 · 함수 — 한 가지 일의 실제 크기">
+<meta property="og:description" content="&quot;함수는 한 가지 일만&quot; 원칙을 실제 코드에 적용할 때의 기준 — 추상화 수준, 인자 개수, 부수효과 격리 — 를 단계별 리팩토링으로 보인다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"클린코드 · 함수 — 한 가지 일의 실제 크기","datePublished":"2020-06-02","dateModified":"2026-07-23","inLanguage":"ko","description":"\"함수는 한 가지 일만\" 원칙을 실제 코드에 적용할 때의 기준 — 추상화 수준, 인자 개수, 부수효과 격리 — 를 단계별 리팩토링으로 보인다.","keywords":"클린코드 · 함수 분리 · 추상화 수준","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/clean-code-functions.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / clean-code-functions</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 클린코드</p>
+    <h1>클린코드 · 함수 — 한 가지 일의 실제 크기</h1>
+    <div class="post-meta">
+      <span>2020년 6월</span><span class="dot-sep">•</span>
+      <span>약 12분</span><span class="dot-sep">•</span>
+      <span>클린코드 · 함수 분리 · 추상화 수준</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">"함수는 한 가지 일만 해야 한다"를 모르는 개발자는 없습니다. 그런데 막상 80줄짜리 함수 앞에 앉으면 질문이 바뀝니다. <b>그래서 '한 가지'가 대체 얼마만 한 크기인가?</b> 이 글은 제가 정산 로직을 리팩토링하며 실제로 겪은 순서대로, 그 기준 — 추상화 수준, 부수효과, 인자 — 을 코드로 따라갑니다. 그리고 잘못 쪼개면 어떻게 더 나빠지는지도 정직하게 다룹니다.</p>
+
+<h2>80줄 함수는 어떻게 태어나는가</h2>
+<p>80줄 함수를 한 번에 쓰는 사람은 없습니다. 처음엔 15줄이었습니다. 판매자 등급별 수수료가 들어오며 18줄이 붙고, 프로모션 할인이 생기며 16줄, 재정산 요구가 생기며 플래그 인자가 하나, 슬랙 알림이 붙으며 또 8줄. <b>한 번의 추가는 전부 합리적이었습니다.</b> "이 다섯 줄 때문에 함수를 새로 파?"라는 판단이 열 번 쌓이면 이런 모양이 됩니다.</p>
+<pre class="code"><span class="k">def</span> <span class="f">settle_order</span>(order_id, retry=<span class="k">False</span>, notify=<span class="k">True</span>):
+    <span class="c"># ── 조회 (11줄) ──</span>
+    order = order_repo.find(order_id)
+    <span class="k">if</span> order <span class="k">is</span> <span class="k">None</span>:
+        <span class="k">raise</span> OrderNotFound(order_id)
+    seller = seller_repo.find(order.seller_id)
+    promotions = promo_repo.find_active(order.created_at)
+    <span class="c"># ── 검증 (9줄) ──</span>
+    <span class="k">if</span> order.status != <span class="s">"PAID"</span>:
+        <span class="k">raise</span> NotSettleable(order_id, order.status)
+    <span class="k">if</span> <span class="k">not</span> retry <span class="k">and</span> settlement_repo.exists(order_id):
+        <span class="k">raise</span> AlreadySettled(order_id)
+    <span class="c"># ── 수수료 계산 (18줄) ──</span>
+    <span class="k">if</span> seller.grade == <span class="s">"PARTNER"</span>:
+        fee_rate = <span class="s">0.05</span>
+    <span class="k">elif</span> seller.grade == <span class="s">"GENERAL"</span> <span class="k">and</span> order.amount &gt;= <span class="s">1_000_000</span>:
+        fee_rate = <span class="s">0.07</span>
+    <span class="k">else</span>:
+        fee_rate = <span class="s">0.09</span>
+    fee = order.amount * fee_rate
+    <span class="c"># ── 할인 반영 (16줄) ──</span>
+    discount = <span class="s">0</span>
+    <span class="k">for</span> promo <span class="k">in</span> promotions:
+        <span class="k">if</span> promo.applies_to(order):
+            discount += promo.amount_for(order)
+    <span class="c"># ── 저장 (13줄) ──</span>
+    settlement = Settlement(order_id, fee, discount, order.amount - fee - discount)
+    settlement_repo.save(settlement)
+    order.mark_settled()
+    order_repo.save(order)
+    <span class="c"># ── 알림 (8줄) ──</span>
+    <span class="k">if</span> notify:
+        slack.send(<span class="s">f"정산 완료: {order_id}"</span>)
+    <span class="k">return</span> settlement</pre>
+<p>실제 80줄을 다 옮기는 대신 구조만 남겼습니다. 주목할 것은 코드가 아니라 <b>주석</b>입니다. <code># ── 조회 ──</code>, <code># ── 검증 ──</code> 같은 구획 주석이 생겼다는 건, 작성자 스스로 "이 함수 안에 서로 다른 일이 여섯 개 있다"고 자백한 것입니다. 구획 주석은 리팩토링의 신호이면서 동시에 <b>설계도</b>입니다 — 각 주석이 곧 추출될 함수의 이름 후보니까요.</p>
+
+<h2>"한 가지 일"의 기준 — 줄 수가 아니라 추상화 수준</h2>
+<p>"함수는 5줄 이내로", "10줄 넘으면 쪼개라" 같은 줄 수 규칙은 왜 실패할까요? 같은 20줄이라도 어떤 20줄은 한 가지 일이고(복잡한 수식 하나를 옮겨 적은 것), 어떤 20줄은 세 가지 일이기 때문입니다(조회하고, 계산하고, 저장하는 것). 줄 수는 결과이지 기준이 아닙니다.</p>
+<p>제가 실제로 쓰는 기준은 이것입니다. <b>함수가 한 가지 일을 한다는 것은, 함수 본문의 모든 문장이 함수 이름보다 정확히 한 단계 낮은 추상화 수준에 있다는 뜻입니다.</b> 위 함수가 문제인 이유는 길어서가 아니라, "정산한다"라는 이름 아래에 "판매자 등급이 PARTNER면 수수료율 0.05" 같은 <b>세 단계 아래</b>의 문장이 섞여 있어서입니다. 독자는 문단 사이를 오르내리는 게 아니라 층 사이를 오르내리게 되고, 그때 읽기가 무너집니다.</p>
+<p>이 기준으로 목표 형태를 먼저 그리면 이렇게 됩니다.</p>
+<pre class="code"><span class="k">def</span> <span class="f">settle_order</span>(order_id: OrderId) -&gt; Settlement:
+    target = load_settlement_target(order_id)   <span class="c"># 조회 (I/O)</span>
+    ensure_settleable(target)                   <span class="c"># 검증</span>
+    result = calculate_settlement(target)       <span class="c"># 계산 (순수)</span>
+    <span class="k">return</span> commit_settlement(target, result)    <span class="c"># 반영 (I/O)</span></pre>
+<p>네 줄이 전부 같은 층위입니다 — 조회, 검증, 계산, 반영. 정산 담당자에게 업무를 설명할 때 쓰는 문장과 정확히 겹칩니다. 이것이 클린코드가 말하는 내려가기 규칙(stepdown rule)의 실체입니다. 코드를 위에서 아래로 읽을 때 한 함수를 지날 때마다 추상화 수준이 <b>딱 한 계단씩</b> 내려가야 하고, 그 계단이 유지되는 한 함수가 4줄이든 20줄이든 "한 가지 일"입니다.</p>
+
+<h2>실제 리팩토링 순서 — 주석이 함수 이름이 된다</h2>
+<p>목표 형태를 그렸으면 이제 옮겨야 하는데, 순서가 중요합니다. 제가 정산 코드에서 밟은 순서는 세 단계였습니다.</p>
+<p><b>1단계 — 동작을 먼저 고정합니다.</b> 리팩토링은 정의상 동작을 바꾸지 않는 작업이므로, 바뀌지 않았음을 증명할 수단이 먼저 필요합니다. 80줄 함수에 단위 테스트가 있을 리 없으니, 대표 입력 몇 개에 대한 현재 출력을 그대로 스냅샷으로 잡는 특성화 테스트(characterization test)를 만듭니다. 이 테스트는 "옳은 동작"이 아니라 "현재 동작"을 지킵니다 — 그거면 충분합니다.</p>
+<div class="callout"><span class="mark">*</span><p><b>추출 1건 = 커밋 1건.</b> 함수 하나를 빼낼 때마다 테스트를 돌리고 커밋합니다. 지루해 보이지만, 여섯 개를 한꺼번에 빼다가 테스트가 깨지면 어느 추출이 범인인지 알 수 없습니다. 커밋이 잘게 쪼개져 있으면 리팩토링 실패의 비용이 <code>git revert</code> 한 번으로 줄어듭니다.</p></div>
+<p><b>2단계 — 구획 주석을 그대로 Extract Method 합니다.</b> 이름 짓기로 고민할 필요가 없습니다. 주석이 이미 이름입니다. <code># 수수료 계산</code>은 <code>commission_fee</code>가 되고, <code># 검증</code>은 <code>ensure_settleable</code>이 됩니다.</p>
+<p><b>3단계 — 추출이 드러낸 것을 봅니다.</b> 여기가 재미있는 지점인데, 함수를 빼내는 순간 원래 코드에서는 보이지 않던 사실이 드러납니다. 수수료·할인 계산을 빼내려니 인자로 <code>order, seller, promotions</code>가 줄줄이 필요했습니다. 같은 인자 묶음이 함수마다 함께 다닌다는 건 <b>이름 붙지 않은 개념이 숨어 있다</b>는 뜻입니다. 그렇게 <code>SettlementTarget</code>이라는 데이터 덩어리를 발견했고, 계산 함수들은 이렇게 정리됐습니다.</p>
+<pre class="code"><span class="k">@dataclass</span>(frozen=<span class="k">True</span>)
+<span class="k">class</span> <span class="f">SettlementTarget</span>:
+    order: Order
+    seller: Seller
+    promotions: list[Promotion]
+
+<span class="k">def</span> <span class="f">calculate_settlement</span>(t: SettlementTarget) -&gt; SettlementResult:
+    fee = commission_fee(t.order.amount, t.seller.grade)
+    discount = promotion_discount(t.order, t.promotions)
+    <span class="k">return</span> SettlementResult(fee, discount, payout=t.order.amount - fee - discount)
+
+<span class="k">def</span> <span class="f">commission_fee</span>(amount: int, grade: SellerGrade) -&gt; int:
+    <span class="c"># 18줄짜리 if-elif가 정책 테이블 하나로 줄어든다</span>
+    rate = FEE_RATES[grade].rate_for(amount)
+    <span class="k">return</span> <span class="f">int</span>(amount * rate)</pre>
+<p><code>commission_fee</code>의 시그니처를 보십시오. <b>금액과 등급을 받아 수수료를 돌려준다</b> — 함수가 무엇에 의존하고 무엇을 내놓는지 시그니처가 전부 말합니다. 80줄 버전에서는 이 정보가 본문 어딘가에 파묻혀 있었고, 알아내려면 읽는 수밖에 없었습니다. 함수 분리의 실질 이득은 "짧아짐"이 아니라 <b>의존성이 시그니처로 승격되는 것</b>입니다.</p>
+
+<h2>부수효과를 가장자리로 — 계산과 I/O의 분리</h2>
+<p>목표 형태의 네 줄에 <code>(I/O)</code>와 <code>(순수)</code>를 굳이 표시한 이유가 있습니다. 80줄 함수의 진짜 비용은 길이가 아니었습니다. <b>수수료 정책 하나를 검증하려고 DB 리포지토리 네 개와 슬랙 클라이언트까지 mock 해야 한다</b>는 것이었습니다. 계산(순수 로직)과 부수효과(DB 쓰기, 알림)가 한 몸이라서, 가장 자주 바뀌고 가장 자주 테스트해야 하는 수수료·할인 로직이 가장 테스트하기 어려운 자리에 갇혀 있었던 겁니다.</p>
+<p>그래서 쪼갤 때 단순히 "여섯 조각으로" 나눈 게 아니라, <b>순수한 계산을 가운데로 모으고 부수효과를 양쪽 가장자리로</b> 밀었습니다. 조회(읽기 I/O) → 계산(순수) → 반영(쓰기 I/O). 흔히 functional core, imperative shell이라 부르는 배치입니다.</p>
+<pre class="code"><span class="k">def</span> <span class="f">commit_settlement</span>(t: SettlementTarget, r: SettlementResult) -&gt; Settlement:
+    <span class="c"># 쓰기 부수효과는 전부 여기, 한 곳에만 있다</span>
+    settlement = settlement_repo.save(Settlement.of(t.order.id, r))
+    order_repo.save(t.order.mark_settled())
+    events.publish(SettlementCompleted(t.order.id))  <span class="c"># 알림은 구독자의 일로</span>
+    <span class="k">return</span> settlement
+
+<span class="c"># 핵심 로직의 테스트에는 mock이 하나도 없다</span>
+<span class="k">def</span> <span class="f">test_partner_fee_rate</span>():
+    t = target(grade=<span class="s">"PARTNER"</span>, amount=<span class="s">200_000</span>)
+    <span class="k">assert</span> calculate_settlement(t).fee == <span class="s">10_000</span></pre>
+<p>이 배치가 성립하는 이유를 한 번 더 짚겠습니다. 부수효과가 흩어져 있으면 함수의 안전한 호출 여부를 <b>호출부에서 판단할 수 없습니다.</b> "이거 두 번 불러도 되나? 트랜잭션 안에서 불러도 되나?"를 알려면 본문을 다 읽어야 하죠. 부수효과를 <code>commit_settlement</code> 한 곳에 모으면 나머지 함수들은 값을 받아 값을 돌려주는 것만 하므로, 몇 번을 부르든 어디서 부르든 안전합니다. <b>"한 가지 일"의 가장 실용적인 해석은 "계산이거나 부수효과이거나 — 둘 다는 아닌 것"입니다.</b> 이후 정산 채널이 늘어나 계산부를 Template Method와 Strategy로 재구성할 때도, 이 분리가 되어 있었기에 교체 대상이 순수 함수뿐이라 작업이 수월했습니다.</p>
+
+<h2>인자 — 개수보다 정직함</h2>
+<p>클린코드는 인자 0~2개를 권하고 3개부터 의심하라고 합니다. 개수 자체보다 중요한 건 <b>인자가 함수에 대해 거짓말을 하는가</b>입니다. 원래 시그니처를 다시 봅시다.</p>
+<pre class="code"><span class="c"># Before — 호출부는 암호가 된다</span>
+settle_order(order_id, <span class="k">True</span>, <span class="k">False</span>)   <span class="c"># True가 뭐고 False가 뭐더라?</span>
+
+<span class="c"># After — 다른 일에는 다른 이름을</span>
+<span class="k">def</span> <span class="f">settle_order</span>(order_id: OrderId) -&gt; Settlement: ...
+<span class="k">def</span> <span class="f">resettle_order</span>(order_id: OrderId) -&gt; Settlement:
+    <span class="c"># 기존 정산 무효화 + 재정산: 검증 규칙 자체가 다른 별개의 유스케이스</span>
+    ...</pre>
+<p><code>retry=False</code> 같은 불리언 플래그 인자는 "이 함수는 사실 두 개인데 합쳐 놨다"는 자백입니다. 플래그에 따라 검증 로직이 갈라진다면 그건 분기가 아니라 <b>서로 다른 유스케이스</b>입니다 — 첫 정산과 재정산은 사전 조건도, 실패 시 처리도 다릅니다. 함수를 둘로 나누면 각각의 이름이 정확해지고, 호출부의 <code>True, False</code> 암호가 사라집니다.</p>
+<p><code>notify=True</code>는 다른 종류의 문제였습니다. 정산 함수가 슬랙을 아는 순간, 알림 채널이 바뀔 때마다 정산 코드가 수정됩니다. 의존 방향이 거꾸로죠. 그래서 위 코드처럼 <code>SettlementCompleted</code> 이벤트를 발행하는 것으로 바꾸고, 알림은 구독자의 일로 넘겼습니다. 인자 하나를 없애는 일이 사실은 <b>모듈 경계를 긋는 일</b>이었던 셈입니다.</p>
+
+<h2>이른 추상화의 함정 — 잘못 쪼개면 더 나빠진다</h2>
+<p>여기까지만 쓰면 반쪽짜리 글입니다. 함수 분리는 <b>잘못하면 원본보다 나쁜 코드</b>를 만듭니다. 실제로 제가 레거시 UseCase를 개선하며 만난, "규칙은 다 지켰는데 더 읽기 어려운" 코드가 이런 모양이었습니다.</p>
+<pre class="code"><span class="k">class</span> <span class="f">SettlementService</span>:
+    <span class="k">def</span> <span class="f">settle</span>(self, order_id):
+        self._load(order_id)      <span class="c"># self.order, self.seller를 채운다</span>
+        self._validate()          <span class="c"># self.order를 몰래 읽는다</span>
+        self._calc_fee()          <span class="c"># self.fee를 몰래 채운다</span>
+        self._apply_discount()    <span class="c"># self.fee를 몰래 고친다!</span>
+        self._save()              <span class="c"># 전부 다 몰래 읽는다</span>
+
+    <span class="k">def</span> <span class="f">_calc_fee</span>(self):
+        <span class="c"># 시그니처가 아무것도 말해주지 않는다: 입력도 출력도 안 보인다</span>
+        self.fee = self.order.amount * self._rate_for(self.seller)</pre>
+<p>함수는 전부 5줄 이내입니다. 줄 수 규칙으로는 만점이죠. 하지만 모든 함수가 <code>self</code>의 필드를 통해 상태를 주고받는 순간, 그 필드들은 <b>클래스 범위의 전역변수</b>가 됩니다. <code>_calc_fee</code>는 <code>_load</code> 다음, <code>_apply_discount</code> 이전에만 호출해야 안전한데, 그 순서 제약은 어디에도 적혀 있지 않습니다. 원본 80줄 함수에서는 최소한 <b>위에서 아래로 읽으면 순서가 보였습니다.</b> 이제는 다섯 함수를 오가며 어떤 필드가 언제 채워지는지 머릿속으로 추적해야 합니다. 함수는 짧아졌는데 이해의 단위는 오히려 커진 겁니다. 쪼개기의 목적은 짧음이 아니라 <b>독립성</b>인데, 이 코드는 이름만 여섯 개로 늘리고 독립성은 하나도 얻지 못했습니다.</p>
+<p>그래서 경계 사례를 하나 인정해야 합니다. <b>중간 상태를 자연스럽게 공유하는 순차 로직 — 파서, 초기화 시퀀스, 한 곳에서만 쓰이는 마이그레이션 스크립트 — 은 다소 긴 함수 하나가 어설프게 쪼갠 다섯 함수보다 낫습니다.</b> 지역변수는 함수 안에 있을 때 가장 안전한 상태 공유 수단입니다. 쪼갰을 때 각 조각이 시그니처만으로 이해되고 독립적으로 테스트된다면 쪼개는 게 맞고, 조각들이 필드나 호출 순서로 몰래 엮인다면 합쳐 두는 게 맞습니다. 판정 기준은 줄 수가 아니라 <b>추출 후 시그니처가 정직한가</b>입니다.</p>
+<div class="callout"><span class="mark">*</span><p><b>구조는 세 번째 반복에서 세웁니다.</b> 정산 리팩토링에서 Template Method와 Strategy를 도입한 시점은 처음이 아니라, 채널별 분기가 세 곳에서 같은 모양으로 반복되는 걸 확인한 뒤였습니다. 두 코드가 비슷해 보여도 <b>바뀌는 이유가 다르면</b>(우연한 중복) 묶는 순간 서로를 인질로 잡습니다. 두 번까지는 중복을 견디고, 세 번째에 패턴이 확실해졌을 때 추상화하는 편이 되돌리는 비용까지 계산하면 거의 항상 쌉니다.</p></div>
+
+<h2>정리 — 함수를 쪼개기 전에 확인하는 것</h2>
+<p>80줄 함수에서 출발해 여기까지 온 규칙을 목록으로 남깁니다. 전부 "왜"가 있는 규칙들입니다.</p>
+<ul>
+  <li><b>구획 주석은 자백이자 설계도입니다.</b> <code># ── 검증 ──</code>이 보이면 그 주석이 곧 추출할 함수의 이름입니다.</li>
+  <li><b>기준은 줄 수가 아니라 추상화 수준입니다.</b> 본문의 모든 문장이 함수 이름보다 한 단계만 낮으면, 그 함수는 길이와 무관하게 한 가지 일을 합니다.</li>
+  <li><b>계산은 가운데로, 부수효과는 가장자리로.</b> "계산이거나 부수효과이거나 — 둘 다는 아닌 것." 핵심 로직의 테스트에서 mock이 사라지는 것으로 성공을 확인합니다.</li>
+  <li><b>불리언 플래그 인자는 함수 두 개를 합쳐 놓은 것입니다.</b> 플래그에 따라 검증이 갈라지면 유스케이스가 다른 것이니 이름을 나눠 줍니다.</li>
+  <li><b>추출 후 조각들이 필드·호출 순서로 엮이면 잘못 쪼갠 것입니다.</b> 시그니처가 입력과 출력을 정직하게 말하지 못하는 분리는 되돌립니다.</li>
+  <li><b>추상화는 세 번째 반복에서.</b> 우연한 중복을 묶으면 코드끼리 인질극이 벌어집니다.</li>
+  <li><b>동작 고정 테스트 먼저, 추출 1건 = 커밋 1건.</b> 리팩토링의 안전망은 신중함이 아니라 절차입니다.</li>
+</ul>
+<p>이 기준들의 공통 뿌리는 하나입니다. 함수 분리는 코드를 짧게 만드는 기술이 아니라, <b>의존성과 의도를 시그니처라는 공개된 자리로 끌어올리는 기술</b>이라는 것. 다음 편에서는 그 시그니처가 실패를 어떻게 말해야 하는지 — 에러 처리로 이어갑니다.</p>
+
+    <div class="post-tags"><span class="pt-head">태그</span><a class="tag" href="index.html">클린코드</a><a class="tag" href="index.html">함수 분리</a><a class="tag" href="index.html">추상화 수준</a></div>
+    <div class="post-cta"><span class="t">이 시리즈의 이전 편 → <b>클린코드 · 이름</b></span><a class="chip primary" href="clean-code-naming.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="clean-code-naming.html"><div class="np-key">← 이전 글</div><div class="np-title">클린코드 · 이름</div></a>
+    <a class="next" href="clean-code-errors.html"><div class="np-key">다음 글 →</div><div class="np-title">클린코드 · 에러</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

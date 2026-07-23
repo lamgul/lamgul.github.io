@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>작은 팀의 AWS — EC2 한 대에서 시작하는 아키텍처 — 안성진</title>
+<meta name="description" content="EC2 단일 인스턴스 → ALB+ASG → 관리형 서비스로 넓혀가는 단계별 선택 기준을 비용과 함께 정리한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="작은 팀의 AWS — EC2 한 대에서 시작하는 아키텍처">
+<meta property="og:description" content="EC2 단일 인스턴스 → ALB+ASG → 관리형 서비스로 넓혀가는 단계별 선택 기준을 비용과 함께 정리한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"작은 팀의 AWS — EC2 한 대에서 시작하는 아키텍처","datePublished":"2024-11-10","dateModified":"2026-07-23","inLanguage":"ko","description":"EC2 단일 인스턴스 → ALB+ASG → 관리형 서비스로 넓혀가는 단계별 선택 기준을 비용과 함께 정리한다.","keywords":"AWS · 아키텍처 · 비용","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/aws-small-team-architecture.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / aws-small-team-architecture</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 인프라</p>
+    <h1>작은 팀의 AWS — EC2 한 대에서 시작하는 아키텍처</h1>
+    <div class="post-meta">
+      <span>2024년 11월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>AWS · 아키텍처 · 비용</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">AWS 아키텍처 문서는 대개 완성형에서 시작합니다. 멀티 AZ, 오토스케일링, 관리형 데이터베이스가 처음부터 그려져 있죠. 하지만 두세 명이 만드는 서비스의 첫 계산서는 다른 이야기입니다. 이 글은 <b>EC2 한 대 → ALB+ASG → 관리형 서비스</b>로 단계를 넓혀갈 때, 각 단계로 넘어가는 판단 기준과 월 비용 감각을 정리합니다. 금액은 us-east-1 온디맨드 기준의 대략치이고, 리전과 시점에 따라 달라지니 절대값보다 <b>비율의 감각</b>으로 읽어 주세요.</p>
+
+<h2>1. 한 대로 시작해도 되는가</h2>
+<p>대부분의 경우, 됩니다. 검증 단계의 트래픽은 <code>t4g.small</code> 한 대가 감당하고도 남습니다. 제가 만들었던 YOLO 차량 감지 MVP처럼 "이게 되는가"를 확인하는 물건이라면 더더욱 그렇습니다. 이 단계에서 멀티 AZ를 그리는 것은 아직 아무에게도 하지 않은 약속을 위해 돈을 내는 일입니다.</p>
+<p>대신 리스크를 정직하게 적어둡니다. 한 대 아키텍처는 인스턴스 장애나 AZ 장애가 나면 <b>그냥 내려갑니다</b>. SLA를 약속한 고객이 없고, 몇십 분의 다운타임을 스스로 감당할 수 있다면 합리적인 거래입니다. 그 경계를 넘는 순간이 오면 2단계로 갑니다 — 그 신호는 3절에서 다룹니다.</p>
+<pre class="code"><span class="c"># main.tf — 시작은 이 정도면 충분합니다</span>
+<span class="k">resource</span> <span class="s">"aws_instance"</span> <span class="s">"app"</span> {
+  <span class="k">ami</span>                    = data.aws_ami.al2023.id
+  <span class="k">instance_type</span>          = <span class="s">"t4g.small"</span>   <span class="c"># Arm, 온디맨드 약 $12/월</span>
+  <span class="k">vpc_security_group_ids</span> = [aws_security_group.app.id]
+  <span class="k">user_data</span>              = file(<span class="s">"cloud-init.sh"</span>)
+
+  <span class="k">root_block_device</span> {
+    <span class="k">volume_type</span> = <span class="s">"gp3"</span>
+    <span class="k">volume_size</span> = 30                     <span class="c"># $0.08/GB·월 → 약 $2.4</span>
+  }
+
+  <span class="k">tags</span> = { <span class="k">Name</span> = <span class="s">"app-single"</span> }
+}
+
+<span class="k">resource</span> <span class="s">"aws_eip"</span> <span class="s">"app"</span> {
+  <span class="k">instance</span> = aws_instance.app.id         <span class="c"># 인스턴스를 갈아끼워도 IP 고정</span>
+}</pre>
+<p>월 비용은 인스턴스 약 $12, EBS 약 $2.4, 그리고 2024년부터 과금되는 퍼블릭 IPv4 주소 약 $3.6을 더해 <b>$20 미만</b>입니다. 프리 티어나 세이빙 플랜을 쓰면 더 내려갑니다. 이 금액에서 시작해도 되는 이유는, 위 코드가 그대로 다음 단계의 재료가 되기 때문입니다.</p>
+
+<h2>2. 죽는 것은 괜찮다, 못 돌아오는 것이 문제다</h2>
+<p>한 대 아키텍처의 진짜 리스크는 다운타임이 아니라 <b>복구 불능</b>입니다. SSH로 들어가 손으로 패키지를 깔고 설정을 고친 서버는, 장애가 났을 때 같은 상태로 다시 만들 수 없습니다. 터미널에서 손으로 한 일은 장애 순간에 재현되지 않습니다.</p>
+<p>그래서 한 대일수록 규율이 필요합니다. 부팅 시 상태는 전부 <code>user_data</code>에, 앱은 컨테이너에, 데이터는 EBS 스냅샷에 둡니다. 이렇게 하면 인스턴스는 소모품이 됩니다 — 이상하면 지우고 다시 띄우면 됩니다.</p>
+<pre class="code"><span class="c">#!/bin/bash</span>
+<span class="c"># cloud-init.sh — 부팅마다 같은 상태를 만든다</span>
+dnf install -y docker
+systemctl enable --now docker
+usermod -aG docker ec2-user
+
+<span class="c"># 앱은 컨테이너로, 재시작 정책은 데몬에게 맡긴다</span>
+docker run -d --name app <span class="k">--restart unless-stopped</span> \
+  -p 80:8000 --env-file /etc/app/.env \
+  ghcr.io/example/app:<span class="s">1.4.2</span>   <span class="c"># latest 대신 버전 고정</span></pre>
+<p>스냅샷은 손으로 뜨지 않고 <b>Data Lifecycle Manager</b>로 자동화합니다. "매일 새벽 1시, 7개 보관" 정책 하나면 됩니다. 그리고 한 번은 실제로 스냅샷에서 인스턴스를 새로 띄워 보세요. 백업의 기준은 "있다"가 아니라 <b>"복구를 해봤다"</b>입니다. 정산 코드를 리팩토링하면서 배운 감각인데, 돈이 걸린 데이터 앞에서는 두 문장의 차이가 큽니다.</p>
+<p>이 규율의 보상은 다음 단계에서 옵니다. <code>user_data</code>로 정리해 둔 부팅 스크립트는 거의 그대로 ASG의 launch template이 됩니다.</p>
+
+<h2>3. 두 번째 인스턴스가 필요해지는 신호</h2>
+<p>스케일 아웃의 신호는 CPU 그래프가 아니라 문장으로 옵니다. 배포할 때마다 수십 초씩 끊기는 게 사용자에게 보이기 시작할 때, 그리고 회의에서 "이 한 대가 죽으면"이라는 말이 나오기 시작할 때입니다. 트래픽 때문이라면 우선 인스턴스 크기를 키우는 스케일 업이 더 싸고 단순한 답인 경우가 많습니다. 두 대로 가는 이유는 대부분 성능이 아니라 <b>무중단 배포와 장애 허용</b>입니다.</p>
+<pre class="code"><span class="c"># ALB가 받고, ASG가 두 AZ에 최소 2대를 유지한다</span>
+<span class="k">resource</span> <span class="s">"aws_lb"</span> <span class="s">"app"</span> {
+  <span class="k">load_balancer_type</span> = <span class="s">"application"</span>    <span class="c"># 기본 약 $16/월 + LCU</span>
+  <span class="k">subnets</span>            = module.vpc.public_subnets
+}
+
+<span class="k">resource</span> <span class="s">"aws_autoscaling_group"</span> <span class="s">"app"</span> {
+  <span class="k">min_size</span>            = 2
+  <span class="k">max_size</span>            = 4
+  <span class="k">vpc_zone_identifier</span> = module.vpc.private_subnets
+  <span class="k">target_group_arns</span>   = [aws_lb_target_group.app.arn]
+  <span class="k">health_check_type</span>   = <span class="s">"ELB"</span>            <span class="c"># 포트가 아니라 /health로 판정</span>
+
+  <span class="k">launch_template</span> {
+    <span class="k">id</span>      = aws_launch_template.app.id  <span class="c"># 2절의 cloud-init이 여기로</span>
+    <span class="k">version</span> = <span class="s">"$Latest"</span>
+  }
+}</pre>
+<p>비용은 정직하게 올라갑니다. ALB 기본요금 약 $16에 LCU 사용량이 붙고, 인스턴스가 두 대가 되니 1단계의 세 배쯤인 <b>월 $60 안팎</b>이 됩니다. 그런데 돈보다 큰 비용이 따로 있습니다. 두 대가 되는 순간 앱이 <b>무상태</b>여야 한다는 전제입니다. 메모리에 두던 세션은 Redis나 DB로, 로컬 디스크에 받던 업로드 파일은 S3로 옮겨야 합니다. 경험상 이 코드 작업이 테라폼 작업보다 오래 걸립니다. 그래서 처음부터 무상태로 짜두면, 2단계 전환은 인프라 코드 몇십 줄의 일이 됩니다.</p>
+
+<h2>4. 상태는 관리형으로 밀어낸다</h2>
+<p>DB를 EC2에 직접 올리면 백업, 마이너 버전 패치, 장애 시 복구가 전부 내 일이 됩니다. RDS <code>db.t4g.micro</code>는 약 $12/월(+스토리지)로 자동 백업과 시점 복구(PITR), 패치 창을 대신 맡아 줍니다. 작은 팀에서 관리형 요금이 비싸 보인다면 비교 대상이 틀린 겁니다. 비교 대상은 인스턴스 요금이 아니라 <b>내 시간</b>입니다. 온프레미스에서 vLLM을 서빙해 본 뒤로 이 감각이 분명해졌습니다. 관리형이 없는 세계에서는 패치와 모니터링과 새벽 장애 대응이 전부 사람 몫이었습니다.</p>
+<pre class="code"><span class="k">resource</span> <span class="s">"aws_db_instance"</span> <span class="s">"main"</span> {
+  <span class="k">engine</span>            = <span class="s">"postgres"</span>
+  <span class="k">instance_class</span>    = <span class="s">"db.t4g.micro"</span>  <span class="c"># 약 $12/월 + 스토리지</span>
+  <span class="k">allocated_storage</span> = 20
+
+  <span class="k">multi_az</span>                = false      <span class="c"># 처음엔 스냅샷 복구로 충분, 켜면 2배</span>
+  <span class="k">backup_retention_period</span> = 7          <span class="c"># 7일 PITR</span>
+  <span class="k">deletion_protection</span>     = true       <span class="c"># terraform destroy 사고 방지</span>
+  <span class="k">db_subnet_group_name</span>    = aws_db_subnet_group.main.name
+}</pre>
+<p>같은 논리가 다른 상태에도 적용됩니다. 파일은 S3(스탠더드 $0.023/GB·월)로, 큐는 SQS로. 크롤링 파이프라인처럼 작업 큐가 필요한 구조라면, SQS는 월 백만 요청까지 무료 구간이 있어서 브로커를 직접 띄워 돌보는 것과 비교 자체가 성립하지 않습니다. 원칙은 하나입니다 — <b>차별화가 아닌 것은 밀어내고, 팀의 시간은 앱에 쓴다</b>. 반대로 vLLM 서빙처럼 관리형이 아직 비싸거나 요건에 안 맞는 워크로드는 직접 운영이 답일 수 있습니다. 원칙이지 교리는 아닙니다.</p>
+
+<h2>5. 월 비용 감각 — 계산서에서 놀라는 항목들</h2>
+<p>단계별로 대략 이렇게 잡힙니다. 1단계 한 대는 <b>$20 미만</b>, 2단계 ALB+ASG 2대는 <b>$60 안팎</b>, 3단계에서 RDS와 S3를 더하면 <b>$80~100</b>. 여기까지는 예상 가능한 증가입니다. 작은 팀의 계산서를 실제로 놀라게 하는 항목은 따로 있습니다.</p>
+<p>첫째, <b>NAT 게이트웨이</b>. 시간당 $0.045로 그냥 켜두기만 해도 약 $32/월이고, 처리하는 트래픽에 GB당 $0.045가 또 붙습니다. 프라이빗 서브넷을 만들면서 무심코 하나 띄우면 인스턴스보다 비싼 항목이 됩니다. 둘째, <b>데이터 전송 아웃</b>. 인터넷으로 나가는 트래픽은 GB당 약 $0.09라서, 이미지나 영상을 EC2에서 직접 서빙하면 조용히 쌓입니다. 셋째, 앞서 말한 <b>퍼블릭 IPv4</b> — 주소 하나에 약 $3.6/월이니 놀리는 EIP부터 정리합니다.</p>
+<div class="callout"><span class="mark">*</span><p>NAT 게이트웨이 앞에서 한 번 멈추세요. 프라이빗 서브넷의 인스턴스가 밖으로 나갈 일이 <b>S3와 ECR뿐이라면</b>, S3는 무료인 게이트웨이 엔드포인트로, ECR은 시간당 과금이 있지만 대개 NAT보다 싼 인터페이스 엔드포인트로 대체할 수 있습니다. 아예 초기에는 퍼블릭 서브넷 + 보안 그룹 인바운드 차단으로 충분한 경우도 많습니다. "프라이빗 서브넷이니까 NAT"는 반사가 아니라 계산의 결과여야 합니다.</p></div>
+<p>마지막으로, 워크로드가 안정되면 <b>세이빙 플랜이나 예약 인스턴스</b>로 컴퓨트 비용을 상당 폭 줄일 수 있습니다. 다만 이건 아키텍처가 자리를 잡은 뒤의 이야기입니다. 어떤 인스턴스 타입으로 갈지 흔들리는 단계에서 1년 약정부터 거는 것은 순서가 뒤바뀐 절약입니다.</p>
+
+<h2>6. 판단 기준 요약</h2>
+<p>단계를 넘는 기준은 트래픽 수치가 아니라 <b>약속</b>입니다. 누구에게 무엇을 약속했는가를 먼저 적고, 그 약속을 지키는 최소 구조를 고릅니다.</p>
+<p>정리하면 이렇습니다. <b>아무에게도 SLA를 약속하지 않았다</b>면 EC2 한 대 — 단, <code>user_data</code>와 스냅샷으로 복구 가능하게. <b>배포 중단이 사용자에게 보이고, 한 대 장애가 사업 문제가 된다</b>면 ALB+ASG — 단, 그 전에 앱을 무상태로. <b>데이터를 잃으면 안 되는 단계</b>가 되면 상태를 관리형으로 — 단, 복구 리허설까지가 도입입니다. 각 단계는 이전 단계의 규율 위에 서 있어서, 순서를 건너뛰면 건너뛴 만큼 다음 단계에서 갚게 됩니다.</p>
+<p>그리고 어느 단계에 있든, 두 대가 되기 전에 갖춰야 할 것이 하나 있습니다. 지금 서버 안에서 무슨 일이 벌어지는지 보이게 만드는 일 — 로그, 메트릭, 알림입니다. 구조를 넓히는 판단 자체가 이 데이터 위에서만 가능하기 때문입니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">AWS</a>
+      <a class="tag" href="index.html">아키텍처</a>
+      <a class="tag" href="index.html">비용</a>
+    </div>
+    <div class="post-cta"><span class="t">구조를 넓히기 전에 갖출 것 → <b>관측 가능성 기초 글</b></span><a class="chip primary" href="observability-basics.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="kubernetes-oomkilled.html"><div class="np-key">← 이전 글</div><div class="np-title">쿠버네티스 requests/limits</div></a>
+    <a class="next" href="ddd-aggregate-boundaries.html"><div class="np-key">다음 글 →</div><div class="np-title">DDD 애그리거트 경계</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

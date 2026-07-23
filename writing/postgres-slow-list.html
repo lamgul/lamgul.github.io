@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -82,7 +83,13 @@ LIMIT 20;   <span class="c">-- 몇 페이지든 일정하게 빠름</span></pre>
 
 <h2>덤: N+1도 같이 잡는다</h2>
 <p>목록이 느린 또 다른 흔한 이유는 각 행마다 연관을 다시 조회하는 N+1입니다. ORM의 지연 로딩을 믿지 말고 <code>JOIN</code>이나 배치 로딩으로 한 방에 가져오세요. 쿼리 로그를 켜서 "화면 하나에 쿼리 몇 개 나가나"를 세는 습관이 반쯤은 답입니다.</p>
-    
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">PostgreSQL</a>
+      <a class="tag" href="index.html">인덱스</a>
+      <a class="tag" href="index.html">페이지네이션</a>
+      <a class="tag" href="index.html">성능</a>
+    </div>
   </article>
 
   <nav class="proj-nav wrap" aria-label="글 이동">
@@ -96,5 +103,6 @@ LIMIT 20;   <span class="c">-- 몇 페이지든 일정하게 빠름</span></pre>
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

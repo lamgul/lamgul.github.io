@@ -13,6 +13,9 @@
 }
 .w-filter button:hover { border-color: var(--accent); color: var(--accent); }
 .w-filter button.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.w-filter button .cnt { color: var(--ink-3); font-size: 0.92em; }
+.w-filter button:hover .cnt { color: inherit; }
+.w-filter button.active .cnt { color: inherit; opacity: 0.7; }
 .w-yr { font-family: var(--mono); font-size: var(--t--1); letter-spacing: 0.14em; color: var(--ink-3); padding: var(--sp-4) 0 0.4rem; }
 .w-group:first-child .w-yr { padding-top: 0; }
 .w-item[hidden], .w-group[hidden] { display: none; }

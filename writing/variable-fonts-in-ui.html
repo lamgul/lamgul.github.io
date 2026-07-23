@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -78,6 +79,13 @@ keys.forEach((k) =&gt; state[k] = from[k] + (target[k] - from[k]) * ease(p));</p
     <p>입력할 때마다 폰트를 리레이아웃하지만, 단일 요소라 60fps가 유지됩니다. 문단이 길어지면 <code>content-visibility</code>가 필요해질 겁니다. 미리보기를 <code>contenteditable</code>로 만든 탓에 붙여넣기 서식이 딸려 오는 문제도 남아 있습니다. <code>plaintext-only</code>의 크로스브라우징이 아직 애매해서, <b>알고 남겨둔 빚</b>으로 두었습니다.</p>
     <p>결국 이 도구를 만든 건 폰트를 <em>읽기</em> 위해서였습니다. 축을 직접 만져보고 나서야 "이 폰트는 왜 이 축을 넣었을까"가 이해됐거든요. 좋은 도구는 종종 대상을 더 잘 보게 해주는 렌즈입니다.</p>
 
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">CSS</a>
+      <a class="tag" href="index.html">Variable Fonts</a>
+      <a class="tag" href="index.html">타이포그래피</a>
+      <a class="tag" href="index.html">프론트</a>
+    </div>
     <div class="post-cta">
       <span class="t">글자가 숨 쉬는 걸 직접 만져보기 → <b>Type Playground</b></span>
       <a class="chip primary" href="../projects/type-playground/">프로젝트 보기 ↗</a>
@@ -95,5 +103,6 @@ keys.forEach((k) =&gt; state[k] = from[k] + (target[k] - from[k]) * ease(p));</p
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

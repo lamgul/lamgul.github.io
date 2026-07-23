@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -77,6 +78,13 @@ vllm serve Qwen2.5-7B-Instruct-AWQ \
   <li><b>양자화는 공짜 점심에 가깝다</b>(이 태스크에선). 다만 코드 생성·수리 논증처럼 정밀도가 중요한 태스크라면 반드시 벤치마크를 돌려야 한다.</li>
   <li>결국 LLM 서빙은 <b>인프라 문제</b>였다. 모델은 30분이면 올리지만, 지연을 관리하며 운영에 태우는 건 그 뒤의 일이다.</li>
 </ul>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">vLLM</a>
+      <a class="tag" href="index.html">양자화</a>
+      <a class="tag" href="index.html">GPU</a>
+      <a class="tag" href="index.html">인프라</a>
+    </div>
     <div class="post-cta"><span class="t">이 서빙이 실제로 돌아가는 곳 → <b>SafeIn</b></span><a class="chip primary" href="../cases/safein.html">사례 보기 ↗</a></div>
   </article>
 
@@ -91,5 +99,6 @@ vllm serve Qwen2.5-7B-Instruct-AWQ \
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

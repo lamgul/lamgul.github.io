@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -73,6 +74,13 @@ jmap -dump:live,format=b,file=heap.hprof &lt;pid&gt;</pre>
 
 <h2>4. 증상이 아니라 원인</h2>
 <p>힙덤프가 알려준 건 "무엇이 쌓였나"였고, 코드로 돌아가 "왜 쌓였나"를 봤습니다. 멀티스레드에서 동기화가 빠져 객체가 회수되지 못하고 있었죠. <code>synchronized</code> 한 줄이 답이었습니다. 도구는 범위를 좁혀줄 뿐, 마지막 한 걸음은 결국 코드를 읽는 일입니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">트러블슈팅</a>
+      <a class="tag" href="index.html">Heap Dump</a>
+      <a class="tag" href="index.html">MAT</a>
+      <a class="tag" href="index.html">GC</a>
+    </div>
     <div class="post-cta"><span class="t">이 추적의 전말 → <b>7일마다 죽던 서버</b></span><a class="chip primary" href="../cases/memory-leak.html">사례 보기 ↗</a></div>
   </article>
 
@@ -87,5 +95,6 @@ jmap -dump:live,format=b,file=heap.hprof &lt;pid&gt;</pre>
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

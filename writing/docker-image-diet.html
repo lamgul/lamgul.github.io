@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -75,8 +76,15 @@ CMD ["node", "dist/main.js"]</pre>
 
 <h2>레이어 캐시는 '순서'가 전부</h2>
 <p>Docker는 레이어를 위에서부터 캐시합니다. 자주 바뀌는 걸 아래에 두는 게 핵심입니다. <b>의존성 파일을 먼저 <code>COPY</code>하고 설치</b>한 뒤, 소스를 나중에 복사하세요. 소스만 바뀌면 <code>npm ci</code> 레이어는 캐시가 그대로 살아, 재빌드가 몇 초로 끝납니다. 순서를 뒤집으면 매번 전부 다시 깝니다.</p>
+<h2>빼먹기 쉬운 두 가지 — .dockerignore와 비루트</h2>
 <div class="callout"><span class="mark">*</span><p><code>.dockerignore</code>를 빼먹지 마세요. <code>node_modules</code>·<code>.git</code>이 빌드 컨텍스트로 딸려 들어가면 캐시가 매번 깨지고 빌드가 느려집니다. 그리고 <b>비루트 유저</b>로 실행하는 건 이미지 다이어트가 아니라 기본 위생입니다.</p></div>
-    
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">인프라</a>
+      <a class="tag" href="index.html">Docker</a>
+      <a class="tag" href="index.html">멀티스테이지</a>
+      <a class="tag" href="index.html">캐시</a>
+    </div>
   </article>
 
   <nav class="proj-nav wrap" aria-label="글 이동">
@@ -90,5 +98,6 @@ CMD ["node", "dist/main.js"]</pre>
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

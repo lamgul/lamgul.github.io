@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: Attention Is All You Need — 수식을 손으로 풀다 — 안성진</title>
+<meta name="description" content="Scaled dot-product attention의 수식 하나를 numpy로 구현하며 Transformer가 RNN을 대체한 이유를 확인한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: Attention Is All You Need — 수식을 손으로 풀다">
+<meta property="og:description" content="Scaled dot-product attention의 수식 하나를 numpy로 구현하며 Transformer가 RNN을 대체한 이유를 확인한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: Attention Is All You Need — 수식을 손으로 풀다","datePublished":"2021-03-02","dateModified":"2026-07-23","inLanguage":"ko","description":"Scaled dot-product attention의 수식 하나를 numpy로 구현하며 Transformer가 RNN을 대체한 이유를 확인한다.","keywords":"Transformer · Attention · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/attention-paper-analysis.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / attention-paper-analysis</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: Attention Is All You Need — 수식을 손으로 풀다</h1>
+    <div class="post-meta">
+      <span>2021년 3월</span><span class="dot-sep">•</span>
+      <span>약 10분</span><span class="dot-sep">•</span>
+      <span>Transformer · Attention · 논문</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">온프레미스에서 vLLM으로 LLM을 서빙하면서 매일 "KV 캐시"라는 말을 썼습니다. 그런데 그 <b>K와 V가 정확히 무엇이냐</b>고 스스로에게 물었을 때 말문이 막혔습니다. 그래서 원점으로 돌아갔습니다 — 2017년 Vaswani 등의 논문에 있는 수식 하나를 numpy로 직접 풀어본 기록입니다.</p>
+
+<h2>1. RNN은 왜 병목이었나</h2>
+<p>Transformer 이전의 기계번역은 RNN 계열이 지배했습니다. RNN의 구조적 한계는 두 가지입니다. 첫째, <code>h_t</code>를 계산하려면 <code>h_(t-1)</code>이 먼저 나와야 하므로 <b>토큰을 순서대로 하나씩</b> 처리할 수밖에 없습니다. GPU는 병렬 연산 기계인데, 문장 길이만큼의 순차 단계가 학습을 가로막습니다. 둘째, 문장 앞의 단어와 뒤의 단어가 관계를 맺으려면 그 사이 모든 스텝을 거쳐야 해서, <b>멀리 떨어진 의존 관계일수록 신호가 희미해집니다</b>.</p>
+<p>논문의 답은 재귀를 통째로 버리는 것이었습니다. 모든 토큰 쌍의 관계를 <b>행렬곱 한 번</b>으로 계산하면, 순차 단계는 사라지고 어떤 두 토큰 사이의 경로 길이도 상수가 됩니다. 그 결과가 base 모델 기준 P100 GPU 8장으로 약 12시간 학습, WMT 2014 영→독 번역에서 big 모델 28.4 BLEU — 당시 앙상블 모델까지 제친 수치였습니다.</p>
+
+<h2>2. 수식 하나 — softmax(QKᵀ/√d_k)V</h2>
+<p>논문의 핵심은 이 한 줄입니다. <b>Attention(Q, K, V) = softmax(QKᵀ/√d_k)V</b>. 저는 이걸 검색에 비유해서야 이해했습니다. <b>Q(query)</b>는 각 토큰이 던지는 질의, <b>K(key)</b>는 각 토큰이 내건 색인, <b>V(value)</b>는 실제 내용입니다. <code>QKᵀ</code>로 모든 질의-색인 쌍의 유사도를 구하고, softmax로 행마다 합이 1인 <b>확률분포("어디를 볼 것인가")</b>를 만들어, 그 가중치로 V를 섞습니다.</p>
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> <span class="f">softmax</span>(x, axis=-1):
+    x = x - x.max(axis=axis, keepdims=<span class="k">True</span>)  <span class="c"># 오버플로 방지</span>
+    e = np.exp(x)
+    <span class="k">return</span> e / e.sum(axis=axis, keepdims=<span class="k">True</span>)
+
+<span class="k">def</span> <span class="f">attention</span>(Q, K, V):
+    d_k = Q.shape[-1]
+    scores  = Q @ K.swapaxes(-2, -1) / np.sqrt(d_k)  <span class="c"># (n, n) 유사도</span>
+    weights = softmax(scores)            <span class="c"># 행마다 합이 1인 분포</span>
+    <span class="k">return</span> weights @ V, weights
+
+n, d_k = 4, 8                            <span class="c"># 토큰 4개, 차원 8</span>
+rng = np.random.default_rng(<span class="s">0</span>)
+x = rng.normal(size=(n, d_k))            <span class="c"># 토큰 임베딩이라 치자</span>
+out, w = attention(x, x, x)              <span class="c"># self-attention: Q=K=V=x</span>
+print(w.round(<span class="s">2</span>))                        <span class="c"># 토큰별 "어디를 보는가"</span></pre>
+<p>실제 모델에서는 Q, K, V가 같은 입력 x에 학습된 가중치 <code>W_q, W_k, W_v</code>를 곱해 만들어집니다. 위 예제는 투영을 생략한 최소형이지만, 수식의 뼈대는 이게 전부입니다. 10줄 남짓입니다.</p>
+<div class="callout"><span class="mark">*</span><p>논문 수식이 안 읽힐 때는 기호보다 <b>shape를 먼저 따라가세요</b>. <code>(n, d_k) @ (d_k, n) → (n, n)</code>, 거기에 <code>(n, n) @ (n, d_v) → (n, d_v)</code>. shape가 맞아떨어지는 순간 수식이 코드로 읽히기 시작합니다.</p></div>
+
+<h2>3. √d_k로 나누는 이유</h2>
+<p>처음엔 √d_k를 장식처럼 지나쳤는데, 논문은 각주에서 이유를 분명히 밝힙니다. 성분이 평균 0, 분산 1인 두 벡터의 내적은 <b>분산이 d_k만큼 커집니다</b>. 직접 확인해 봤습니다.</p>
+<pre class="code">d = <span class="s">512</span>
+q = rng.normal(size=(<span class="s">10000</span>, d))
+k = rng.normal(size=(<span class="s">10000</span>, d))
+dots = (q * k).sum(axis=<span class="s">1</span>)
+
+print(dots.std())                <span class="c"># ≈ 22.6 ≈ sqrt(512)</span>
+print((dots / np.sqrt(d)).std()) <span class="c"># ≈ 1.0</span></pre>
+<p>표준편차 22가 넘는 값들이 softmax에 들어가면 지수 함수가 큰 값 하나로 쏠려 사실상 <b>one-hot</b>이 됩니다. 기울기는 0에 가까워지고 학습이 멈춥니다. √d_k로 나누는 한 줄은 softmax를 기울기가 살아 있는 구간에 붙잡아 두는 장치입니다. 수식의 "잡다한 상수"에도 다 이유가 있다는 걸 이 논문에서 배웠습니다.</p>
+
+<h2>4. 멀티헤드 — 관점을 8개로 쪼갠다</h2>
+<p>attention을 d_model=512 전체 차원으로 한 번 수행하는 대신, 논문은 <b>64차원짜리 헤드 8개</b>로 쪼갭니다(base 모델 기준 h=8, d_k=d_v=64). 각 헤드는 자기만의 투영 행렬을 가지므로 서로 다른 관계 — 어떤 헤드는 인접 단어, 어떤 헤드는 문법적 호응 — 를 보도록 학습될 수 있습니다. 총 연산량은 전체 차원 한 방과 거의 같습니다.</p>
+<pre class="code"><span class="k">def</span> <span class="f">multi_head</span>(x, W_q, W_k, W_v, W_o, h=<span class="s">8</span>):
+    n, d_model = x.shape
+    d_k = d_model // h                   <span class="c"># 512 // 8 = 64</span>
+    <span class="c"># (n, d_model) → (h, n, d_k): 헤드 축을 앞으로</span>
+    Q = (x @ W_q).reshape(n, h, d_k).swapaxes(<span class="s">0</span>, <span class="s">1</span>)
+    K = (x @ W_k).reshape(n, h, d_k).swapaxes(<span class="s">0</span>, <span class="s">1</span>)
+    V = (x @ W_v).reshape(n, h, d_k).swapaxes(<span class="s">0</span>, <span class="s">1</span>)
+    heads, _ = attention(Q, K, V)        <span class="c"># 헤드 8개를 한 번에</span>
+    concat = heads.swapaxes(<span class="s">0</span>, <span class="s">1</span>).reshape(n, d_model)
+    <span class="k">return</span> concat @ W_o                  <span class="c"># 다시 하나로 섞는다</span>
+
+d_model = <span class="s">512</span>
+W = [rng.normal(size=(d_model, d_model)) / np.sqrt(d_model) <span class="k">for</span> _ <span class="k">in</span> range(<span class="s">4</span>)]
+x = rng.normal(size=(<span class="s">6</span>, d_model))       <span class="c"># 토큰 6개짜리 문장</span>
+print(multi_head(x, *W).shape)           <span class="c"># (6, 512) — 들어온 모양 그대로</span></pre>
+<p>2절의 <code>attention</code> 함수를 그대로 재사용했다는 점이 중요합니다. <code>swapaxes(-2, -1)</code>로 써 둔 덕에 헤드 축이 배치처럼 붙어도 같은 코드가 돌아갑니다. reshape 두 번과 행렬곱 하나 — 멀티헤드의 실체는 이게 전부입니다.</p>
+
+<h2>5. 포지셔널 인코딩 — 순서를 더하기로 복원한다</h2>
+<p>attention에는 치명적인 성질이 하나 있습니다. 토큰의 순서를 바꿔도 결과가 (행 순서만 바뀐 채) 똑같다는 것 — <b>순열 불변</b>입니다. "개가 사람을 물었다"와 "사람이 개를 물었다"를 구분하지 못합니다. 논문은 순서 정보를 담은 벡터를 임베딩에 <b>그냥 더하는</b> 방식을 택했고, 그 벡터를 주기가 기하급수적으로 다른 사인·코사인으로 만들었습니다.</p>
+<pre class="code"><span class="k">def</span> <span class="f">positional_encoding</span>(n, d_model):
+    pos = np.arange(n)[:, <span class="k">None</span>]              <span class="c"># (n, 1) 위치</span>
+    i   = np.arange(d_model // <span class="s">2</span>)[<span class="k">None</span>, :]   <span class="c"># (1, d/2) 차원 인덱스</span>
+    angle = pos / <span class="s">10000</span> ** (<span class="s">2</span> * i / d_model)
+    pe = np.empty((n, d_model))
+    pe[:, <span class="s">0</span>::<span class="s">2</span>] = np.sin(angle)              <span class="c"># 짝수 차원</span>
+    pe[:, <span class="s">1</span>::<span class="s">2</span>] = np.cos(angle)              <span class="c"># 홀수 차원</span>
+    <span class="k">return</span> pe
+
+x = x + positional_encoding(<span class="s">6</span>, d_model)      <span class="c"># 임베딩에 더하면 끝</span></pre>
+<p>낮은 차원은 토큰마다 빠르게 진동해 이웃을 구분하고, 높은 차원은 문장 전체에 걸쳐 천천히 변해 대략적 위치를 담습니다. 사인·코사인 쌍으로 만들면 위치 차이(상대 위치)가 선형 변환으로 표현된다는 성질도 논문이 이 형태를 고른 이유로 제시됩니다. "concat이 아니라 덧셈이라니" 싶었지만, 512차원 공간은 순서 신호가 얹혀도 내용 신호와 얽히지 않을 만큼 넓다는 게 요지입니다.</p>
+
+<h2>6. 이 수식이 서빙 병목이 되기까지</h2>
+<p>여기까지가 이론이고, 제가 이 논문을 다시 편 이유는 운영 쪽에 있습니다. 추론 단계에서 토큰을 하나씩 생성할 때, 새 토큰의 Q는 <b>이전 모든 토큰의 K와 V</b>를 상대로 attention을 수행합니다. 이전 토큰들의 K·V는 매번 다시 계산할 필요가 없으니 저장해 두는데 — 그게 바로 <b>KV 캐시</b>입니다. 2절 코드의 K, V 행렬이 GPU 메모리에 그대로 쌓이는 셈입니다.</p>
+<p>문맥이 길어질수록 이 캐시는 토큰 수에 비례해 자라고, <code>QKᵀ</code>의 (n, n) 연산은 제곱으로 자랍니다. 제가 온프레미스 서빙에서 <code>gpu-memory-utilization</code>과 동시 처리 슬롯 수를 붙잡고 씨름했던 이유가 결국 이 두 줄의 수식이었습니다. vLLM의 PagedAttention은 이 KV 캐시를 페이지 단위로 관리하는 기법인데, 그 논문은 다음 글에서 따로 다룹니다.</p>
+<div class="callout"><span class="mark">*</span><p>서빙 파라미터를 튜닝하기 전에 수식으로 돌아가면 감이 잡힙니다. KV 캐시 크기는 대략 <b>2 × 레이어 수 × 토큰 수 × d_model × 바이트 수</b> — 최대 문맥 길이와 동시 슬롯 수를 정할 때 이 곱셈부터 해 보면, OOM이 나기 전에 예산이 보입니다.</p></div>
+
+<h2>7. 손으로 풀어 남은 것</h2>
+<ul>
+  <li><b>수식 하나가 전부였다.</b> QKV도, 멀티헤드도, 결국 softmax(QKᵀ/√d_k)V의 변주다. numpy 20줄이면 뼈대가 다 나온다.</li>
+  <li><b>상수에도 이유가 있다.</b> √d_k는 장식이 아니라 기울기를 살리는 장치였다. 분산 실험 다섯 줄로 확인할 수 있었다.</li>
+  <li><b>이론은 운영의 언어가 된다.</b> K·V가 뭔지 알고 나니 KV 캐시, 문맥 길이, 메모리 예산이 하나의 그림으로 연결됐다. 도구를 쓰는 것과 이해하고 쓰는 것의 차이였다.</li>
+</ul>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Transformer</a>
+      <a class="tag" href="index.html">Attention</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">이 이론이 실전이 되는 곳 → <b>온프레미스 LLM 서빙 글</b></span><a class="chip primary" href="serving-llm-on-prem.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="index.html"><div class="np-key">← 글 목록</div><div class="np-title">전체 보기</div></a>
+    <a class="next" href="pagedattention-paper.html"><div class="np-key">다음 글 →</div><div class="np-title">논문 분석: PagedAttention</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

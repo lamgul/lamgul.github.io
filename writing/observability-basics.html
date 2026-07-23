@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -71,6 +72,13 @@ log.info({ event: <span class="s">"report.resolve"</span>, reportId, userId,
 
 <h2>알림은 증상이 아니라 영향에</h2>
 <p>"CPU 90%" 알림은 새벽에 사람을 깨우기만 하고 대개 아무 일도 아닙니다. 알림은 <b>사용자에게 영향을 주는 것</b>에 걸어야 합니다 — 에러율 급증, p99 지연, 큐 적체. 그래야 알림이 "양치기 소년"이 되지 않고, 울리면 진짜 봐야 하는 신호가 됩니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">운영</a>
+      <a class="tag" href="index.html">로그</a>
+      <a class="tag" href="index.html">메트릭</a>
+      <a class="tag" href="index.html">트레이스</a>
+    </div>
     <div class="post-cta"><span class="t">트레이스가 범인을 짚어준 → <b>7일마다 죽던 서버</b></span><a class="chip primary" href="../cases/memory-leak.html">사례 보기 ↗</a></div>
   </article>
 
@@ -85,5 +93,6 @@ log.info({ event: <span class="s">"report.resolve"</span>, reportId, userId,
 </footer>
 
 <script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
 </body>
 </html>

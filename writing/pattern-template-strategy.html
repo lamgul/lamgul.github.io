@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합 — 안성진</title>
+<meta name="description" content="정산 시스템에서 복붙으로 늘어난 분기 코드를 Template Method(골격)와 Strategy(교체 지점)의 조합으로 정리한 실제 과정.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합">
+<meta property="og:description" content="정산 시스템에서 복붙으로 늘어난 분기 코드를 Template Method(골격)와 Strategy(교체 지점)의 조합으로 정리한 실제 과정.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합","datePublished":"2021-10-25","dateModified":"2026-07-23","inLanguage":"ko","description":"정산 시스템에서 복붙으로 늘어난 분기 코드를 Template Method(골격)와 Strategy(교체 지점)의 조합으로 정리한 실제 과정.","keywords":"Template Method · Strategy · 리팩토링","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/pattern-template-strategy.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / pattern-template-strategy</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 아키텍처</p>
+    <h1>아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합</h1>
+    <div class="post-meta">
+      <span>2021년 10월</span><span class="dot-sep">•</span>
+      <span>약 12분</span><span class="dot-sep">•</span>
+      <span>Template Method · Strategy · Java</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead"><a class="u-link" href="../cases/settlement-refactor.html">사례 글</a>에서는 결과만 이야기했습니다 — 정산 로직 5곳이 1곳이 되고, 코드가 40% 줄었다는 것. 이 글은 그 사이에 있었던 <b>코드의 이야기</b>입니다. Template Method와 Strategy는 각각으로도 유명한 패턴이지만, 이 리팩토링에서 힘을 낸 건 <b>둘의 조합</b>이었습니다. 왜 하나로는 부족했는지부터 시작합니다.</p>
+
+<h2>1. 복붙이 만든 다섯 개의 진실</h2>
+<p>주차 관제 시스템의 정산 로직이었습니다. 결제 경로는 다섯 개 — 웹, 키오스크, 카카오페이, 월정액, 관리자 수동 정산. 그리고 정산 코드도 다섯 벌이었습니다. 처음에는 한 벌이었을 겁니다. 새 경로가 생길 때마다 기존 코드를 복사해 붙이고, 각자 자기 자리에서 "조금씩" 고쳐졌겠죠. 제가 만났을 때는 이런 모양이었습니다.</p>
+<pre class="code"><span class="c">// 채널별 서비스에 흩어져 있던 다섯 사본 — 비교를 위해 한 메서드로 모아 본 모습</span>
+<span class="k">public int</span> <span class="f">calculate</span>(Parking p, String channel, Member m) {
+  <span class="k">long</span> min = p.durationMinutes();
+  <span class="k">int</span> fare = 0;
+  <span class="k">if</span> (<span class="s">"WEB"</span>.equals(channel)) {
+    fare = (<span class="k">int</span>)(min / 30) * 1500;             <span class="c">// 30분 단위 — 내림</span>
+    <span class="k">if</span> (m.isSubscriber()) fare = (<span class="k">int</span>)(fare * 0.9); <span class="c">// ① 할인 먼저</span>
+    fare = fare / 100 * 100;                    <span class="c">// ② 100원 절사</span>
+  } <span class="k">else if</span> (<span class="s">"KIOSK"</span>.equals(channel)) {
+    fare = (<span class="k">int</span>) Math.ceil(min / 30.0) * 1500;  <span class="c">// 여기만 올림!</span>
+    fare = fare / 100 * 100;                    <span class="c">// ① 절사 먼저</span>
+    <span class="k">if</span> (m.isSubscriber()) fare = (<span class="k">int</span>)(fare * 0.9); <span class="c">// ② 할인 나중 — 순서가 뒤집혔다</span>
+  } <span class="k">else if</span> (<span class="s">"KAKAO"</span>.equals(channel)) {
+    <span class="c">// … 또 미묘하게 다른 30여 줄 …</span>
+  }
+  <span class="k">return</span> Math.max(fare, 0);
+}</pre>
+<p>같은 100분 주차인데 웹은 내림 계산으로 4,500원에서 할인·절사를 거쳐 <b>4,000원</b>, 키오스크는 올림 계산에 절사·할인 순서까지 뒤집혀 <b>5,400원</b>이 나왔습니다. 어느 사본을 열어봐도 그 안에서는 나름의 논리가 서 있습니다. 버그는 <b>사본 하나의 안</b>이 아니라 <b>사본들 사이</b>에 있었고, 그래서 diff로도 리뷰로도 잘 안 잡혔습니다.</p>
+<p>이 코드의 문제를 "중복"이라고 부르면 절반만 본 것입니다. 복붙은 코드를 복사하는 게 아니라 <b>결정권을 복사</b>합니다. 다섯 사본은 각자 "할인과 절사 중 무엇이 먼저인가"라는 비즈니스 결정을 <em>매번 다시</em> 내리고 있었고, 다른 시기에 다른 사람이 고친 결정들이 서로 어긋난 것뿐입니다. 그러니 해법도 "코드를 합치자"가 아니라 <b>"결정을 한 곳으로 되돌리자"</b>여야 했습니다.</p>
+
+<h2>2. 변하는 것, 변하지 않는 것, 그리고 변하는 '시점'</h2>
+<p>패턴 이름을 먼저 고르지 않았습니다. 다섯 사본을 나란히 놓고 계산을 단계로 분해하는 일부터 했습니다. 설계의 절반은 여기서 끝났습니다.</p>
+<pre class="code"><span class="c">// 다섯 사본을 나란히 놓고 얻은 단계 분해</span>
+[1] 기본요금   주차 시간 → 금액       <span class="c">수단마다 다르다 (과금 단위 · 회차 유예 · 올림 규칙)</span>
+[2] 할인       정책에 따라 차감·감률  <span class="c">수단과 무관하다 (회원 · 경차 · 월정액 …)</span>
+[3] 절사       100원 미만 버림        <span class="c">전 수단 공통 — 반드시 할인 뒤</span>
+[4] 하한 보정  음수 금액 방지         <span class="c">전 수단 공통</span></pre>
+<p>이 표에서 세 가지 성질이 갈라져 나옵니다. 그리고 각각이 <b>서로 다른 도구</b>를 요구합니다.</p>
+<p>첫째, <b>단계의 순서는 절대 불변</b>입니다. "절사는 할인 뒤"는 코딩 스타일이 아니라 요금 규정입니다. 순서가 불변이라면 순서를 결정하는 코드는 <b>단 한 곳</b>에만 존재해야 하고, 나머지 코드에서는 순서를 결정할 <em>능력 자체가 없어야</em> 합니다. 이게 Template Method가 하는 일입니다 — 제어 흐름의 소유권을 상위 클래스 한 곳으로 옮기는 것.</p>
+<p>둘째, <b>기본요금은 수단이 정해지면 고정</b>됩니다. 키오스크의 올림 규칙은 배포 시점에 이미 결정돼 있죠. 컴파일 타임에 정해지는 변이는 상속(<code>abstract</code> 메서드)으로 표현해도 안전합니다.</p>
+<p>셋째, <b>할인은 요청이 와야 정해집니다.</b> 이 차가 경차인지, 이 회원이 정기권자인지는 런타임 정보입니다. 런타임에 갈리는 변이를 상속으로 표현하려면 조합마다 클래스를 만들어야 하니, 객체를 <b>주입</b>하는 Strategy가 맞습니다. 요컨대 <em>변이의 방향</em>이 패턴을 고르는 게 아니라 <em>변이가 확정되는 시점</em>까지 봐야 도구가 정해집니다.</p>
+
+<h2>3. 골격 — 순서를 컴파일러에게 맡긴다 (Template Method)</h2>
+<p>공통 골격은 추상 클래스 하나로 옮겼습니다. 핵심은 <code>calculate()</code>에 붙은 <code>final</code> 한 단어입니다.</p>
+<pre class="code"><span class="k">public abstract class</span> <span class="f">Settlement</span> {
+  <span class="k">private final</span> DiscountPolicy discount;
+  <span class="k">protected</span> <span class="f">Settlement</span>(DiscountPolicy discount) { <span class="k">this</span>.discount = discount; }
+
+  <span class="c">/** 정산의 골격 — 계산 순서는 이 메서드만 결정한다 */</span>
+  <span class="k">public final</span> Money <span class="f">calculate</span>(Parking p) {
+    Money base = baseFare(p.duration());        <span class="c">// [1] 수단별 차이 — abstract</span>
+    Money discounted = discount.apply(base, p); <span class="c">// [2] 정책별 차이 — 전략에 위임</span>
+    Money truncated = truncate(discounted);     <span class="c">// [3] 공통 — 훅(기본 구현)</span>
+    <span class="k">return</span> Money.max(truncated, Money.ZERO);    <span class="c">// [4] 공통 — 고정</span>
+  }
+
+  <span class="k">protected abstract</span> Money <span class="f">baseFare</span>(Duration d);  <span class="c">// 하위 클래스가 반드시 구현</span>
+
+  <span class="k">protected</span> Money <span class="f">truncate</span>(Money m) {             <span class="c">// 대부분 같지만 예외를 허용</span>
+    <span class="k">return</span> m.floorTo(100);
+  }
+}</pre>
+<p><code>final</code>이 왜 이 상황에서 성립하는 규칙인지 짚고 가겠습니다. 골격 메서드가 <code>final</code>이 아니면 하위 클래스가 <code>calculate()</code>를 오버라이드해 순서를 다시 정할 수 있습니다. 그 순간 1절의 "다섯 개의 진실"이 상속 계층 안에서 그대로 부활합니다 — 복붙이 상속으로 이름만 바꾼 셈이죠. <code>final</code>이 있으면 "순서는 한 곳"이라는 규칙을 코드 리뷰가 아니라 <b>컴파일러가</b> 지켜줍니다. 사람의 주의력에 기대던 불변식을 타입 시스템의 제약으로 바꾸는 것, 이 리팩토링에서 얻은 가장 큰 안전장치였습니다.</p>
+<p>하위 클래스에 열어주는 문은 두 종류로 구분했습니다. <b>반드시 다른 것</b>은 <code>abstract</code>로 — 구현하지 않으면 컴파일이 안 되니 누락이 불가능합니다. <b>대부분 같지만 예외가 있는 것</b>은 기본 구현이 있는 훅(hook)으로 — 관리자 수동 정산만 절사 규칙이 달랐는데, 그 한 곳만 <code>truncate()</code>를 재정의했습니다.</p>
+<div class="callout"><span class="mark">*</span><p><b>골격은 final, 훅은 최소로.</b> 훅을 하나 열 때마다 하위 클래스는 골격의 일부를 다시 결정할 권한을 얻습니다. "언젠가 필요할지 모르니" 미리 열어둔 훅이 쌓이면 Template Method는 조용히 다섯 개의 진실로 되돌아갑니다. <em>실제로 지금 다른 것</em>만 훅으로 여세요 — 필요해지면 그때 여는 게 훨씬 쌉니다.</p></div>
+
+<h2>4. 교체 지점 — 할인은 상속이 아니라 주입 (Strategy)</h2>
+<p>여기서 "할인도 <code>abstract</code> 메서드로 만들면 되지 않나?"라는 질문이 나옵니다. 실제로 처음 스케치는 그랬습니다. 그런데 산수를 해보면 무너집니다. 수단이 5개, 할인 정책이 회원·경차·월정액·무할인으로 4개면, 상속만으로는 <code>WebSubscriberSettlement</code>, <code>KioskLightCarSettlement</code>… <b>5 × 4 = 20개</b>의 클래스가 필요합니다. 상속 계층은 변이의 축을 <b>하나</b>밖에 표현하지 못하는데, 우리 문제는 축이 <b>둘</b>(수단, 정책)이고 서로 직교하기 때문입니다.</p>
+<p>두 번째 축을 클래스 계층에서 꺼내 <b>필드로</b> 만들면 곱셈이 덧셈이 됩니다: 수단 5개 + 정책 4개 = <b>9개 클래스</b>. 이것이 이 상황에서 Strategy가 성립하는 이유입니다 — 패턴이 좋아서가 아니라, 직교하는 두 번째 축은 조합(composition)으로만 선형으로 담을 수 있어서입니다.</p>
+<pre class="code"><span class="k">public interface</span> <span class="f">DiscountPolicy</span> {
+  Money <span class="f">apply</span>(Money base, Parking p);
+
+  DiscountPolicy NONE = (base, p) -&gt; base;   <span class="c">// null 대신 무할인 전략</span>
+}
+
+<span class="k">public class</span> <span class="f">SubscriberDiscount</span> <span class="k">implements</span> DiscountPolicy {
+  <span class="k">public</span> Money <span class="f">apply</span>(Money base, Parking p) {
+    <span class="k">return</span> base.rate(0.9);                   <span class="c">// 정기권 10% 감률</span>
+  }
+}
+
+<span class="k">public class</span> <span class="f">LightCarDiscount</span> <span class="k">implements</span> DiscountPolicy {
+  <span class="k">public</span> Money <span class="f">apply</span>(Money base, Parking p) {
+    <span class="k">return</span> base.rate(0.5);                   <span class="c">// 경차 50% — 조례 기준</span>
+  }
+}</pre>
+<p>런타임 논증도 같은 결론을 가리킵니다. 어떤 <code>Settlement</code> 클래스를 쓸지는 요청의 채널만 보면 정해지지만, 어떤 할인이 적용될지는 <b>회원 조회가 끝나야</b> 압니다. 컴파일 타임 결정은 타입으로, 런타임 결정은 값(주입되는 객체)으로 — 결정 시점과 표현 수단을 맞추면 코드가 자연스럽게 제자리를 찾습니다. 덤으로 테스트가 쉬워집니다. <code>DiscountPolicy</code>는 값 객체(<code>Money</code>, <code>Parking</code>)만 주고받는 순수한 인터페이스라, DB도 채널도 없이 정책 하나만 단위 테스트할 수 있었습니다.</p>
+
+<h2>5. 결합 지점 — 골격이 '언제'를, 전략이 '무엇을'</h2>
+<p>두 패턴이 만나는 지점은 딱 한 줄입니다. 골격의 [2]번 단계, <code>discount.apply(base, p)</code>. Template Method가 "할인은 기본요금 <em>뒤</em>, 절사 <em>앞</em>에 적용된다"는 <b>언제</b>를 소유하고, Strategy가 "10%인지 50%인지"라는 <b>무엇</b>을 소유합니다. 1절의 순서 역전 버그가 재발할 수 없는 이유가 정확히 이 분업입니다 — 전략 구현체는 자기가 언제 불리는지 알 수 없고, 알 필요도 없습니다.</p>
+<p>수단별 구현체는 이렇게 얇아졌습니다. 다섯 벌의 80줄짜리 사본이, 골격 하나와 10줄 남짓한 구현체 다섯 개로 바뀐 겁니다.</p>
+<pre class="code"><span class="k">public class</span> <span class="f">KioskSettlement</span> <span class="k">extends</span> Settlement {
+  <span class="k">public</span> <span class="f">KioskSettlement</span>(DiscountPolicy discount) { <span class="k">super</span>(discount); }
+
+  <span class="k">@Override protected</span> Money <span class="f">baseFare</span>(Duration d) {
+    <span class="k">long</span> units = ceilDiv(d.toMinutes(), 30);   <span class="c">// 키오스크: 30분 단위 올림</span>
+    <span class="k">return</span> UNIT_FARE.times(units);             <span class="c">// 이 클래스가 아는 전부</span>
+  }
+}
+
+<span class="c">// 조립 지점 — if-else가 "이사 간" 곳</span>
+<span class="k">public</span> Settlement <span class="f">settlementFor</span>(Channel ch, Member m) {
+  DiscountPolicy policy = discountFor(m);      <span class="c">// 런타임 결정은 여기서 한 번</span>
+  <span class="k">return switch</span> (ch) {
+    <span class="k">case</span> WEB   -&gt; <span class="k">new</span> WebSettlement(policy);
+    <span class="k">case</span> KIOSK -&gt; <span class="k">new</span> KioskSettlement(policy);
+    <span class="k">case</span> KAKAO -&gt; <span class="k">new</span> KakaoSettlement(policy);
+    <span class="k">case</span> MONTHLY, MANUAL -&gt; <span class="c">/* … */</span>
+  };
+}
+Money fee = settlementFor(channel, member).calculate(parking);</pre>
+<p>오해를 하나 정리해야 합니다. <b>if-else는 사라지지 않았습니다. 이사했습니다.</b> 분기는 조립 지점(<code>settlementFor</code>) 한 곳에 여전히 있습니다. 다만 결정적인 차이가 있죠 — 분기 안에서 <b>금액을 계산하지 않습니다</b>. 고르는 것은 객체이지 숫자가 아니므로, 이 분기가 틀리면 "요금이 미묘하게 다른" 버그가 아니라 "채널이 뒤바뀐" 버그가 나고, 그건 테스트 한 줄로 잡힙니다. 분기를 없애는 게 목표가 아니라 <b>분기와 계산을 다른 방에 두는 것</b>이 목표였습니다.</p>
+<p>새 결제 수단을 추가하는 작업도 성격이 바뀌었습니다. 전에는 기존 사본 하나를 통째로 복사해 여섯 번째 사본을 만들고 "조금씩" 고치는 일이었다면 — 1절의 다섯 사본이 정확히 그렇게 태어났죠 — 이제는 <code>baseFare()</code> 하나를 가진 새 클래스를 만들고 조립 지점에 한 줄 등록하는 일입니다. 기존 코드는 <em>열어보지도 않습니다</em>. 사례 글의 "신규 수단 추가 시간 절반"과 "코드 40% 감소"는 이 구조 변화의 산수적 결과입니다.</p>
+
+<h2>6. 한계 — 전략 폭발, 그리고 패턴이 과한 순간</h2>
+<p>여기까지가 성공담이라면, 지금부터는 이 조합이 <b>버거워지는 경계</b>입니다. 실제로 두 번 부딪혔습니다.</p>
+<p>첫 번째는 <b>할인이 겹치기 시작할 때</b>입니다. "경차이면서 정기권 회원"은 어떻게 하나요? 순진하게 가면 <code>SubscriberAndLightCarDiscount</code> 같은 클래스가 생깁니다 — 조합마다 클래스를 만드는 순간 4개였던 정책이 2ⁿ으로 불어나는 <b>전략 폭발</b>이죠. Composite로 묶으면 클래스 수는 잡히지만, 더 미묘한 문제가 남습니다.</p>
+<pre class="code"><span class="k">public class</span> <span class="f">CompositeDiscount</span> <span class="k">implements</span> DiscountPolicy {
+  <span class="k">private final</span> List&lt;DiscountPolicy&gt; policies;  <span class="c">// 적용 순서 = 리스트 순서</span>
+
+  <span class="k">public</span> Money <span class="f">apply</span>(Money base, Parking p) {
+    Money result = base;
+    <span class="k">for</span> (DiscountPolicy policy : policies)
+      result = policy.apply(result, p);
+    <span class="k">return</span> result;
+  }
+}
+<span class="c">// 정액 2,000원 차감과 정률 50% 할인 — 순서에 따라 금액이 달라진다.</span>
+<span class="c">// 조합 순서를 호출부마다 정하게 두면, 1절의 순서 버그가 전략 층에서 부활한다.</span></pre>
+<p>정액 차감과 정률 할인은 교환법칙이 성립하지 않습니다. 조합 순서가 <b>다시 비즈니스 규칙</b>이 된 겁니다. 호출부마다 리스트를 임의로 조립하게 두면, 그토록 애써 없앤 "사본마다 다른 순서"가 층만 바꿔 재발합니다. 저희는 조합을 만드는 팩토리를 한 곳에 두고 정렬 규칙(정률 먼저, 정액 나중)을 그 안에 고정하는 것으로 막았습니다 — 눈치채셨겠지만 이건 전략 조합에 대한 <em>또 하나의 작은 Template Method</em>입니다. 같은 병은 층을 바꿔 재발하고, 같은 약이 다시 듣습니다.</p>
+<div class="callout"><span class="mark">!</span><p><b>전략 폭발의 조기 신호:</b> 전략 구현체 이름에 <code>And</code>가 들어가기 시작하면(<code>SubscriberAndLightCar…</code>) 조합이 클래스 수를 곱셈으로 늘리고 있다는 뜻입니다. 그 시점에 Composite로 전환하되, <b>조합 순서를 결정하는 코드를 반드시 한 곳으로</b> 모으세요. 순서가 흩어지는 순간 처음의 불일치 버그가 전략 레벨에서 되살아납니다.</p></div>
+<p>두 번째 경계는 더 근본적입니다. <b>이 조합 자체가 과한 상황</b>이 있습니다. 만약 결제 수단이 2개뿐이고 할인이 하나뿐이었다면, 추상 클래스 하나·인터페이스 하나·구현체 서너 개로 늘어난 파일들은 <code>if</code> 두 줄보다 명백히 비쌉니다. 패턴은 간접 참조를 만들고, 간접 참조는 코드를 처음 읽는 사람에게 점프 비용을 물립니다. "분기가 있으니 패턴을 쓴다"는 규칙이 아닙니다 — <b>변이의 축이 늘어나거나(수단 × 정책), 같은 결정이 여러 곳에서 반복될 때만</b> 패턴이 비용을 회수합니다. 저 역시 다섯 사본과 두 개의 직교 축이라는 압력이 없었다면 이 구조를 만들지 않았을 겁니다.</p>
+<p>마지막으로 Template Method 쪽의 고전적 한계도 언급해야 공정합니다. 상속 기반이라 하위 클래스가 <b>단일 상속을 소모</b>하고, 골격과 구현체가 <code>protected</code>로 은근히 결합하기 쉽습니다. 요즘 코드라면 <code>baseFare</code>마저 <code>Function&lt;Duration, Money&gt;</code>로 주입해 골격을 상속 없는 일반 클래스로 만드는 선택지도 충분히 좋습니다. 그 경우 Template Method는 "상속 패턴"이 아니라 <b>순서를 소유한 하나의 final 함수</b>로 남는데, 패턴의 겉모습은 달라져도 1절에서 세운 원칙 — 순서의 결정권은 한 곳 — 은 그대로입니다. 저는 이후 NestJS 레거시 UseCase를 정리할 때 이 함수형 변형을 썼습니다.</p>
+
+<h2>7. 정리 — 두 패턴을 조합하는 규칙</h2>
+<p>이 리팩토링에서 건진 규칙을 요약하면 다음과 같습니다.</p>
+<ul>
+  <li><b>복붙의 진짜 비용은 결정권의 분산이다.</b> 사본마다 계산 순서를 다시 정하게 되고, 버그는 사본 안이 아니라 사본 사이에 생긴다.</li>
+  <li><b>패턴보다 분해가 먼저다.</b> 단계를 나눠 무엇이 변하고 무엇이 불변인지, 그리고 변이가 <em>컴파일 타임</em>에 확정되는지 <em>런타임</em>에 확정되는지까지 본다.</li>
+  <li><b>순서가 불변이면 Template Method.</b> 골격 메서드는 반드시 <code>final</code> — 순서 불변식을 리뷰가 아니라 컴파일러가 지키게 한다. 훅은 실제로 지금 다른 것만 연다.</li>
+  <li><b>변이의 축이 둘이고 직교하면 두 번째 축은 Strategy.</b> 상속은 축 하나만 담는다. 필드로 꺼내면 M × N이 M + N이 된다.</li>
+  <li><b>결합 지점은 한 줄로.</b> 골격이 '언제'를, 전략이 '무엇'을 소유한다. 전략은 자기가 언제 불리는지 몰라야 한다.</li>
+  <li><b>if-else는 없애는 게 아니라 옮기는 것.</b> 분기는 조립 지점 한 곳으로 — 분기와 계산을 같은 방에 두지 않는다.</li>
+  <li><b>전략이 조합되면 조합 순서를 다시 한 곳에 고정하라.</b> 같은 병은 층을 바꿔 재발한다.</li>
+  <li><b>축이 하나뿐이면 참아라.</b> 분기 두어 개짜리 코드에 이 조합을 들이미는 건 문제보다 비싼 해법이다.</li>
+</ul>
+<p>골격과 교체 지점을 나누는 이 감각은 이후 크롤링 파이프라인에 Adapter를 붙일 때도, 레거시 UseCase를 정리할 때도 그대로 다시 썼습니다. 패턴의 이름은 매번 달랐지만 질문은 늘 같았습니다 — <b>무엇이 변하고, 언제 변하는가.</b></p>
+
+    <div class="post-tags"><span class="pt-head">태그</span><a class="tag" href="index.html">아키텍처</a><a class="tag" href="index.html">디자인 패턴</a><a class="tag" href="index.html">리팩토링</a></div>
+    <div class="post-cta"><span class="t">이 리팩토링의 실무 전말 → <b>정산 시스템 모듈화 사례</b></span><a class="chip primary" href="../cases/settlement-refactor.html">사례 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="pattern-layered-hexagonal.html"><div class="np-key">← 이전 글</div><div class="np-title">아키텍처 패턴 · 레이어드에서 헥사고날로</div></a>
+    <a class="next" href="pattern-pipe-filter.html"><div class="np-key">다음 글 →</div><div class="np-title">아키텍처 패턴 · Pipe &amp; Filter</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>

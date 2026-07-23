@@ -55,24 +55,7 @@
   margin-right: 0.15em;
 }
 
-.icon-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 38px; height: 38px;
-  border-radius: 100px;
-  border: 1px solid var(--line-2);
-  color: var(--ink-2);
-  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s;
-}
-.icon-btn:hover { color: var(--ink); border-color: var(--ink-3); transform: rotate(-18deg); }
-.theme-toggle { display: inline-flex; align-items: center; gap: 0.5em; }
-.theme-toggle .sun { display: none; }
-:root[data-theme="dark"] .theme-toggle .sun { display: block; }
-:root[data-theme="dark"] .theme-toggle .moon { display: none; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .theme-toggle .sun { display: block; }
-  :root:not([data-theme="light"]) .theme-toggle .moon { display: none; }
-}
+/* .icon-btn / .theme-toggle moved to base.css (shared chrome) */
 
 .nav-hide { }
 @media (max-width: 620px) {
@@ -374,11 +357,8 @@
 .stat span { font-family: var(--mono); font-size: var(--t--1); color: var(--ink-3); }
 
 /* ============================ footer ============================ */
-.site-footer {
-  margin-top: var(--sp-7);
-  border-top: 1px solid var(--line);
-  padding-block: var(--sp-6) var(--sp-5);
-}
+/* .site-footer shell + .colophon moved to base.css (shared chrome);
+   only the home-flavoured cta/links extensions live here */
 .footer-cta { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-5); align-items: end; }
 .footer-cta h2 {
   font-family: var(--serif);
@@ -393,18 +373,4 @@
 .footer-links a { color: var(--ink-2); font-size: var(--t-0); }
 .footer-links a:hover { color: var(--ink); }
 
-.colophon {
-  margin-top: var(--sp-6);
-  padding-top: var(--sp-4);
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--sp-3);
-  font-family: var(--mono);
-  font-size: var(--t--1);
-  color: var(--ink-3);
-}
-.colophon a { color: var(--ink-2); }
-.colophon a:hover { color: var(--accent); }
 @media (max-width: 640px) { .footer-cta { grid-template-columns: 1fr; } .footer-links { justify-content: flex-start; } }

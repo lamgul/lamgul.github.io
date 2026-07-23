@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>클린코드 · 테스트 — 테스트가 설계를 바꾼다 — 안성진</title>
+<meta name="description" content="테스트하기 어려운 코드는 설계 신호다. 시간·랜덤·IO 의존을 주입으로 밀어내고, 준비-실행-검증 리듬으로 테스트를 문서로 만드는 법.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="클린코드 · 테스트 — 테스트가 설계를 바꾼다">
+<meta property="og:description" content="테스트하기 어려운 코드는 설계 신호다. 시간·랜덤·IO 의존을 주입으로 밀어내고, 준비-실행-검증 리듬으로 테스트를 문서로 만드는 법.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"클린코드 · 테스트 — 테스트가 설계를 바꾼다","datePublished":"2021-01-05","dateModified":"2026-07-23","inLanguage":"ko","description":"테스트하기 어려운 코드는 설계 신호다. 시간·랜덤·IO 의존을 주입으로 밀어내고, 준비-실행-검증 리듬으로 테스트를 문서로 만드는 법.","keywords":"클린코드 · 테스트 · 의존성 주입","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/clean-code-tests.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / clean-code-tests</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 클린코드</p>
+    <h1>클린코드 · 테스트 — 테스트가 설계를 바꾼다</h1>
+    <div class="post-meta">
+      <span>2021년 1월</span><span class="dot-sep">•</span>
+      <span>약 12분</span><span class="dot-sep">•</span>
+      <span>클린코드 · 테스트 · 의존성 주입</span>
+    </div>
+  </section>
+
+  <article class="post-body" id="body">
+    <p class="lead">테스트가 안 짜지는 코드를 만나면 저는 테스트를 탓하기 전에 설계를 봅니다. <b>테스트하기 어려움은 결합도의 다른 이름</b>이기 때문입니다. 이 글은 "커버리지를 올리는 법"이 아니라, 테스트라는 렌즈로 시간·랜덤·IO 의존을 찾아내 설계를 고치고, 그렇게 만든 테스트를 읽히는 문서로 유지하는 법을 다룹니다.</p>
+
+<h2>테스트하기 어려운 코드는 설계가 보내는 신호입니다</h2>
+<p>테스트를 짠다는 것은 결국 <b>코드의 모든 입력을 내 손으로 통제하고, 모든 출력을 내 눈으로 관찰하는 일</b>입니다. 그런데 어떤 코드는 아무리 애써도 통제가 안 됩니다. 함수 안에서 스스로 시계를 보고, 전역 상태를 읽고, DB에 곧장 씁니다. 통제할 수 없는 입력이 있다는 건 취향의 문제가 아니라 <b>이 함수의 진짜 입력이 시그니처에 다 드러나 있지 않다는 형식적 증거</b>입니다. 정산 로직을 리팩토링하기 전, 제가 마주했던 코드가 정확히 그랬습니다.</p>
+<pre class="code"><span class="c">// Before — 이 코드는 "오늘"을 스스로 안다</span>
+<span class="k">public class</span> <span class="f">SettlementService</span> {
+
+  <span class="k">public void</span> <span class="f">settle</span>(Order order) {
+    LocalDate today = LocalDate.now();          <span class="c">// 숨은 입력 1: 시간</span>
+    FeePolicy policy = FeePolicy.current();     <span class="c">// 숨은 입력 2: 전역 상태</span>
+    BigDecimal fee = policy.feeOf(order, today);
+    repository.save(<span class="k">new</span> Settlement(order, fee, today)); <span class="c">// 숨은 출력: IO</span>
+  }
+}</pre>
+<p>이 코드의 주말 수수료 분기를 검증하려면 선택지가 둘뿐입니다. 토요일까지 기다리거나, 시스템 시계를 조작하거나. 반환값도 없어서 결과를 보려면 DB를 다시 읽어야 합니다. 테스트가 어려운 게 아니라, <b>이 함수가 자신의 입력과 출력을 숨기고 있는 것</b>입니다. 그래서 "테스트 먼저"라는 구호가 실무에서 힘을 갖습니다. 테스트를 먼저 생각하는 순간, 숨은 의존이 전부 수면 위로 올라오기 때문입니다.</p>
+
+<h2>시간·랜덤·IO — 비결정성을 경계로 밀어냅니다</h2>
+<p>테스트를 막는 3대 원흉은 <b>시간, 랜덤, IO</b>입니다. 셋의 공통점은 비결정성 — 같은 코드를 두 번 실행해도 같은 결과가 보장되지 않는다는 점입니다. 결정적이지 않은 함수는 검증할 수 없고, 검증할 수 없는 코드는 명세가 없는 것과 같습니다. 해법은 하나의 원칙으로 수렴합니다. <b>비결정성을 함수 밖으로, 시스템의 경계로 밀어내라.</b> 가장 쉬운 도구가 의존성 주입입니다.</p>
+<pre class="code"><span class="c">// After — "오늘"은 밖에서 들어오고, 저장은 호출자의 일이 된다</span>
+<span class="k">public class</span> <span class="f">SettlementService</span> {
+  <span class="k">private final</span> Clock clock;
+  <span class="k">private final</span> FeePolicy feePolicy;
+
+  <span class="k">public</span> <span class="f">SettlementService</span>(Clock clock, FeePolicy feePolicy) {
+    <span class="k">this</span>.clock = clock; <span class="k">this</span>.feePolicy = feePolicy;
+  }
+
+  <span class="k">public</span> Settlement <span class="f">settle</span>(Order order) {
+    LocalDate today = LocalDate.now(clock);
+    <span class="k">return</span> Settlement.of(order, feePolicy.feeOf(order, today), today);
+  }
+}
+
+<span class="c">// JUnit — 토요일을 기다릴 필요가 없다</span>
+@Test
+<span class="k">void</span> <span class="f">주말_주문에는_주말_수수료율이_적용된다</span>() {
+  Clock saturday = Clock.fixed(Instant.parse(<span class="s">"2026-07-18T00:00:00Z"</span>), SEOUL);
+  SettlementService service = <span class="k">new</span> SettlementService(saturday, defaultPolicy());
+
+  Settlement result = service.settle(orderOf(<span class="s">10_000</span>));
+
+  assertThat(result.feeRate()).isEqualTo(WEEKEND_RATE);
+}</pre>
+<p>바뀐 것은 세 가지입니다. 시간은 <code>Clock</code>으로 주입받고, 정책은 인터페이스 뒤로 갔고, <code>save</code>는 사라지고 <b>결과를 반환</b>합니다. 계산과 저장을 분리하면 계산은 순수 함수가 되어 DB 없이 검증되고, 저장은 얇아져서 통합 테스트 몇 개면 충분해집니다. 정산 시스템을 Template Method와 Strategy로 리팩토링했을 때 체감한 것이 이것입니다. 요율 정책이 Strategy로 분리되자 <b>정책 × 케이스의 조합</b>을 순수 단위 테스트로 다 깔 수 있었고, 테스트가 쉬워진 만큼 새 정책을 추가하는 일도 쉬워졌습니다. 테스트 가능성과 확장 가능성은 같은 설계의 양면입니다.</p>
+<p>다만 이 원칙에도 경계가 있습니다. <b>"모든 곳에 Clock을 주입하라"가 되면 곤란합니다.</b> 도메인 깊숙한 객체까지 Clock을 끌고 가면 생성자들이 시계 배달 통로가 되고, 주입 자체가 새로운 결합이 됩니다. 더 좋은 형태는 유스케이스 진입점(컨트롤러·스케줄러)에서 <code>now</code>를 한 번만 찍어 <b>값으로</b> 내려보내는 것입니다. 그러면 도메인 함수는 주입조차 필요 없는 <code>settle(order, today)</code>가 됩니다. 즉 상위 규칙은 "주입하라"가 아니라 <b>"비결정성을 경계에서 한 번만 해석하라"</b>이고, 주입은 그 수단 중 하나일 뿐입니다.</p>
+<div class="callout"><span class="mark">*</span><p>NestJS에서 Jest의 <code>jest.useFakeTimers()</code>는 전역 시계를 조작하는 방식이라, 디바운스·재시도 지연처럼 <b>"흐르는 시간"</b>을 검증할 때만 쓰는 게 안전합니다. 도메인이 "오늘"을 아는 문제는 가짜 타이머가 아니라 <b>주입 또는 파라미터</b>로 푸세요. 전역 조작은 같은 파일의 <code>test.concurrent</code>, 그리고 실제 타이머에 기대는 라이브러리(HTTP 타임아웃·커넥션 유지)와 얽히는 순간 새기 시작합니다.</p></div>
+
+<h2>준비-실행-검증 — 테스트는 실행되는 횟수보다 읽히는 횟수가 많습니다</h2>
+<p>테스트를 실행하는 건 CI지만, 읽는 건 사람입니다. 6개월 뒤의 저는 요구사항 문서가 아니라 테스트를 열어 "이 시스템이 약속한 동작"을 확인합니다. 그래서 테스트는 <b>준비(Arrange) → 실행(Act) → 검증(Assert)</b>의 리듬이 눈에 보여야 하고, 이름은 완결된 문장이어야 합니다. SafeIn 백엔드를 단독으로 설계했을 때는 리뷰어가 없었기 때문에, 테스트 이름을 문장으로 쓰는 습관이 사실상 코드 리뷰를 대신했습니다. 이름만 위에서 아래로 읽으면 명세서가 되도록.</p>
+<pre class="code"><span class="c">// Jest — 이름만 모아 읽으면 명세가 되게</span>
+describe(<span class="s">'CouponService.apply'</span>, () =&gt; {
+  it(<span class="s">'만료된 쿠폰이면 ExpiredCouponError를 던진다'</span>, <span class="k">async</span> () =&gt; {
+    <span class="c">// 준비 — 이 테스트의 조건만 눈에 띄게</span>
+    <span class="k">const</span> coupon  = couponFixture({ expiresAt: daysAgo(<span class="s">1</span>) });
+    <span class="k">const</span> service = <span class="k">new</span> CouponService(fixedClock(<span class="s">'2026-07-23'</span>));
+
+    <span class="c">// 실행 — 한 줄</span>
+    <span class="k">const</span> apply = () =&gt; service.apply(anOrder(), coupon);
+
+    <span class="c">// 검증 — 한 관심사</span>
+    <span class="k">await</span> expect(apply).rejects.toThrow(ExpiredCouponError);
+  });
+});</pre>
+<p>이 리듬은 미관이 아니라 진단 도구입니다. <b>실행이 두 줄 이상이면</b> 대상 함수가 두 가지 일을 하고 있다는 신호이고(함수 편에서 다룬 "한 가지 일"이 여기서 다시 등장합니다), <b>검증이 서로 다른 관심사를 여러 개 확인하면</b> 테스트가 두 개여야 한다는 신호입니다. 준비가 화면을 넘길 만큼 길다면 대상 객체의 생성이 너무 무겁다는 뜻이니, 그것도 설계로 되돌아갈 신호입니다. AAA가 안 지켜지는 테스트는 대개 테스트의 잘못이 아닙니다.</p>
+
+<h2>목 남용 — 테스트가 구현을 못 박을 때</h2>
+<p>테스트의 존재 이유는 <b>동작을 보존한 채 구현을 바꿀 자유</b>, 즉 리팩토링을 가능하게 하는 것입니다. 그런데 목(mock)으로 호출 여부와 인자를 일일이 검증하는 테스트는 동작이 아니라 <b>구현의 현재 모습</b>을 고정합니다. 레거시 UseCase를 개선할 때 이걸 뼈저리게 겪었습니다. 목이 겹겹이 쌓인 테스트들은 리팩토링 첫 커밋 — 동작은 하나도 바뀌지 않은 커밋 — 에서 전부 빨갛게 물들었습니다. 안전망이어야 할 테스트가 족쇄가 된 겁니다.</p>
+<pre class="code"><span class="c">// Bad — 결과가 아니라 "어떻게"를 검증한다</span>
+it(<span class="s">'정산을 계산한다'</span>, <span class="k">async</span> () =&gt; {
+  <span class="k">await</span> service.settle(order);
+
+  expect(feePolicy.feeOf).toHaveBeenCalledTimes(<span class="s">1</span>);
+  expect(feePolicy.feeOf).toHaveBeenCalledWith(order, expect.anything());
+  expect(repo.save).toHaveBeenCalledWith(
+    expect.objectContaining({ fee: <span class="s">300</span> })
+  );
+});
+<span class="c">// 내부에 캐시를 넣거나 호출 순서를 바꾸면 — 동작은 같아도 — 깨진다</span>
+
+<span class="c">// Good — 검증은 결과 상태로</span>
+it(<span class="s">'1만 원 카드 주문의 수수료는 300원이다'</span>, <span class="k">async</span> () =&gt; {
+  <span class="k">const</span> result = <span class="k">await</span> service.settle(cardOrderOf(<span class="s">10_000</span>));
+
+  expect(result.fee).toBe(<span class="s">300</span>);
+});</pre>
+<p>왜 상태 검증이 우월할까요. 리팩토링의 정의가 "관찰 가능한 동작을 보존하는 변경"이기 때문입니다. 반환값과 상태는 관찰 가능한 동작이지만, 내부 협력자를 몇 번 불렀는지는 관찰 가능한 동작이 아니라 구현 세부입니다. 구현 세부를 검증하는 테스트는 정의상 <b>모든 리팩토링에서 깨질 수밖에</b> 없습니다.</p>
+<p>그렇다고 "목 금지"를 새 규칙으로 삼으면 반대쪽 벽에 부딪힙니다. 여기가 이 원칙의 경계입니다. <b>프로세스 경계 밖 — 결제 게이트웨이, SMTP, 남의 서버 — 는 목·스텁이 정답입니다.</b> 실물을 부를 수 없고, 불러서도 안 되니까요. DDD로 크롤링 파이프라인을 만들 때는 대상 사이트의 HTML을 픽스처 파일로 박제해 스텁으로 썼습니다. 사이트가 바뀌면 픽스처를 갱신하면 되고, 파서 테스트는 네트워크 없이 밀리초에 돕니다. 정리하면 이렇습니다. <b>내가 소유한 코드는 실물로, 소유하지 않은 경계는 목으로.</b> 목은 경계 표시선이지, 편의 도구가 아닙니다.</p>
+<div class="callout"><span class="mark">*</span><p>한 테스트에 <code>toHaveBeenCalledWith</code>가 세 개 이상 보이면 그 테스트는 명세가 아니라 <b>구현의 스냅샷</b>입니다. 리팩토링 때마다 깨진다면 지키는 게 없다는 뜻 — 상태 검증으로 바꾸거나, 바꿀 수 없다면 지우는 쪽이 코드베이스에 이롭습니다.</p></div>
+
+<h2>픽스처에도 의도를 — 데이터가 문장이 되게</h2>
+<p>테스트 본문을 아무리 다듬어도 준비 단계의 데이터가 불투명하면 문서가 되지 못합니다. 인자 일곱 개짜리 생성자 호출에서 "이 테스트의 주인공이 어느 값인지"를 알아내는 건 독자의 몫이 되니까요.</p>
+<pre class="code"><span class="c">// Bad — 어떤 값이 이 테스트의 주인공인지 알 수 없다</span>
+<span class="k">const</span> order = <span class="k">new</span> Order(<span class="s">'u-1'</span>, <span class="s">10_000</span>, <span class="s">'CARD'</span>, <span class="k">true</span>, <span class="k">null</span>, <span class="s">3</span>);
+
+<span class="c">// Good — 결론에 기여하는 값만 앞으로, 나머지는 기본값 뒤로</span>
+<span class="k">const</span> order = anOrder().amount(<span class="s">10_000</span>).paidBy(<span class="s">'CARD'</span>).build();
+
+<span class="c">// 더 좋은 것 — 의도가 이름이 된 픽스처</span>
+<span class="k">const</span> weekendOrder  = orderOn(<span class="s">'2026-07-18'</span>);        <span class="c">// 토요일</span>
+<span class="k">const</span> expiredCoupon = couponExpiredSince(daysAgo(<span class="s">1</span>));</pre>
+<p>규칙은 하나입니다. <b>테스트의 결론에 기여하는 값만 보이게 하고, 나머지는 빌더의 기본값 뒤로 숨긴다.</b> 이 규칙이 성립하는 이유는 관련성의 문제입니다. 화면에 보이는 모든 값은 독자에게 "이 값이 결과에 영향을 주는가?"라는 질문을 강제합니다. 무관한 값 다섯 개가 보이면 독자는 다섯 번 헛질문을 합니다. 반대로 <code>weekendOrder</code>, <code>expiredCoupon</code>처럼 <b>의도가 이름이 된 픽스처</b>는 질문 자체를 없앱니다. 부수 효과도 큽니다. 필드가 추가돼도 빌더의 기본값 한 곳만 고치면 수백 개의 테스트가 그대로 살아남습니다.</p>
+
+<h2>게임에서 배운 것 — 자동 플레이테스트 20종</h2>
+<p>게임 프로젝트에서 자동 플레이테스트 20종을 만들어 돌린 적이 있습니다. 스폰, 이동, 전투, 보상 같은 시나리오를 봇이 자동으로 수행하고 결과를 검증하는 방식이었는데, 여기서도 이 글의 원칙이 그대로 성립했습니다. 랜덤이 낀 전투는 <b>시드를 고정</b>해야 재현 가능했고 — 랜덤 주입의 다른 얼굴입니다 — 시나리오 이름은 실패 로그만 보고도 무엇이 깨졌는지 알 수 있게 문장으로 지어야 했습니다. 그리고 가장 큰 수확은 심리적인 것이었습니다. 20종이 매번 돌아준다는 믿음이 생기자 <b>밸런스 수치를 바꾸는 일이 더 이상 겁나지 않았습니다</b>. 서버 코드도 똑같습니다. 테스트가 주는 진짜 가치는 버그 검출이 아니라, 변경을 두려워하지 않게 되는 것입니다.</p>
+
+<h2>정리 — 오늘 가져갈 규칙</h2>
+<p>테스트는 품질 검사 도구이기 전에 설계 도구입니다. 테스트가 괴로울 때 고쳐야 할 것은 대부분 테스트가 아니라 코드 쪽입니다.</p>
+<ul>
+  <li><b>테스트가 안 짜지면 설계를 의심합니다.</b> 통제할 수 없는 입력 = 시그니처에 숨은 의존이 있다는 증거입니다.</li>
+  <li><b>시간·랜덤·IO는 경계로 밀어냅니다.</b> 주입하거나, 더 좋게는 진입점에서 한 번 해석해 값으로 내려보냅니다.</li>
+  <li><b>계산과 저장을 분리합니다.</b> 계산은 순수 함수로 단위 테스트, 저장은 얇게 만들어 통합 테스트 몇 개로.</li>
+  <li><b>준비-실행-검증.</b> 실행은 한 줄, 검증은 한 관심사. 길어지면 테스트가 아니라 대상 함수를 쪼갭니다.</li>
+  <li><b>이름은 문장으로.</b> 테스트 이름만 모아 읽으면 명세서가 되어야 합니다.</li>
+  <li><b>내가 소유한 코드는 실물로, 소유하지 않은 프로세스 경계만 목으로.</b> 호출 검증이 쌓이면 구현을 못 박은 것입니다.</li>
+  <li><b>픽스처는 결론에 기여하는 값만 보이게.</b> 나머지는 빌더 기본값 뒤로 숨깁니다.</li>
+</ul>
+    <div class="post-tags"><span class="pt-head">태그</span><a class="tag" href="index.html">클린코드</a><a class="tag" href="index.html">테스트</a><a class="tag" href="index.html">의존성 주입</a></div>
+    <div class="post-cta"><span class="t">함께 읽기 → <b>클린코드 · 함수</b></span><a class="chip primary" href="clean-code-functions.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="proj-nav wrap" aria-label="글 이동">
+    <a class="prev" href="clean-code-errors.html"><div class="np-key">← 이전 글</div><div class="np-title">클린코드 · 에러</div></a>
+    <a class="next" href="pattern-layered-hexagonal.html"><div class="np-key">다음 글 →</div><div class="np-title">아키텍처 패턴 · 레이어드에서 헥사고날로</div></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+</body>
+</html>
