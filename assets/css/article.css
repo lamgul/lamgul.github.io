@@ -114,7 +114,7 @@ article .prose h3 { scroll-margin-top: 5rem; }
    overrides the narrower defaults from writing.css / project.css. */
 .post-hero,
 .post-body,
-article .prose { max-width: min(76ch, 100%); }
+article .prose { max-width: min(58rem, 100%); }
 
 .post-body,
 article .prose {
@@ -155,12 +155,12 @@ article .prose b, article .prose strong { color: var(--ink); font-weight: 650; }
 /* ---- smaller, blog-like headings ----
    the display-scale titles felt oversized for a reading blog. */
 .post-hero h1 {
-  font-size: var(--t-3);
-  line-height: 1.14;
-  letter-spacing: -0.02em;
+  font-size: var(--t-2);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
 }
 /* case pages share this file — tame their oversized hero too */
-.proj-hero h1 { font-size: var(--t-3); line-height: 1.1; }
+.proj-hero h1 { font-size: var(--t-3); line-height: 1.12; }
 .proj-hero h1 .sub { font-size: 0.32em; }
 
 .post-body h2,
@@ -172,57 +172,38 @@ article .prose h2 {
 .post-body h3,
 article .prose h3 { font-size: clamp(1.06rem, 0.99rem + 0.28vw, 1.22rem); font-weight: 650; }
 
-/* ---- blog-style prev / next as clickable cards ---- */
-.proj-nav {
+/* ---- simple prev / next (Naver·Tistory style, stacked rows) ----
+   used on blog posts via <nav class="post-nav">. no "글 목록" link —
+   just the previous and next article, one row each. */
+.post-nav {
   margin-top: var(--sp-6);
-  border-top: none;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--sp-3);
+  border-top: 1px solid var(--line-2);
 }
-.proj-nav a {
-  padding: var(--sp-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elev);
+.post-nav a {
   display: flex;
-  flex-direction: column;
-  gap: 0.4em;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+  align-items: baseline;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-2);
+  border-bottom: 1px solid var(--line);
+  transition: background 0.2s, padding-inline 0.35s var(--ease-out);
 }
-.proj-nav a:hover {
-  border-color: var(--accent);
-  background: var(--surface);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-1);
-  color: var(--ink);
-}
-.proj-nav .np-key {
+.post-nav a:hover { background: var(--surface); padding-inline: var(--sp-3); }
+.post-nav .pn-label {
+  flex: none;
+  width: 4em;
   font-family: var(--mono);
   font-size: var(--t--1);
-  color: var(--accent);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
+  color: var(--ink-3);
 }
-.proj-nav .np-title {
-  font-family: var(--sans);
-  font-size: var(--t-0);
+.post-nav a:hover .pn-label { color: var(--accent); }
+.post-nav .pn-title {
   font-weight: 600;
-  line-height: 1.35;
   color: var(--ink);
-  margin-top: 0;
+  font-size: var(--t-0);
+  line-height: 1.4;
+  transition: color 0.2s;
 }
-.proj-nav .prev { padding-right: var(--sp-4); }
-.proj-nav .next {
-  text-align: right;
-  border-left: none;
-  padding-left: var(--sp-4);
-  align-items: flex-end;
-}
-@media (max-width: 560px) {
-  .proj-nav { grid-template-columns: 1fr; }
-  .proj-nav .next { text-align: left; align-items: flex-start; border-top: none; padding-left: var(--sp-4); }
-}
+.post-nav a:hover .pn-title { color: var(--accent); }
 
 /* ---- concept / glossary box (지식 공유용 용어 설명) ----
    a quiet study-note box: plain-language definitions of key terms.
