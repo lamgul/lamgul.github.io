@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead"><code>kubectl describe</code>에 찍힌 <b>OOMKilled</b>는 쿠버네티스가 내린 판결처럼 보입니다. 하지만 실제로 프로세스를 죽인 것은 리눅스 커널입니다. limits가 어떻게 cgroup 값이 되는지 작은 실험 매니페스트로 눈으로 확인하고, 그 위에서 JVM 컨테이너가 유독 잘 죽는 전형적 패턴을 정리합니다.</p>
+    <p class="lead"><code>kubectl describe</code>에 <b>OOMKilled</b>가 찍혀 있는 것을 보고, 한동안은 쿠버네티스가 파드를 죽인 것이라고 생각했습니다. 실제로 프로세스를 종료시킨 쪽은 리눅스 커널이었습니다. limits가 어떻게 cgroup 값이 되는지 작은 실험 매니페스트로 확인해 보고, 그 위에서 JVM 컨테이너가 자주 죽던 전형적 패턴을 함께 적어 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -60,17 +60,17 @@
     <dt>requests / limits<span class="en">requests / limits</span></dt>
     <dd>컨테이너에 배정하는 메모리·CPU의 두 값입니다. requests는 "이만큼은 예약해 줘"라는 최소 요청이고, limits는 "여기까지만 써"라는 최대 한도입니다. 방을 예약할 때 잡아 두는 최소 인원(requests)과 정원(limits)에 비유할 수 있습니다. 이 글은 이 둘이 서로 다른 층에서 작동한다는 점에서 출발합니다.</dd>
     <dt>cgroup<span class="en">control group</span></dt>
-    <dd>리눅스 커널이 프로세스 묶음에 쓸 수 있는 자원(메모리·CPU 등)을 제한·측정하는 기능입니다. 쿠버네티스의 limits는 결국 이 cgroup의 설정 파일 값으로 바뀌어 커널이 직접 집행합니다. 즉 한도를 지키게 만드는 진짜 주체는 쿠버네티스가 아니라 커널입니다.</dd>
+    <dd>리눅스 커널이 프로세스 묶음에 쓸 수 있는 자원(메모리·CPU 등)을 제한·측정하는 기능입니다. 쿠버네티스의 limits는 이 cgroup의 설정 파일 값으로 바뀌어 커널이 직접 집행합니다. 즉 한도를 실제로 지키게 만드는 쪽은 쿠버네티스가 아니라 커널입니다.</dd>
     <dt>OOMKilled / OOM killer<span class="en">Out Of Memory</span></dt>
-    <dd>메모리가 한도를 넘으면 리눅스 커널의 OOM killer가 프로세스를 강제로 종료시키는데, 그 결과를 쿠버네티스가 파드 상태에 <code>OOMKilled</code>라고 적어 둡니다. 경고 없이 프로세스가 죽기 때문에, 로그가 갑자기 끊기는 장애의 흔한 원인입니다.</dd>
+    <dd>메모리가 한도를 넘으면 리눅스 커널의 OOM killer가 프로세스를 강제로 종료시키는데, 그 결과를 쿠버네티스가 파드 상태에 <code>OOMKilled</code>라고 적어 둡니다. 예고 없이 프로세스가 종료되기 때문에, 로그가 갑자기 끊기는 장애에서 자주 만나게 됩니다.</dd>
     <dt>힙<span class="en">Heap</span></dt>
-    <dd>JVM(자바 가상 머신)이 객체를 담아 두는 메모리 영역입니다. 다만 자바 프로세스가 쓰는 전체 메모리는 힙보다 큽니다 — 힙 밖에도 스레드 스택·메타스페이스 같은 "세입자"들이 있어서, 힙만 계산하면 컨테이너가 한도를 넘겨 죽는 함정에 빠집니다.</dd>
+    <dd>JVM(자바 가상 머신)이 객체를 담아 두는 메모리 영역입니다. 다만 자바 프로세스가 쓰는 전체 메모리는 힙보다 큽니다 — 힙 밖에도 스레드 스택·메타스페이스 같은 "세입자"들이 있어서, 힙만 계산하면 컨테이너가 한도를 넘겨 종료되는 일이 생깁니다.</dd>
   </dl>
 </div>
 
 <h2>1. requests와 limits는 다른 기계를 움직인다</h2>
-<p>둘은 한 쌍처럼 쓰이지만 작동하는 층이 다릅니다. <b>requests</b>는 스케줄러의 언어입니다. "이 파드를 어느 노드에 놓을까"를 계산할 때 쓰는 예약값이고, 런타임에 사용량을 막지 않습니다. requests가 100Mi인 파드도 노드에 여유가 있으면 그 이상을 씁니다. 반면 <b>limits</b>는 커널의 언어입니다. kubelet이 컨테이너 런타임을 거쳐 <b>cgroup에 기록하는 강제 한도</b>이고, 스케줄러는 이 값을 보지 않습니다.</p>
-<p>그리고 자원의 성격에 따라 초과의 결과가 다릅니다. CPU limits를 넘으면 <b><span class="term" title="정해진 한도만큼만 쓰도록 커널이 속도를 조여 늦추는 것">스로틀링</span></b>으로 느려질 뿐이지만, 메모리는 압축할 수 없는 자원이라 limits를 넘는 순간 커널 OOM killer가 프로세스를 <b>죽입니다</b>. 이 비대칭이 이 글 전체의 핵심입니다. 실험에 쓸 매니페스트는 이렇습니다.</p>
+<p>둘은 한 쌍처럼 쓰이지만 작동하는 층이 다릅니다. <b>requests</b>는 스케줄러가 보는 값입니다. "이 파드를 어느 노드에 놓을까"를 계산할 때 쓰는 예약값이고, 런타임에 사용량을 막지는 않습니다. 그래서 requests가 100Mi인 파드도 노드에 여유가 있으면 그 이상을 씁니다. 반면 <b>limits</b>는 커널이 보는 값이라, kubelet이 컨테이너 런타임을 거쳐 cgroup에 강제 한도로 기록하고 스케줄러는 이 값을 보지 않습니다.</p>
+<p>자원의 성격에 따라 한도를 넘겼을 때의 결과도 다릅니다. CPU limits를 넘으면 <b><span class="term" title="정해진 한도만큼만 쓰도록 커널이 속도를 조여 늦추는 것">스로틀링</span></b>으로 느려질 뿐이지만, 메모리는 압축할 수 없는 자원이라 limits를 넘는 순간 커널 OOM killer가 프로세스를 종료시킵니다. 이 비대칭이 아래 내용의 바탕입니다. 실험에 쓴 매니페스트는 이렇습니다.</p>
 <pre class="code"><span class="c"># memory-demo.yaml — limits 안쪽(150M)만 쓰는 얌전한 파드</span>
 <span class="k">apiVersion:</span> v1
 <span class="k">kind:</span> Pod
@@ -87,10 +87,10 @@
         <span class="k">memory:</span> <span class="s">"200Mi"</span>
     <span class="k">command:</span> [<span class="s">"stress"</span>]
     <span class="k">args:</span> [<span class="s">"--vm"</span>, <span class="s">"1"</span>, <span class="s">"--vm-bytes"</span>, <span class="s">"150M"</span>, <span class="s">"--vm-hang"</span>, <span class="s">"1"</span>]</pre>
-<p>kind든 minikube든 로컬 클러스터면 충분합니다. <code>stress</code>가 150M를 할당한 채 버티므로, limits 200Mi 안에서 멀쩡히 돌아갑니다.</p>
+<p>kind든 minikube든 로컬 클러스터면 충분했습니다. <code>stress</code>가 150M를 할당한 채 버티므로, limits 200Mi 안에서 문제없이 돌아갑니다.</p>
 
 <h2>2. limits는 cgroup 파일이 된다 — 눈으로 확인</h2>
-<p>이 파드에 들어가 cgroup 파일을 읽어보면, YAML에 적은 문자열이 커널 설정값이 되어 있는 것을 그대로 볼 수 있습니다.</p>
+<p>이 파드에 들어가 cgroup 파일을 읽어보면, YAML에 적은 문자열이 커널 설정값이 되어 있는 것을 그대로 확인할 수 있었습니다.</p>
 <pre class="code">$ kubectl apply -f memory-demo.yaml
 $ kubectl exec memory-demo -- cat /sys/fs/cgroup/memory.max
 209715200        <span class="c"># = 200Mi (200 × 1024 × 1024), cgroup v2</span>
@@ -98,10 +98,10 @@ $ kubectl exec memory-demo -- cat /sys/fs/cgroup/memory.max
 <span class="c"># cgroup v1 노드라면 경로가 다릅니다</span>
 $ kubectl exec memory-demo -- cat /sys/fs/cgroup/memory/memory.limit_in_bytes
 209715200</pre>
-<p>전달 경로는 단순합니다. <b>YAML의 limits → kubelet → 컨테이너 런타임 → cgroup의 <code>memory.max</code></b>. 여기까지 오고 나면 쿠버네티스의 역할은 끝났습니다. 이후 이 한도를 집행하는 것은 순수하게 리눅스 커널입니다. cgroup의 메모리 사용량이 <code>memory.max</code>에 닿으면 커널이 그 cgroup 안에서 희생자를 골라 <code>SIGKILL</code>을 보내고, kubelet은 <b>사후에</b> 그 결과를 읽어 파드 상태에 <code>OOMKilled</code>라고 적어줄 뿐입니다. "쿠버네티스가 죽였다"는 말은 절반만 맞는 셈입니다.</p>
+<p>전달 경로는 단순합니다. YAML의 limits가 kubelet과 컨테이너 런타임을 거쳐 cgroup의 <code>memory.max</code>에 적히고, 거기까지가 쿠버네티스의 몫입니다. 이후 이 한도를 집행하는 것은 <b>리눅스 커널</b>이라, cgroup의 메모리 사용량이 <code>memory.max</code>에 닿으면 커널이 그 cgroup 안에서 희생자를 골라 <code>SIGKILL</code>을 보냅니다. kubelet은 사후에 그 결과를 읽어 파드 상태에 <code>OOMKilled</code>라고 적어 둘 뿐입니다. 그래서 "쿠버네티스가 죽였다"는 말은 절반만 맞는 표현이었습니다.</p>
 
 <h2>3. 일부러 죽여본다 — 137이라는 서명</h2>
-<p>이제 같은 매니페스트에서 <code>--vm-bytes</code>만 <code>250M</code>으로 올려 limits(200Mi)를 넘겨봅니다. 컨테이너는 곧바로 죽고, describe에 전형적인 흔적이 남습니다.</p>
+<p>같은 매니페스트에서 <code>--vm-bytes</code>만 <code>250M</code>으로 올려 limits(200Mi)를 넘겨 봤습니다. 컨테이너는 곧바로 종료됐고, describe에 전형적인 흔적이 남았습니다.</p>
 <pre class="code">$ kubectl describe pod memory-demo
     ...
     Last State:     Terminated
@@ -111,15 +111,15 @@ $ kubectl exec memory-demo -- cat /sys/fs/cgroup/memory/memory.limit_in_bytes
     ...
 Events:
   Warning  BackOff  ...  Back-off restarting failed container</pre>
-<p><b>137 = 128 + 9</b>. 시그널 9번, 즉 <code>SIGKILL</code>로 죽었다는 뜻입니다. 이 숫자가 중요한 이유는 <code>SIGKILL</code>은 <b>가로챌 수 없는 시그널</b>이기 때문입니다. 애플리케이션은 종료 훅도, 마지막 로그 한 줄도, graceful shutdown도 수행하지 못합니다. 로그가 아무 예고 없이 뚝 끊기고 재시작 카운트만 올라가 있다면, 가장 먼저 의심할 것이 이 경로입니다.</p>
+<p><b>137 = 128 + 9</b>, 시그널 9번인 <code>SIGKILL</code>로 종료됐다는 뜻입니다. <code>SIGKILL</code>은 애플리케이션이 가로챌 수 없는 시그널이라 종료 훅도, 마지막 로그 한 줄도, graceful shutdown도 수행되지 않습니다. 로그가 예고 없이 끊기고 재시작 카운트만 올라가 있을 때 이 경로를 먼저 확인하게 된 것도 그래서입니다.</p>
 
 <h2>4. JVM 컨테이너가 죽는 전형적 패턴</h2>
-<p>이 무대 위에서 JVM은 두 가지 방향으로 자주 미끄러집니다. 요즘 JVM(JDK 8u191+, JDK 10+)은 <code>UseContainerSupport</code>가 기본이라 cgroup 한도를 "가용 메모리"로 올바르게 인식하지만, 문제는 그다음의 <b>기본 비율</b>입니다. 최대 힙의 기본값은 가용 메모리의 <b>25%</b>(<code>MaxRAMPercentage=25</code>)입니다.</p>
+<p>이 구조 위에서 JVM은 두 방향으로 자주 미끄러집니다. 요즘 JVM(JDK 8u191+, JDK 10+)은 <code>UseContainerSupport</code>가 기본이라 cgroup 한도를 "가용 메모리"로 올바르게 인식하는데, 걸리는 것은 그다음의 기본 비율이었습니다. 최대 힙의 기본값은 가용 메모리의 <b>25%</b>(<code>MaxRAMPercentage=25</code>)입니다.</p>
 <pre class="code">$ kubectl exec jvm-app -- java -XX:+PrintFlagsFinal -version | grep -i maxheapsize
    size_t MaxHeapSize = 268435456    {ergonomic}
 <span class="c"># limits.memory가 1Gi인데 힙은 256Mi — 기본 25%의 결과</span></pre>
-<p><b>실패 1 — 기본값 방치.</b> 1Gi를 예약해 놓고 힙은 256Mi만 쓰는 상태입니다. 나머지는 놀고, 힙이 좁아 GC가 일찍부터 바빠집니다. 그래서 <code>-XX:MaxRAMPercentage=75.0</code>처럼 비율을 올리는 것이 컨테이너의 정석입니다.</p>
-<p><b>실패 2 — 힙만 계산에 넣는 것.</b> 반대로 90% 이상으로 올리면 이번엔 커널에게 죽습니다. cgroup이 세는 것은 힙이 아니라 <b>프로세스 전체</b>이기 때문입니다. 힙 밖에도 메타스페이스, 스레드 스택(64비트 리눅스 기본 1MB × 스레드 수), 코드 캐시, 다이렉트 버퍼, GC 오버헤드가 삽니다. 힙이 한도의 90%를 차지하면 이 나머지가 10%를 넘는 순간 — 힙은 멀쩡한데도 — 컨테이너가 137로 사라집니다. 75%는 이 "힙 밖 세입자들"의 몫을 남겨두는 경험칙입니다.</p>
+<p><b>실패 1 — 기본값 방치.</b> 1Gi를 예약해 놓고 힙은 256Mi만 쓰는 상태입니다. 남은 공간은 놀고, 힙이 좁으니 GC는 일찍부터 바빠집니다. 그래서 <code>-XX:MaxRAMPercentage=75.0</code>처럼 비율을 직접 올려 두는 편이 낫습니다.</p>
+<p><b>실패 2 — 힙만 계산에 넣는 것.</b> 반대로 90% 이상으로 올리면 이번엔 커널이 프로세스를 종료시킵니다. cgroup이 세는 것은 힙이 아니라 프로세스 전체이기 때문입니다. 힙 밖에도 메타스페이스, 스레드 스택(64비트 리눅스 기본 1MB × 스레드 수), 코드 캐시, 다이렉트 버퍼, GC 오버헤드가 함께 삽니다. 힙이 한도의 90%를 차지하면 이 나머지가 10%를 넘는 순간, 힙은 멀쩡한데도 컨테이너가 137로 종료됩니다. 75%는 이 "힙 밖 세입자들"의 몫을 남겨두는 경험칙입니다.</p>
 <pre class="code"><span class="c"># Deployment 컨테이너 스펙 — 힙 비율과 힙덤프 준비를 함께</span>
 <span class="k">containers:</span>
 - <span class="k">name:</span> api
@@ -135,11 +135,11 @@ Events:
       <span class="k">memory:</span> <span class="s">"1Gi"</span>
     <span class="k">limits:</span>
       <span class="k">memory:</span> <span class="s">"1Gi"</span></pre>
-<div class="callout"><span class="mark">*</span><p>죽음의 종류를 먼저 구분하세요. 로그에 <code>java.lang.OutOfMemoryError</code>가 있으면 <b>힙 문제</b>이고 <code>HeapDumpOnOutOfMemoryError</code>가 힙덤프를 남겨줍니다. 로그 없이 exit code <b>137</b>이면 <b>컨테이너 예산 문제</b>이고, <code>SIGKILL</code>이라 힙덤프도 남지 않습니다. 137 앞에서 힙덤프 파일을 찾아 헤매는 것이 가장 흔한 시간 낭비입니다.</p></div>
+<div class="callout"><span class="mark">*</span><p>종료의 종류를 먼저 구분해 두면 헤매는 시간이 줄어듭니다. 로그에 <code>java.lang.OutOfMemoryError</code>가 있으면 <b>힙 문제</b>이고 <code>HeapDumpOnOutOfMemoryError</code>가 힙덤프를 남겨줍니다. 로그 없이 exit code <b>137</b>이면 컨테이너 예산 문제이고, <code>SIGKILL</code>이라 힙덤프도 남지 않습니다. 137 앞에서 힙덤프 파일을 찾아 헤매다 시간을 쓰기 쉬운 지점입니다.</p></div>
 
 <h2>5. 운영에서의 결론 — 예산을 정하고, 실측한다</h2>
-<p>메모리에 한해서는 <b>requests = limits</b>로 맞추는 편을 권합니다. 메모리는 CPU처럼 잠깐 양보할 수 있는 자원이 아니어서, 오버커밋된 노드가 압박을 받으면 파드 <span class="term" title="노드에 메모리가 부족할 때 쿠버네티스가 파드를 강제로 내보내 다른 노드로 옮기거나 종료하는 것">축출</span>로 이어집니다. requests와 limits를 같게 두면 스케줄러가 예약한 만큼만 쓰는 정직한 파드가 되고, CPU까지 같게 맞추면 QoS도 Guaranteed가 됩니다. 그리고 75%든 얼마든 비율은 출발점일 뿐이라, 실제 부하에서 <code>container_memory_working_set_bytes</code>를 보며 한도와의 여유를 실측해야 합니다.</p>
-<p>이 감각은 온프레미스에서 vLLM을 서빙하며 <code>gpu-memory-utilization</code>과 동시 슬롯 수의 균형을 잡던 일과 정확히 같은 종류였습니다. 예산을 정하고, 예산 안의 세입자를 전부 세고, 실제 트래픽으로 스윗스팟을 확인한다 — 자원이 VRAM이든 cgroup 메모리든 순서는 같습니다. 그리고 한도가 아니라 애플리케이션 안쪽이 문제로 판명되면, 그때부터는 힙덤프를 읽는 일이 시작됩니다. 7일마다 죽던 서버를 추적했던 순서를 아래 글에 정리해 두었습니다.</p>
+<p>메모리에 한해서는 <b>requests = limits</b>로 맞추는 편이 마음이 편했습니다. 메모리는 CPU처럼 잠깐 양보할 수 있는 자원이 아니어서, 오버커밋된 노드가 압박을 받으면 파드 <span class="term" title="노드에 메모리가 부족할 때 쿠버네티스가 파드를 강제로 내보내 다른 노드로 옮기거나 종료하는 것">축출</span>로 이어집니다. 두 값을 같게 두면 스케줄러가 예약한 만큼만 쓰는 파드가 되고, CPU까지 같게 맞추면 QoS도 Guaranteed가 됩니다. 다만 75%든 얼마든 비율은 출발점일 뿐이라, 실제 부하에서 <code>container_memory_working_set_bytes</code>를 보며 한도와의 여유를 실측해 두는 편이 좋습니다.</p>
+<p>돌아보면 온프레미스에서 vLLM을 서빙하며 <code>gpu-memory-utilization</code>과 동시 슬롯 수의 균형을 잡던 일과 비슷한 종류였습니다. 예산을 정하고, 예산 안의 세입자를 전부 세고, 실제 트래픽으로 스윗스팟을 확인하는 순서는 자원이 VRAM이든 cgroup 메모리든 크게 다르지 않았습니다. 한도가 아니라 애플리케이션 안쪽이 문제인 경우도 있었는데, 그때는 힙덤프를 읽어야 했습니다. 7일마다 죽던 서버를 추적했던 순서는 아래 글에 정리해 두었습니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">Kubernetes</a>

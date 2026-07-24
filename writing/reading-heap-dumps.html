@@ -52,19 +52,19 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">7일마다 죽던 서버의 진짜 원인은 힙덤프 안에 있었습니다. 문제는 <b>힙덤프를 읽을 줄 몰랐다</b>는 것. 그때 익힌 순서를 정리합니다. 겁먹을 것 없이, 몇 개의 화면만 보면 됩니다.</p>
+    <p class="lead">서버가 7일마다 죽던 때가 있었습니다. 원인은 힙덤프 안에 있었는데, 정작 저는 <b>힙덤프를 읽을 줄 몰랐습니다</b>. 며칠 동안 붙잡고 익힌 순서를 잊지 않으려고 적어 둡니다. 막상 해보니 봐야 하는 화면은 몇 개 되지 않았습니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
   <dl>
     <dt>힙덤프<span class="en">Heap Dump</span></dt>
-    <dd>어느 한순간 프로그램이 메모리에 쥐고 있던 모든 객체를 통째로 찍은 사진입니다. 사고 순간의 이 사진을 뜯어보는 것이 이 글의 전부입니다.</dd>
+    <dd>어느 한순간 프로그램이 메모리에 쥐고 있던 모든 객체를 통째로 찍은 사진입니다. 이 글은 사고가 난 순간의 그 사진을 뜯어본 기록입니다.</dd>
     <dt>메모리 누수<span class="en">Memory Leak</span></dt>
-    <dd>더는 쓰지 않는데도 프로그램이 계속 붙잡고 있어 치워지지 않는 객체가 쌓이는 현상입니다. 방을 안 치우면 물건이 쌓이듯, 메모리가 서서히 꽉 차 결국 서버가 죽습니다.</dd>
+    <dd>더는 쓰지 않는데도 프로그램이 계속 붙잡고 있어 치워지지 않는 객체가 쌓이는 현상입니다. 방을 안 치우면 물건이 쌓이듯 메모리가 서서히 꽉 차고, 그러다 서버가 죽습니다.</dd>
     <dt>GC<span class="en">Garbage Collection</span></dt>
-    <dd>아무도 더 참조하지 않는 객체를 자동으로 찾아 메모리에서 치워 주는 청소부입니다. 누수는 바로 이 청소부가 "아직 누군가 쓴다"고 착각해 못 치우는 상태를 말합니다.</dd>
+    <dd>아무도 더 참조하지 않는 객체를 자동으로 찾아 메모리에서 치워 주는 청소부입니다. 누수는 이 청소부가 "아직 누군가 쓴다"고 판단해 치우지 못하는 상태를 말합니다.</dd>
     <dt>Dominator Tree</dt>
-    <dd>"이 객체가 사라지면 덩달아 함께 사라질 객체가 얼마나 되는가"를 크기순으로 줄 세운 표입니다. 메모리를 가장 많이 붙잡은 범인을 한눈에 찾게 해 줍니다.</dd>
+    <dd>"이 객체가 사라지면 덩달아 함께 사라질 객체가 얼마나 되는가"를 크기순으로 줄 세운 표입니다. 메모리를 가장 많이 붙잡고 있는 객체가 위쪽에 올라옵니다.</dd>
     <dt>GC Roots</dt>
     <dd>실행 중인 스레드, static 변수처럼 GC가 "여기서부터는 무조건 살아 있다"고 보는 출발점입니다. 어떤 객체가 이 뿌리까지 참조로 이어져 있으면 청소 대상에서 빠집니다.</dd>
   </dl>
@@ -77,17 +77,17 @@
 
 <span class="c"># 살아있는 프로세스를 수동으로 뜰 때</span>
 jmap -dump:live,format=b,file=heap.hprof &lt;pid&gt;</pre>
-<p>재현이 어려운 누수일수록 <code>HeapDumpOnOutOfMemoryError</code>가 생명줄입니다. 터지는 순간의 스냅샷이 곧 증거니까요.</p>
+<p>누수는 재현하기가 어려워서, <code>HeapDumpOnOutOfMemoryError</code>를 걸어 두고 기다리는 쪽이 빨랐습니다. 터지는 순간의 스냅샷이 남아 있어야 그다음을 볼 수 있었습니다.</p>
 
 <h2>2. Dominator Tree로 "누가 붙잡고 있나"</h2>
-<p>Eclipse MAT를 열면 가장 먼저 볼 것은 <b>Dominator Tree</b>입니다. 여기서 중요한 건 <code>Shallow Heap</code>(그 객체 자체 크기)이 아니라 <b><code>Retained Heap</code></b>(그 객체가 사라지면 함께 회수될 총 크기)입니다. Retained가 압도적으로 큰 객체가 범인입니다. 저는 특정 캐시 클래스 하나가 <b>힙의 80%</b>를 retained로 쥐고 있는 걸 봤습니다.</p>
+<p>Eclipse MAT를 열면 저는 Dominator Tree부터 봅니다. 여기서 봐야 하는 값은 <code>Shallow Heap</code>(그 객체 자체 크기)이 아니라 <b><code>Retained Heap</code></b>(그 객체가 사라지면 함께 회수될 총 크기)입니다. 두 값을 헷갈리면 엉뚱한 객체를 붙잡고 시간을 씁니다. Retained가 유독 큰 객체가 메모리를 쥐고 있는 쪽이고, 제 경우에는 특정 캐시 클래스 하나가 힙의 80%를 retained로 들고 있었습니다.</p>
 
 <h2>3. Leak Suspects와 GC Roots</h2>
-<p>MAT의 <b>Leak Suspects</b> 리포트는 의심 객체를 자동으로 짚어줍니다. 시작점으로 훌륭하죠. 그다음 "이게 왜 GC에 안 먹히지?"는 <b>Path to GC Roots</b>로 봅니다 — 이 객체를 살려두는 참조 사슬을 뿌리까지 그려줍니다. 제 경우 그 사슬 끝에 <b>동기화 없이 공유되던 <span class="term" title="프로그램 전역에서 하나만 존재하며 계속 살아 있는 목록형 객체">static 컬렉션</span></b>이 있었습니다. static은 프로그램이 켜져 있는 내내 사라지지 않기 때문에, 여기에 담긴 객체도 함께 영영 회수되지 못한 것이죠.</p>
-<div class="callout"><span class="mark">*</span><p>"Path to GC Roots → exclude weak/soft references" 옵션을 꼭 켜세요. 약참조는 어차피 회수되니, 진짜로 객체를 붙잡는 <b>강참조 경로</b>만 봐야 범인이 보입니다.</p></div>
+<p>MAT의 Leak Suspects 리포트는 의심 객체를 자동으로 짚어 줍니다. 확정은 아니지만 어디부터 볼지 정하는 데는 도움이 됐습니다. 그다음 "이게 왜 GC에 안 먹히지?"는 <b>Path to GC Roots</b>로 확인했습니다. 이 객체를 살려두는 참조 사슬을 뿌리까지 그려 줍니다. 제 경우 그 사슬 끝에는 동기화 없이 공유되던 <span class="term" title="프로그램 전역에서 하나만 존재하며 계속 살아 있는 목록형 객체">static 컬렉션</span>이 있었습니다. static은 프로그램이 켜져 있는 내내 사라지지 않기 때문에, 여기에 담긴 객체도 함께 회수되지 못한 채 남아 있었습니다.</p>
+<div class="callout"><span class="mark">*</span><p>"Path to GC Roots → exclude weak/soft references" 옵션은 켜 두고 봤습니다. 약참조는 어차피 회수되기 때문에, 객체를 실제로 붙잡고 있는 <b>강참조 경로</b>만 남겨야 사슬이 읽힙니다.</p></div>
 
 <h2>4. 증상이 아니라 원인</h2>
-<p>힙덤프가 알려준 건 "무엇이 쌓였나"였고, 코드로 돌아가 "왜 쌓였나"를 봤습니다. 멀티스레드에서 동기화가 빠져 객체가 회수되지 못하고 있었죠. <code>synchronized</code> 한 줄이 답이었습니다. 도구는 범위를 좁혀줄 뿐, 마지막 한 걸음은 결국 코드를 읽는 일입니다.</p>
+<p>힙덤프가 알려준 것은 "무엇이 쌓였나"까지였고, "왜 쌓였나"는 코드로 돌아가서 봐야 했습니다. 멀티스레드에서 동기화가 빠져 객체가 회수되지 못하고 있었고, <code>synchronized</code>를 붙여 정리했습니다. 도구는 볼 곳을 좁혀 줄 뿐, 마지막은 코드를 읽는 일이었습니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">트러블슈팅</a>

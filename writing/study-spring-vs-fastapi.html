@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">한동안 오전에는 Spring으로 정산 모듈을 만지고, 오후에는 FastAPI로 크롤링 파이프라인과 vLLM 게이트웨이를 짰습니다. 두 세계를 오갈 때 진짜 비용은 문법이 아니라 <b>머릿속 모델을 갈아 끼우는 일</b>이었습니다. 둘 다 의존성 주입·검증·트랜잭션이라는 같은 문제를 푸는데, 방향이 정반대입니다 — 한쪽은 <b>컨테이너</b>로, 한쪽은 <b>함수 시그니처</b>로. 이 노트는 같은 REST 엔드포인트를 양쪽으로 구현해 그 철학 차이를 비교하고, 제가 DI의 뿌리를 이해하게 해준 『토비의 스프링』을 그 렌즈로 다시 읽습니다. 어느 쪽이 낫다가 아니라, 언제 무엇을 고르느냐의 이야기입니다.</p>
+    <p class="lead">한동안 오전에는 Spring으로 정산 모듈을 만지고, 오후에는 FastAPI로 크롤링 파이프라인과 vLLM 게이트웨이를 짰습니다. 오갈 때마다 시간이 걸린 쪽은 문법이 아니라 <b>머릿속 모델을 갈아 끼우는 일</b>이었습니다. 둘 다 의존성 주입·검증·트랜잭션이라는 같은 문제를 다루는데, 한쪽은 컨테이너에 조립을 맡기고 한쪽은 함수 시그니처에 적어 두는 식으로 방향이 달랐습니다. 그래서 같은 REST 엔드포인트를 양쪽으로 구현해 두고 무엇이 어떻게 다른지 정리해 두었습니다. DI의 뿌리를 이해하게 해준 『토비의 스프링』도 그 렌즈로 다시 읽었습니다. 어느 쪽이 낫다는 이야기는 아니고, 언제 무엇을 고르게 되었는지에 대한 기록입니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -71,7 +71,7 @@
 </div>
 
 <h2>1. 같은 엔드포인트, 두 개의 세계</h2>
-<p>비교를 추상적으로 하면 끝이 없으니 하나의 엔드포인트에 못 박겠습니다. 산업안전 시스템에서 흔한 <b>근로자 등록</b> — 요청을 검증하고, 서비스가 저장하고, 결과를 돌려주는 POST입니다. 먼저 Spring입니다.</p>
+<p>추상적으로 비교하면 끝이 없어서 엔드포인트 하나를 정해 두고 봤습니다. 산업안전 시스템에서 흔한 <b>근로자 등록</b>으로, 요청을 검증하고 서비스가 저장한 뒤 결과를 돌려주는 POST입니다. 먼저 Spring 쪽입니다.</p>
 <pre class="code"><span class="k">@RestController</span>
 <span class="k">@RequestMapping</span>(<span class="s">"/api/workers"</span>)
 <span class="k">public class</span> <span class="f">WorkerController</span> {
@@ -125,11 +125,11 @@ app = FastAPI()
     session.add(worker)
     <span class="k">await</span> session.flush()               <span class="c"># 트랜잭션 경계는 get_session이 그린다</span>
     <span class="k">return</span> WorkerResponse(id=worker.id, name=worker.name)</pre>
-<p>두 코드는 겉으로 놀랍도록 닮았습니다. <b>검증 → 서비스 → 저장 → 응답</b>이라는 뼈대가 같고, 요청 DTO와 응답 DTO를 나눈 것도 같습니다. 차이는 눈에 보이는 코드가 아니라 <b>조각들이 언제, 어떻게 조립되는가</b>에 있습니다. Spring은 시작할 때 컨테이너가 그래프를 통째로 엮어 싱글턴으로 세워 두고, FastAPI는 요청이 올 때마다 함수 시그니처를 읽어 그 요청만의 조각을 맞춥니다. 이 한 문장의 차이가 DI·검증·비동기·트랜잭션 전부로 번집니다. 하나씩 보겠습니다.</p>
+<p>나란히 놓고 보면 두 코드는 겉모습이 꽤 닮았습니다. 검증 → 서비스 → 저장 → 응답이라는 뼈대가 같고, 요청 DTO와 응답 DTO를 나눈 것도 같습니다. 차이는 눈에 보이는 코드보다 <b>조각들이 언제, 어떻게 조립되는가</b>에 있었습니다. Spring은 애플리케이션이 뜰 때 컨테이너가 객체 그래프를 엮어 싱글턴으로 세워 두고, FastAPI는 요청이 올 때마다 함수 시그니처를 읽어 그 요청에 필요한 조각을 맞춥니다. 이 차이가 DI·검증·비동기·트랜잭션에 각각 어떻게 나타나는지 순서대로 적어 두겠습니다.</p>
 
 <h2>2. 컨테이너 대 시그니처</h2>
-<p>Spring의 세계는 <b>컨테이너</b>가 중심입니다. <code>@Service</code>·<code>@Repository</code>가 붙은 클래스를 애플리케이션이 뜰 때 스캔해 <code>ApplicationContext</code>가 객체 그래프를 통째로 엮고, 대부분 <span class="term" title="애플리케이션 전체에서 딱 하나만 만들어 공유하는 객체">싱글턴</span>으로 한 번만 만들어 재사용합니다. 객체의 생성과 조립·수명을 전부 컨테이너가 소유하고, 내 코드는 생성자로 받기만 합니다. FastAPI에는 그런 전역 컨테이너가 없습니다. <code>Depends</code>가 <b>요청이 올 때마다</b> 핸들러의 시그니처를 읽어 그 요청만의 의존성 트리를 그때그때 조립합니다. 같은 DI인데 <b>미리 통째로</b>와 <b>매번 그때그때</b>로 갈립니다.</p>
-<p>이 차이를 원리로 이해하게 된 건 『토비의 스프링』 덕이었습니다. 1권은 스프링 문법으로 시작하지 않습니다. <code>UserDao</code> 하나가 <b>직접 DB 커넥션을 만드는</b> 평범한 코드에서 출발해, '이게 왜 문제인가'를 집요하게 파고듭니다.</p>
+<p>Spring 쪽은 <b>컨테이너</b>가 중심입니다. <code>@Service</code>·<code>@Repository</code>가 붙은 클래스를 애플리케이션이 뜰 때 스캔해 <code>ApplicationContext</code>가 객체 그래프를 통째로 엮고, 대부분 <span class="term" title="애플리케이션 전체에서 딱 하나만 만들어 공유하는 객체">싱글턴</span>으로 한 번만 만들어 재사용합니다. 객체의 생성과 조립·수명을 전부 컨테이너가 소유하고, 제 코드는 생성자로 받기만 합니다. FastAPI에는 그런 전역 컨테이너가 없습니다. <code>Depends</code>가 요청이 올 때마다 핸들러의 시그니처를 읽어 그 요청만의 의존성 트리를 그때그때 조립합니다. 같은 DI인데 미리 통째로 엮어 두느냐, 매번 다시 엮느냐로 갈립니다.</p>
+<p>이 차이를 원리로 이해하게 된 건 『토비의 스프링』을 읽고 나서였습니다. 1권은 스프링 문법으로 시작하지 않고, <code>UserDao</code> 하나가 <b>직접 DB 커넥션을 만드는</b> 평범한 코드에서 출발해 이게 왜 문제인지를 오래 파고듭니다.</p>
 <pre class="code"><span class="c">// 출발점: UserDao가 커넥션 만드는 법을 "직접" 안다 — 강하게 결합돼 있다</span>
 <span class="k">public class</span> <span class="f">UserDao</span> {
   <span class="k">public void</span> <span class="f">add</span>(User user) <span class="k">throws</span> SQLException {
@@ -147,12 +147,12 @@ app = FastAPI()
     <span class="k">this</span>.connectionMaker = connectionMaker;
   }
 }</pre>
-<p>책은 답을 먼저 주는 대신 질문을 반복합니다 — <b>누가 만들고, 누가 조립하는가.</b> 커넥션 만드는 책임을 <code>ConnectionMaker</code> 인터페이스 뒤로 밀어내자 <code>UserDao</code>는 '사용하지만 만들지 않는' 코드가 되고, 그러면 '그럼 누가 넣어주지?'라는 질문이 남습니다. 그 질문의 끝에 <code>DaoFactory</code>가, 다시 그 끝에 스프링 <b>컨테이너</b>가 자연스럽게 놓입니다. DI를 기능으로 소개하지 않고 <b>객체지향 설계 원칙(OCP·DIP)에서 연역</b>해 낸다는 게 이 책의 태도이고, 저는 여기서 DI가 스프링의 발명이 아니라 스프링이 <b>산업화한 원리</b>라는 걸 배웠습니다.</p>
-<p>그 렌즈를 끼고 FastAPI를 보면 <code>Depends</code>가 더 이상 낯선 마법이 아닙니다. 컨테이너가 생성자를 읽어 조립하던 일을, FastAPI는 <code>inspect</code>로 함수 시그니처를 읽어 요청 단위로 할 뿐입니다. '사용하는 쪽은 만들지 않는다'는 원리는 똑같고, <b>조립도를 어디에 적는가</b>만 다릅니다 — 컨테이너라는 한 곳에 모으느냐, 시그니처마다 흩뿌리느냐. 이 이야기의 실전은 따로 정리해 두었으니 여기서는 원리만 짚고 넘어갑니다.</p>
+<p>책은 답을 먼저 주지 않고 누가 만들고 누가 조립하는가를 계속 되묻습니다. 커넥션 만드는 책임을 <code>ConnectionMaker</code> 인터페이스 뒤로 밀어내자 <code>UserDao</code>는 '사용하지만 만들지 않는' 코드가 되고, 그럼 누가 넣어주느냐는 질문이 남습니다. 그 질문의 끝에 <code>DaoFactory</code>가, 다시 그 끝에 스프링 컨테이너가 놓입니다. DI를 기능으로 소개하지 않고 <b>객체지향 설계 원칙(OCP·DIP)에서 연역</b>해 낸다는 게 이 책의 태도인데, 저는 여기서 DI가 스프링의 발명이 아니라 스프링이 산업화한 원리라는 걸 배웠습니다.</p>
+<p>그 렌즈를 끼고 나니 FastAPI의 <code>Depends</code>도 덜 낯설게 보였습니다. 컨테이너가 생성자를 읽어 조립하던 일을, FastAPI는 <code>inspect</code>로 함수 시그니처를 읽어 요청 단위로 합니다. '사용하는 쪽은 만들지 않는다'는 원리는 같고 <b>조립도를 어디에 적는가</b>가 다른데, 컨테이너라는 한 곳에 모으느냐 시그니처마다 나눠 적느냐의 차이입니다. 실전 쪽은 따로 정리해 두었으니 여기서는 원리만 적어 둡니다.</p>
 
 <h2>3. 검증 — 애너테이션 대 타입</h2>
 <p>Spring에서 검증은 <b><span class="term" title="여러 기능에 공통으로 걸치는 부가 관심사(검증·로깅·보안 등)">횡단 관심사</span></b>입니다. DTO에 <code>@NotBlank</code>·<code>@Email</code> 같은 Bean Validation 애너테이션으로 규칙을 선언하면, 이미 만들어진 객체를 프레임워크가 <code>@Valid</code> 시점에 훑어 규칙을 적용합니다. 실패하면 <code>MethodArgumentNotValidException</code>이 튀고, 보통 <code>@RestControllerAdvice</code>에서 공통으로 400으로 변환합니다. 검증이 <b>객체 생성과 별개의 단계</b>이고, 실패 처리도 별도의 자리에서 이뤄지는 구조입니다.</p>
-<p>Pydantic의 태도는 정반대입니다. <b>타입 자체가 검증기</b>입니다. 파싱과 검증이 같은 행위라서, 모델이 만들어졌다는 것은 이미 규칙을 통과했다는 뜻입니다. 잘못된 입력은 모델 생성 단계에서 걸려 <b>내 함수 본문에 도달조차 못 합니다</b> — FastAPI는 그 실패를 자동으로 422로 돌려주고, 저는 예외 핸들러도 <code>@Valid</code> 같은 트리거도 쓰지 않았습니다. 도메인 규칙까지 타입 안에 넣을 수 있습니다.</p>
+<p>Pydantic은 이 자리를 다르게 잡습니다. <b>타입 자체가 검증기</b>여서, 파싱과 검증이 같은 행위입니다. 모델이 만들어졌다는 것은 이미 규칙을 통과했다는 뜻이고, 잘못된 입력은 모델 생성 단계에서 걸려 함수 본문까지 오지 않습니다. FastAPI가 그 실패를 422로 돌려주기 때문에 저는 예외 핸들러도 <code>@Valid</code> 같은 트리거도 쓰지 않았습니다. 도메인 규칙까지 타입 안에 넣을 수 있습니다.</p>
 <pre class="code"><span class="k">from</span> pydantic <span class="k">import</span> field_validator
 
 <span class="k">class</span> <span class="f">RegisterWorker</span>(BaseModel):
@@ -164,11 +164,11 @@ app = FastAPI()
         <span class="k">if</span> v <span class="k">not in</span> ACTIVE_SITE_IDS:
             <span class="k">raise</span> ValueError(<span class="s">"inactive site"</span>)   <span class="c"># 객체가 만들어지는 바로 그 순간 검증된다</span>
         <span class="k">return</span> v</pre>
-<p>정리하면 Spring은 <b>객체를 만든 뒤 검사</b>하고, Pydantic은 <b>생성과 검증을 한 몸</b>으로 만듭니다. 전자는 검증을 한곳에서 일괄 관리하기 좋고, 후자는 '유효한 값'과 '아무 값'을 타입 수준에서 갈라놓아 함수 안쪽이 방어 코드로부터 자유로워집니다. 파싱을 통과한 데이터는 이미 신뢰할 수 있다 — 이 감각이 FastAPI로 코드를 짤 때 가장 편한 지점이었습니다.</p>
+<p>정리하면 Spring은 <b>객체를 만든 뒤 검사</b>하고, Pydantic은 생성과 검증을 한 몸으로 만듭니다. 앞쪽은 검증을 한곳에서 일괄 관리하기 좋고, 뒤쪽은 '유효한 값'과 '아무 값'을 타입 수준에서 갈라놓아 함수 안쪽에 방어 코드를 덜 쓰게 됩니다. 파싱을 통과한 데이터는 믿어도 된다는 감각이, FastAPI로 코드를 짤 때 가장 편했던 부분입니다.</p>
 
 <h2>4. 비동기 — 스레드 풀 대 이벤트 루프</h2>
 <p>Spring MVC의 기본 모델은 <b>요청 하나에 스레드 하나</b>입니다. 블로킹 코드를 써도 넉넉한 스레드 풀이 흡수하고, <code>@Transactional</code>은 스레드에 묶인(thread-local) 트랜잭션을 전제로 동작합니다. 비동기·논블로킹이 필요하면 WebFlux(Reactor)라는 별도의 세계로 넘어가야 하는데, 사실상 프로그래밍 모델 전체가 바뀝니다. 반면 FastAPI는 처음부터 <b>단일 이벤트 루프</b> 위에서 돕니다. <code>async def</code> 핸들러는 <code>await</code> 지점에서 제어를 양보하고, 그 사이 루프는 다른 요청을 처리합니다. 스레드에 묶인 트랜잭션 같은 개념은 없습니다.</p>
-<p>이 차이가 실무에서 갈린 순간이 뚜렷합니다. 온프레미스 vLLM 게이트웨이는 <b>여러 백엔드로 동시에 요청을 뿌리고 기다리는</b> I/O 바운드 작업이라, 이벤트 루프가 정확히 물 만난 곳이었습니다.</p>
+<p>실무에서 이 차이를 체감한 건 온프레미스 vLLM 게이트웨이를 만들 때였습니다. <b>여러 백엔드로 동시에 요청을 뿌리고 기다리는</b> I/O 바운드 작업이라, 이벤트 루프가 잘 맞았습니다.</p>
 <pre class="code"><span class="k">import</span> asyncio
 
 @app.post(<span class="s">"/v1/ensemble"</span>)
@@ -177,11 +177,11 @@ app = FastAPI()
     <span class="c"># 여러 vLLM 백엔드에 동시에 던지고, 기다리는 동안 루프는 놀지 않는다</span>
     results = <span class="k">await</span> asyncio.gather(*(b.generate(req.text) <span class="k">for</span> b <span class="k">in</span> backends))
     <span class="k">return</span> {<span class="s">"best"</span>: pick_best(results)}</pre>
-<p>반대로 Spring으로 만든 정산 모듈은 CPU와 DB에 붙은 <b>동기적 작업</b>이 대부분이었고, 스레드-퍼-리퀘스트 모델과 스레드에 묶인 <code>@Transactional</code>이 오히려 사고를 단순하게 해줬습니다. 비동기가 공짜가 아니라는 걸 여기서 배웠습니다. 팬아웃·스트리밍처럼 <b>기다림이 많은</b> 일에는 이벤트 루프가 압도적이지만, 경계가 또렷한 트랜잭션 처리에는 블로킹 모델의 단순함이 자산입니다.</p>
+<p>반대로 Spring으로 만든 정산 모듈은 CPU와 DB에 붙은 <b>동기적 작업</b>이 대부분이었고, 스레드-퍼-리퀘스트 모델과 스레드에 묶인 <code>@Transactional</code>이 오히려 생각을 단순하게 해줬습니다. 비동기가 공짜가 아니라는 걸 여기서 배웠습니다. 팬아웃이나 스트리밍처럼 기다림이 많은 일에는 이벤트 루프가 잘 맞았고, 경계가 또렷한 트랜잭션 처리에는 블로킹 모델의 단순함이 도움이 됐습니다.</p>
 <div class="callout"><span class="mark">*</span><p>FastAPI에서 <code>async def</code> 핸들러는 이벤트 루프에서, 평범한 <code>def</code> 핸들러는 스레드풀에서 돕니다. 그래서 <b>동기 블로킹 드라이버를 <code>async def</code> 안에서 부르면</b> 루프 전체가 그 시간만큼 멈춰, 무관한 다른 요청까지 함께 느려집니다. 비동기로 갈 거면 드라이버도 끝까지 비동기여야 하고, 어중간하면 차라리 <code>def</code>로 두어 스레드풀에 맡기는 편이 안전합니다.</p></div>
 
 <h2>5. 트랜잭션 — 선언 대 명시</h2>
-<p>트랜잭션 경계를 긋는 방식에서 두 프레임워크의 성격이 가장 선명하게 드러납니다. Spring의 <code>@Transactional</code>은 <b>프록시 기반 AOP</b>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 숨어 있고, 메서드 본문에는 <b>경계가 보이지 않습니다</b>. <span class="term" title="매번 똑같이 반복해서 써야 하는 상투적인 준비·마무리 코드">보일러플레이트</span>가 사라지는 대신, 어디서 트랜잭션이 시작되고 끝나는지가 애너테이션 뒤로 감춰집니다.</p>
+<p>트랜잭션 경계를 긋는 방식에서 두 프레임워크의 성격 차이가 잘 드러납니다. Spring의 <code>@Transactional</code>은 <b>프록시 기반 AOP</b>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 숨어 있고, 메서드 본문에는 <b>경계가 보이지 않습니다</b>. <span class="term" title="매번 똑같이 반복해서 써야 하는 상투적인 준비·마무리 코드">보일러플레이트</span>가 사라지는 대신, 어디서 트랜잭션이 시작되고 끝나는지가 애너테이션 뒤로 감춰집니다.</p>
 <pre class="code"><span class="c">// Spring: 경계가 애너테이션 뒤에 숨는다 — 프록시가 열고 닫는다</span>
 <span class="k">@Transactional</span>
 <span class="k">public</span> WorkerResponse <span class="f">register</span>(RegisterWorker req) {
@@ -195,27 +195,27 @@ app = FastAPI()
     <span class="k">async with</span> Session() <span class="k">as</span> session:
         <span class="k">async with</span> session.begin():     <span class="c"># BEGIN … COMMIT/ROLLBACK이 이 블록이다</span>
             <span class="k">yield</span> session          <span class="c"># 핸들러가 끝나면 여기로 돌아와 커밋/롤백</span></pre>
-<p>이건 취향이 아니라 <b>교환</b>입니다. <code>@Transactional</code>은 반복을 없애주지만, 경계가 코드에 없으니 통제도 프레임워크의 규칙을 따라야 합니다. 명시적 세션은 매번 <code>async with</code>를 써야 하는 대신, 경계가 <b>내가 쓴 그 자리</b>에 정확히 있습니다. 그리고 이 명시성은 함정 하나를 통째로 없앱니다.</p>
-<div class="callout"><span class="mark">*</span><p>Spring의 선언적 경계는 프록시 위에 있어서, 같은 클래스 안에서 <code>this.method()</code>로 부르면 경계가 조용히 무시됩니다(자기 호출 함정 — <a href="spring-transaction-propagation.html">전파 글</a>에서 자세히 다뤘습니다). FastAPI 쪽엔 이 함정이 <b>존재할 수 없습니다</b>. 경계가 <code>async with session.begin()</code>이라는 눈에 보이는 코드라서, 건너뛰려면 내가 직접 안 써야 하기 때문입니다. 숨겨서 편한 것과, 드러나서 안전한 것의 교환입니다.</p></div>
-<p>덧붙이면 『토비의 스프링』이 트랜잭션을 다루며 강조한 건 애너테이션이 아니라 <b>서비스 추상화(PSA)</b>였습니다. JDBC든 JPA든 JTA든, 코드는 <code>PlatformTransactionManager</code>라는 하나의 추상에만 기대게 만든다는 것. 정작 중요한 가치는 '선언적'이라는 편의가 아니라 <b>기술이 바뀌어도 흔들리지 않는 추상</b>에 있었고, FastAPI는 그 추상을 프레임워크가 주는 대신 세션이라는 형태로 손수 잡는 셈입니다.</p>
+<p>둘은 취향의 문제라기보다 서로 <b>맞바꾸는 관계</b>에 가깝습니다. <code>@Transactional</code>은 반복을 없애주는 대신 경계가 코드에 없어서 통제도 프레임워크의 규칙을 따라야 하고, 명시적 세션은 매번 <code>async with</code>를 써야 하는 대신 경계가 제가 쓴 그 자리에 있습니다. 그리고 이 명시성 덕분에 함정 하나가 아예 생기지 않습니다.</p>
+<div class="callout"><span class="mark">*</span><p>Spring의 선언적 경계는 프록시 위에 있어서, 같은 클래스 안에서 <code>this.method()</code>로 부르면 경계가 조용히 무시됩니다(자기 호출 함정 — <a href="spring-transaction-propagation.html">전파 글</a>에서 자세히 다뤘습니다). FastAPI 쪽에는 이 함정이 <b>생기지 않습니다</b>. 경계가 <code>async with session.begin()</code>이라는 눈에 보이는 코드라서, 건너뛰려면 제가 직접 안 써야 하기 때문입니다. 숨겨서 편한 쪽과 드러나서 안전한 쪽을 맞바꾼 셈입니다.</p></div>
+<p>덧붙이면 『토비의 스프링』이 트랜잭션을 다루며 강조한 건 애너테이션이 아니라 <b>서비스 추상화(PSA)</b>였습니다. JDBC든 JPA든 JTA든 코드는 <code>PlatformTransactionManager</code>라는 하나의 추상에만 기대게 만든다는 이야기입니다. 중요한 가치는 '선언적'이라는 편의보다 기술이 바뀌어도 흔들리지 않는 추상 쪽에 있었고, FastAPI는 그 추상을 프레임워크에서 받는 대신 세션이라는 형태로 직접 잡는 셈입니다.</p>
 
 <h2>6. 타입 시스템이 만드는 설계 차이</h2>
-<p>이 모든 차이의 뿌리를 거슬러 가면 결국 <b>타입 시스템</b>이 나옵니다. Java는 명목적(nominal) 타이핑에 컴파일 타임 검사입니다. 그래서 Spring은 <b>인터페이스와 프록시</b>에 크게 기댑니다 — 구현체는 인터페이스를 <code>implements</code>로 명시적으로 선언하고, AOP는 JDK 동적 프록시나 CGLIB로 런타임에 대상 객체를 감쌉니다. 조립은 시작 시점의 리플렉션이 담당하고, 대부분의 오류는 컴파일러가 먼저 잡습니다.</p>
+<p>여기까지의 차이를 거슬러 올라가면 <b>타입 시스템</b>이 나옵니다. Java는 명목적(nominal) 타이핑에 컴파일 타임 검사입니다. 그래서 Spring은 <b>인터페이스와 프록시</b>에 크게 기댑니다 — 구현체는 인터페이스를 <code>implements</code>로 명시적으로 선언하고, AOP는 JDK 동적 프록시나 CGLIB로 런타임에 대상 객체를 감쌉니다. 조립은 시작 시점의 리플렉션이 담당하고, 대부분의 오류는 컴파일러가 먼저 잡습니다.</p>
 <p>Python은 점진적(gradual) 타이핑에 구조적(structural) 타이핑, 그리고 런타임 검사입니다. FastAPI에서 타입 힌트는 '힌트'가 아니라 <b>실행에 관여하는 실물</b>입니다. <code>inspect</code>가 시그니처를 읽어 의존성과 파라미터를 해석하고, Pydantic은 힌트를 검증기로 컴파일합니다. 인터페이스도 <code>implements</code> 없이 <b>모양만 맞으면</b> 성립합니다.</p>
 <pre class="code"><span class="c"># Python: 구조적 타이핑 — 이 모양이면 이 타입이다 (implements 선언이 없다)</span>
 <span class="k">class</span> <span class="f">WorkerRepo</span>(Protocol):
     <span class="k">async def</span> <span class="f">save</span>(self, w: Worker) -&gt; Worker: ...</pre>
-<p>같은 '인터페이스'라는 단어가 두 세계에서 다른 것을 뜻합니다. Java에서는 <b>계약을 먼저 선언</b>하고 구현이 거기 서명하는 반면, Python의 <code>Protocol</code>은 <b>필요한 모양을 뒤늦게 기술</b>해도 기존 클래스가 소급해 만족합니다. 그래서 Spring 코드는 계약을 앞세우는 무게가 있고, FastAPI 코드는 가볍게 시작해 나중에 타입으로 조이는 유연함이 있습니다. 오류가 드러나는 시점도 다릅니다 — 한쪽은 컴파일러가, 한쪽은 요청이 들어와 데이터를 파싱하는 순간이. 어느 쪽이 낫다기보다, <b>안전을 앞에서 사느냐 뒤에서 사느냐</b>의 차이입니다.</p>
+<p>같은 '인터페이스'라는 단어가 양쪽에서 다른 것을 뜻합니다. Java에서는 <b>계약을 먼저 선언</b>하고 구현이 거기 서명하는 반면, Python의 <code>Protocol</code>은 필요한 모양을 뒤늦게 기술해도 기존 클래스가 소급해 만족합니다. 그래서 Spring 코드는 계약을 앞세우는 무게가 있고, FastAPI 코드는 가볍게 시작해 나중에 타입으로 조이는 편입니다. 오류가 드러나는 시점도 달라서, 한쪽은 컴파일러가 잡아 주고 한쪽은 요청이 들어와 데이터를 파싱하는 순간에 드러납니다. 어느 쪽이 낫다기보다 <b>안전을 앞에서 사느냐 뒤에서 사느냐</b>의 차이로 이해하고 있습니다.</p>
 
 <h2>7. 정리 — 언제 무엇을 선택하나</h2>
-<p>두 프레임워크를 오간 끝에 남은 판단 기준을 목록으로 정리합니다. 전부 '어느 게 좋다'가 아니라 '언제 무엇을'의 규칙입니다.</p>
+<p>두 프레임워크를 오가며 남은 판단 기준을 목록으로 적어 둡니다. '어느 게 좋다'보다는 '언제 무엇을'에 가까운 기준입니다.</p>
 <ul>
   <li><b>강한 트랜잭션 정합성이 핵심이고 팀이 JVM에 익숙하면 → Spring.</b> 선언적 트랜잭션과 성숙한 생태계가 동기적 업무 로직의 무게를 잘 받쳐줍니다. 정산 모듈이 그랬습니다.</li>
   <li><b>I/O 바운드 동시성·ML/데이터 생태계·빠른 반복이 핵심이면 → FastAPI.</b> 이벤트 루프의 팬아웃과 가벼운 기동이 크롤링·vLLM 게이트웨이에 맞았습니다.</li>
   <li><b>검증을 도메인 타입에 붙이고 싶으면 → Pydantic, 횡단 관심사로 일괄 처리하고 싶으면 → Bean Validation.</b> 응집이냐 일관된 처리냐의 선택입니다.</li>
   <li><b>경계를 숨겨 보일러플레이트를 줄이려면 → <code>@Transactional</code>, 경계를 눈에 보이게 통제하려면 → 명시적 세션.</b> 편의와 통제의 교환입니다.</li>
 </ul>
-<p>2020년에 저는 ETRI에서 CNN 객체탐지를 다루며 Python으로 개발을 시작했고, Java와 Spring은 이후 실무를 거치며 익혔습니다. 두 언어를 양쪽에서 밀고 들어온 셈인데, 그 덕에 얻은 가장 큰 소득은 문법 두 벌이 아니었습니다. <code>Depends</code>든 컨테이너든 결국 <b>사용하는 쪽은 만들지 않는다</b>는 한 원리의 두 구현이고, 선언적 트랜잭션이든 명시적 세션이든 <b>관심사를 추상 뒤로 밀어낸다</b>는 같은 목표의 두 표현이라는 것 — 『토비의 스프링』이 스프링 문법이 아니라 그 원리를 가르치려 했던 이유를, FastAPI를 만지고 나서야 완전히 이해했습니다. 두 프레임워크를 오간 진짜 배당금은 <b>도구를 원리로 착각하지 않게 된 것</b>이었습니다. 그러고 나면 다음 도구가 무엇이든, 새로 배우는 건 문법 몇 개뿐입니다.</p>
+<p>2020년에 ETRI에서 CNN 객체탐지를 다루며 Python으로 개발을 시작했고, Java와 Spring은 이후 실무를 거치며 익혔습니다. 두 언어를 양쪽에서 붙잡고 온 셈인데, 그렇게 남은 건 문법 두 벌이 아니었습니다. <code>Depends</code>든 컨테이너든 <b>사용하는 쪽은 만들지 않는다</b>는 한 원리의 두 구현이고, 선언적 트랜잭션이든 명시적 세션이든 관심사를 추상 뒤로 밀어낸다는 같은 목표의 두 표현이었습니다. 『토비의 스프링』이 스프링 문법이 아니라 그 원리를 가르치려 했던 이유는 FastAPI를 한참 만지고 나서야 납득이 갔습니다. 돌아보면 두 프레임워크를 오가며 얻은 건 도구를 원리로 착각하지 않게 된 정도인데, 그것만으로도 다음 도구를 볼 때 부담이 줄었습니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">학습</a>

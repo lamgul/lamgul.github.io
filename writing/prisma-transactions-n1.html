@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">SafeIn 백엔드는 NestJS와 Prisma, PostgreSQL로 돌아갑니다. 코드에는 <code>findMany</code> 한 줄인데 목록 API가 느릴 때, 추측으로는 아무것도 못 고칩니다. ORM은 SQL을 숨기는 게 일이고, 우리는 그걸 다시 꺼내 보는 게 일입니다. 이 글은 Prisma가 <b>실제로 무엇을 실행하는지</b>를 로그로 확인하는 법, N+1이 진짜로 생기는 지점, 그리고 그걸 잡는 세 가지 처방을 비교합니다.</p>
+    <p class="lead">SafeIn 백엔드는 NestJS와 Prisma, PostgreSQL로 돌아갑니다. 코드에는 <code>findMany</code> 한 줄뿐인데 목록 API가 느린 적이 있었습니다. 추측만으로는 어디를 손대야 할지 알 수 없었고, ORM이 SQL을 대신 써 주는 만큼 실제로 나가는 쿼리도 눈에 보이지 않았습니다. 그래서 로그를 켜는 일부터 다시 했습니다. Prisma가 <b>실제로 무엇을 실행하는지</b> 확인하는 법과 N+1이 생기는 지점, 그걸 잡는 세 가지 방법을 비교해 적어 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -71,7 +71,7 @@
 </div>
 
 <h2>1. 로그부터 켠다 — 추측 금지</h2>
-<p>모든 이야기의 출발점은 쿼리 로그입니다. Prisma는 <code>log</code> 옵션으로 실행되는 SQL을 이벤트로 뽑아줄 수 있습니다. NestJS라면 <code>PrismaService</code>에서 한 번만 연결해 두면 됩니다.</p>
+<p>손댈 곳을 찾으려면 쿼리 로그부터 봐야 했습니다. Prisma는 <code>log</code> 옵션으로 실행되는 SQL을 이벤트로 뽑아 줍니다. NestJS라면 <code>PrismaService</code>에서 한 번만 연결해 두면 이후로는 따로 신경 쓸 일이 없습니다.</p>
 <pre class="code"><span class="c">// prisma.service.ts — 쿼리를 이벤트로 받아 NestJS 로거로 흘린다</span>
 <span class="k">@Injectable</span>()
 <span class="k">export class</span> PrismaService
@@ -91,10 +91,10 @@
     <span class="k">await this</span>.$connect();
   }
 }</pre>
-<p>이벤트 객체에는 실행된 SQL(<code>e.query</code>), 바인딩된 파라미터(<code>e.params</code>), 소요 시간(<code>e.duration</code>, ms)이 들어 있습니다. 개발 환경에서 이걸 켜 두면 "요청 하나에 쿼리 몇 개가 나가는가"가 매 요청마다 눈에 보입니다. 느린 API를 열어보기 전에, 먼저 쿼리 개수부터 세는 습관이 이 글의 전부라고 해도 됩니다.</p>
+<p>이벤트 객체에는 실행된 SQL(<code>e.query</code>), 바인딩된 파라미터(<code>e.params</code>), 소요 시간(<code>e.duration</code>, ms)이 들어 있습니다. 개발 환경에서 이걸 켜 두니 "요청 하나에 쿼리 몇 개가 나가는가"가 매 요청마다 눈에 보였습니다. 느린 API를 열어 보기 전에 쿼리 개수부터 세는 습관이 생긴 것도 이때부터입니다.</p>
 
 <h2>2. include는 N+1이 아닙니다</h2>
-<p>흔한 오해부터 정리합니다. <code>include</code>를 쓰면 관계 개수만큼 쿼리가 나간다고 생각하기 쉽지만, Prisma의 기본 전략은 그렇지 않습니다. 부모를 한 번 조회하고, 자식은 부모 id들을 모아 <b><code>IN</code> 쿼리 한 번</b>으로 가져온 뒤 애플리케이션 메모리에서 조립합니다.</p>
+<p>저도 처음에는 <code>include</code>를 쓰면 관계 개수만큼 쿼리가 나가는 줄 알았는데, Prisma의 기본 전략은 그렇지 않았습니다. 부모를 한 번 조회하고, 자식은 부모 id들을 모아 <b><code>IN</code> 쿼리 한 번</b>으로 가져온 뒤 애플리케이션 메모리에서 조립합니다.</p>
 <pre class="code"><span class="c">// TBM 목록 + 참가자 — 쿼리가 몇 개 나갈까?</span>
 <span class="k">const</span> tbms = <span class="k">await</span> prisma.tbm.<span class="f">findMany</span>({
   where: { siteId },
@@ -107,10 +107,10 @@ SELECT "id", "title", "state" FROM "Tbm"
   WHERE "siteId" = $1 LIMIT $2
 SELECT "tbmId", "employeeNameAtAssign", "state" FROM "TbmParticipant"
   WHERE "tbmId" IN ($1,$2, ... ,$20)</pre>
-<p>부모 20건에 자식이 몇백 건이어도 쿼리는 2개입니다. 즉 <code>include</code> 자체는 무죄입니다. 다만 공짜는 아닙니다 — 자식 테이블의 컬럼을 전부 끌고 오므로, 관계가 깊어지고 <code>include</code>가 중첩될수록 전송량과 메모리에서의 조립 비용이 커집니다. 목록 화면이라면 <code>select</code>로 필요한 필드만 좁히는 것이 먼저입니다.</p>
+<p>부모 20건에 자식이 몇백 건이어도 쿼리는 2개였습니다. <code>include</code> 자체가 N+1을 만들지는 않는 셈입니다. 다만 공짜는 아니어서, 자식 테이블의 컬럼을 전부 끌고 오는 탓에 관계가 깊어지고 <code>include</code>가 중첩될수록 전송량과 메모리에서의 조립 비용이 커집니다. 목록 화면이라면 <code>select</code>로 필요한 필드만 좁히는 편이 먼저였습니다.</p>
 
 <h2>3. 진짜 N+1은 반복문에서 태어난다</h2>
-<p>제가 로그에서 실제로 만나는 N+1은 ORM이 만든 게 아니라 <b>제 손으로 쓴 반복문</b>이었습니다. "목록에 집계 하나만 붙이자"가 전형적인 시작입니다.</p>
+<p>로그에서 실제로 만난 N+1은 ORM이 만든 것이 아니라 <b>제가 쓴 반복문</b>이었습니다. "목록에 집계 하나만 붙이자"고 시작한 코드가 대체로 그랬습니다.</p>
 <pre class="code"><span class="c">// 안티패턴 — TBM마다 확인 인원을 세러 간다</span>
 <span class="k">const</span> tbms = <span class="k">await</span> prisma.tbm.<span class="f">findMany</span>({ where: { siteId } });
 <span class="k">const</span> rows = <span class="k">await</span> Promise.all(
@@ -128,11 +128,11 @@ SELECT "tbmId", "employeeNameAtAssign", "state" FROM "TbmParticipant"
   where: { tbmId: { in: tbms.map((t) =&gt; t.id) }, state: <span class="s">'CONFIRMED'</span> },
   _count: <span class="k">true</span>,
 });  <span class="c">// 쿼리 2개로 끝. 이후 Map으로 붙이면 된다.</span></pre>
-<p><code>Promise.all</code>로 감싸면 병렬이라 빨라 보이지만, <span class="term" title="DB 연결을 미리 만들어 두고 돌려 쓰는 한정된 창고">커넥션 풀</span>을 N개가 나눠 쓰며 DB에 왕복 N번을 강요하는 건 그대로입니다. 부하가 없는 개발 DB에서는 티가 안 나다가, 운영에서 목록이 길어지는 순간 응답 시간이 목록 길이에 비례해 늘어납니다. 로그에 <b>같은 모양의 쿼리가 파라미터만 바뀌며 줄줄이</b> 찍힌다면 그게 N+1의 지문입니다.</p>
-<p>참고로 GraphQL 리졸버처럼 항목 단위 조회가 구조적으로 강제되는 곳에서는, Prisma의 fluent API(<code>prisma.tbm.findUnique({ where: { id } }).participants()</code>)가 같은 틱에 발생한 <code>findUnique</code>들을 내부 dataloader로 묶어 <code>IN</code> 쿼리 하나로 배치해 줍니다. 반복문 N+1과 달리 이 경로는 설계된 탈출구입니다.</p>
+<p><code>Promise.all</code>로 감싸면 병렬이라 빨라 보이지만, <span class="term" title="DB 연결을 미리 만들어 두고 돌려 쓰는 한정된 창고">커넥션 풀</span>을 N개가 나눠 쓰며 DB에 왕복 N번을 하는 것은 그대로였습니다. 부하가 없는 개발 DB에서는 티가 나지 않다가, 운영에서 목록이 길어지면 응답 시간이 목록 길이에 비례해 늘어납니다. 로그에 <b>같은 모양의 쿼리가 파라미터만 바뀌며</b> 줄줄이 찍히는 것이 제가 N+1을 알아보는 표시가 됐습니다.</p>
+<p>참고로 GraphQL 리졸버처럼 항목 단위 조회가 구조적으로 강제되는 곳에서는, Prisma의 fluent API(<code>prisma.tbm.findUnique({ where: { id } }).participants()</code>)가 같은 틱에 발생한 <code>findUnique</code>들을 내부 dataloader로 묶어 <code>IN</code> 쿼리 하나로 배치해 줍니다. 반복문에서 생긴 N+1과 달리 이 경로는 처음부터 그렇게 설계된 것이라 그대로 써도 됩니다.</p>
 
 <h2>4. 처방 비교 — IN 배치, DB 조인, 수동 SQL</h2>
-<p>N+1을 없애는 방법은 결국 세 갈래입니다. 각각 코드부터 보겠습니다.</p>
+<p>N+1을 없애는 방법은 제가 써 본 범위에서 세 갈래였습니다. 각각 코드부터 보겠습니다.</p>
 <pre class="code"><span class="c">// (a) 기본 전략 — 쿼리 분리 + IN 배치 (2절의 include가 이것)</span>
 
 <span class="c">// (b) DB 조인 — preview 기능 relationJoins를 켜면 선택 가능</span>
@@ -151,14 +151,14 @@ SELECT "tbmId", "employeeNameAtAssign", "state" FROM "TbmParticipant"
   LEFT JOIN "TbmParticipant" p ON p."tbmId" = t."id"
   WHERE t."siteId" = ${siteId}
   GROUP BY t."id"`</span>;</pre>
-<p>선택 기준은 이렇게 정리하고 있습니다.</p>
-<p><b>(a) IN 배치</b>는 기본값이자 대부분의 화면에 충분합니다. 쿼리가 단순해 인덱스를 태우기 쉽고, 관계별로 나뉘어 있어 로그를 읽기도 쉽습니다. 약점은 왕복이 관계 수만큼 늘고, 조립을 애플리케이션이 떠안는다는 것.</p>
-<p><b>(b) <code>relationLoadStrategy: 'join'</code></b>은 왕복을 한 번으로 줄입니다. 다만 이 글 시점 기준 preview 기능이라 <code>schema.prisma</code>의 <code>previewFeatures = ["relationJoins"]</code>를 켜야 하고, 생성되는 SQL이 JSON 집계를 낀 조인이라 <b>플래너가 어떤 계획을 세우는지</b>는 직접 확인해야 합니다. 조인이 항상 빠르다는 보장은 없습니다 — 부모가 적고 자식이 아주 많은 분포에서는 (a)가 나은 경우도 있습니다.</p>
-<p><b>(c) <code>$queryRaw</code></b>는 집계·윈도우 함수·조건부 카운트처럼 ORM 문법 바깥의 일이 필요할 때 꺼냅니다. 위처럼 "목록 + 확인 인원 + 전체 인원"을 쿼리 하나로 끝낼 수 있습니다. 대가는 타입 안전이 약해지고(결과 타입을 직접 선언해야 합니다) 스키마 변경 시 컴파일러가 못 잡아준다는 것. 그래서 저는 raw SQL을 리포지토리 한 곳에 모아 격리합니다.</p>
-<div class="callout"><span class="mark">*</span><p>어느 처방이든 채택 전에 <b>같은 데이터 분포로 로그를 떠서 비교</b>하세요. 1절의 <code>e.duration</code>과 PostgreSQL의 <code>EXPLAIN ANALYZE</code>면 충분합니다. "조인이 빠르다더라"는 남의 분포에서 나온 결론일 수 있습니다.</p></div>
+<p>고를 때 보는 기준은 이렇게 정리해 두었습니다.</p>
+<p><b>(a) IN 배치</b>는 기본값이고 대부분의 화면에는 이걸로 충분했습니다. 쿼리가 단순해 인덱스를 태우기 쉽고, 관계별로 나뉘어 있어 로그를 읽기도 쉽습니다. 약점이라면 왕복이 관계 수만큼 늘고 조립을 애플리케이션이 떠안는다는 점입니다.</p>
+<p><b>(b) <code>relationLoadStrategy: 'join'</code></b>은 왕복을 한 번으로 줄입니다. 다만 이 글 시점 기준 preview 기능이라 <code>schema.prisma</code>의 <code>previewFeatures = ["relationJoins"]</code>를 켜야 하고, 생성되는 SQL이 JSON 집계를 낀 조인이라 플래너가 어떤 계획을 세우는지는 직접 확인해야 했습니다. 조인이 항상 빠르지도 않아서, 부모가 적고 자식이 아주 많은 분포에서는 (a)가 나은 경우도 있었습니다.</p>
+<p><b>(c) <code>$queryRaw</code></b>는 집계·윈도우 함수·조건부 카운트처럼 ORM 문법 바깥의 일이 필요할 때 꺼냈습니다. 위처럼 "목록 + 확인 인원 + 전체 인원"을 쿼리 하나로 끝낼 수 있습니다. 대신 타입 안전이 약해지고(결과 타입을 직접 선언해야 합니다) 스키마를 바꿔도 컴파일러가 잡아 주지 못합니다. 그래서 raw SQL은 리포지토리 한 곳에 모아 격리해 두었습니다.</p>
+<div class="callout"><span class="mark">*</span><p>어느 쪽을 고르든 <b>같은 데이터 분포로 로그를 떠서 비교</b>한 다음에 정했습니다. 1절의 <code>e.duration</code>과 PostgreSQL의 <code>EXPLAIN ANALYZE</code>면 충분했습니다. "조인이 빠르다더라"는 이야기는 남의 데이터 분포에서 나온 결론일 수 있습니다.</p></div>
 
 <h2>5. $transaction — 배열, 인터랙티브, 격리수준</h2>
-<p>쿼리 개수를 줄이는 것과 별개로, 쿼리를 <b>한 단위로 묶는</b> 문제가 있습니다. Prisma의 <code>$transaction</code>은 두 가지 형태입니다. 배열 폼은 준비된 쿼리들을 순서대로 한 트랜잭션에서 실행합니다 — 앞 결과를 읽어 다음 쿼리를 결정할 필요가 없다면 이쪽이 가볍습니다. 읽고-판단하고-쓰는 흐름이 필요하면 인터랙티브 폼을 씁니다.</p>
+<p>쿼리 개수를 줄이는 것과 별개로, 쿼리를 <b>한 단위로 묶는</b> 문제가 남습니다. Prisma의 <code>$transaction</code>은 두 가지 형태입니다. 배열 폼은 준비된 쿼리들을 순서대로 한 트랜잭션에서 실행하는데, 앞 결과를 읽어 다음 쿼리를 결정할 필요가 없다면 이쪽이 가볍습니다. 읽고-판단하고-쓰는 흐름이 필요하면 인터랙티브 폼을 씁니다.</p>
 <pre class="code"><span class="c">// TBM 발행 — 상태 전이 + 참가자 스냅샷 + 번역 작업 적재를 한 단위로</span>
 <span class="k">const</span> tbm = <span class="k">await</span> prisma.<span class="f">$transaction</span>(
   <span class="k">async</span> (tx) =&gt; {
@@ -176,12 +176,12 @@ SELECT "tbmId", "employeeNameAtAssign", "state" FROM "TbmParticipant"
     timeout: <span class="s">5000</span>,   <span class="c">// 트랜잭션 전체 시간 한도 (기본 5초)</span>
   },
 );</pre>
-<p>세 번째 인자가 핵심입니다. <span class="term" title="동시 트랜잭션이 서로를 얼마나 볼 수 있는지 정하는 단계">격리수준</span>(<code>isolationLevel</code>)을 지정하지 않으면 DB의 기본값을 따릅니다 — PostgreSQL이라면 <code>READ COMMITTED</code>. 대부분의 CRUD에는 그걸로 충분하고, 위처럼 "읽은 상태를 전제로 쓰는" 경합 구간에만 올려 잡습니다. <code>Serializable</code>은 동시 발행 같은 경합을 확실히 걸러 주는 대신, 충돌 시 트랜잭션이 <code>P2034</code>(write conflict/deadlock) 에러로 실패할 수 있으므로 <b>재시도 로직이 세트</b>입니다. 격리수준을 올리는 코드에는 재시도가 따라와야 완성입니다.</p>
-<p>이전 직장에서 정산 코드를 리팩토링하며 새긴 원칙도 같은 것이었습니다. 돈이든 안전 기록이든, <b>부분 성공은 실패보다 나쁩니다</b>. "발행은 됐는데 참가자 스냅샷이 없다"는 상태는 조회 화면의 버그가 아니라 데이터의 거짓말이 되기 때문입니다.</p>
-<div class="callout"><span class="mark">*</span><p>인터랙티브 트랜잭션 안에서 <b>외부 I/O를 하지 마세요</b>. FCM 푸시, LLM 번역 호출 같은 것이 안에 들어오면 커넥션을 쥔 채 대기하다 <code>timeout</code>으로 통째로 롤백됩니다. 위 코드가 번역을 직접 호출하는 대신 <code>translationJob</code> 레코드만 적재하는 이유입니다 — 외부 호출은 커밋 이후, 워커의 일입니다.</p></div>
+<p>제가 오래 눈여겨보지 않았던 것이 세 번째 인자였습니다. <span class="term" title="동시 트랜잭션이 서로를 얼마나 볼 수 있는지 정하는 단계">격리수준</span>(<code>isolationLevel</code>)을 지정하지 않으면 DB의 기본값을 따르는데, PostgreSQL이라면 <code>READ COMMITTED</code>입니다. 대부분의 CRUD에는 그걸로 충분해서, 위처럼 "읽은 상태를 전제로 쓰는" 경합 구간에만 올려 잡고 있습니다. <code>Serializable</code>은 동시 발행 같은 경합을 걸러 주는 대신 충돌 시 트랜잭션이 <code>P2034</code>(write conflict/deadlock) 에러로 실패할 수 있어서, 격리수준을 올렸다면 <b>재시도 로직</b>까지 붙여야 마무리가 됩니다.</p>
+<p>이전 직장에서 정산 코드를 리팩토링할 때도 비슷한 생각을 했습니다. 돈이든 안전 기록이든 부분 성공은 실패보다 다루기 까다롭습니다. "발행은 됐는데 참가자 스냅샷이 없다"는 상태는 조회 화면의 버그처럼 보이지만, 실제로는 데이터 자체가 어긋난 것이기 때문입니다.</p>
+<div class="callout"><span class="mark">*</span><p>인터랙티브 트랜잭션 안에서는 <b>외부 I/O</b>를 하지 않는 편이 좋았습니다. FCM 푸시나 LLM 번역 호출 같은 것이 안에 들어오면 커넥션을 쥔 채 대기하다 <code>timeout</code>으로 통째로 롤백됩니다. 위 코드가 번역을 직접 호출하지 않고 <code>translationJob</code> 레코드만 적재하는 것도 그래서입니다. 외부 호출은 커밋 이후에 워커가 맡습니다.</p></div>
 
 <h2>6. 숨겨진 것을 꺼내 보는 습관</h2>
-<p>정리하면 순서는 이렇습니다. 쿼리 로그를 켜고, 요청당 쿼리 개수를 세고, 같은 모양의 쿼리가 반복되면 반복문을 의심합니다. 처방은 IN 배치 → DB 조인 → 수동 SQL 순으로, 단순한 것부터 씁니다. 그리고 묶여야 하는 쓰기는 <code>$transaction</code>으로 묶되, 격리수준을 올렸다면 재시도를 붙이고 외부 I/O는 밖으로 뺍니다. ORM을 쓰지 말자는 이야기가 아닙니다 — Prisma 덕에 스키마와 타입이 하나로 움직이는 생산성은 SafeIn처럼 모델이 많은 제품에서 포기할 수 없습니다. 다만 ORM이 숨겨 준 것을 <b>언제든 꺼내 볼 수 있는 상태</b>를 유지하는 것, 그게 ORM을 오래 쓰는 방법이라고 생각합니다.</p>
+<p>정리하면 순서는 이렇습니다. 쿼리 로그를 켜고, 요청당 쿼리 개수를 세고, 같은 모양의 쿼리가 반복되면 반복문을 의심합니다. 처방은 IN 배치 → DB 조인 → 수동 SQL 순으로 단순한 것부터 씁니다. 묶여야 하는 쓰기는 <code>$transaction</code>으로 묶되, 격리수준을 올렸다면 재시도를 붙이고 외부 I/O는 밖으로 뺍니다. ORM을 쓰지 말자는 이야기는 아닙니다. Prisma 덕분에 스키마와 타입이 하나로 움직이는 생산성은 SafeIn처럼 모델이 많은 제품에서 포기하기 어렵습니다. 다만 ORM이 숨겨 준 것을 <b>언제든 꺼내 볼 수 있는 상태</b>로 두는 편이 오래 쓰기에 낫다고, 지금은 생각하고 있습니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">Prisma</a>

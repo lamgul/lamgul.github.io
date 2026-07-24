@@ -52,13 +52,13 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">같은 데이터, 같은 모델이라도 순위를 가르는 건 <b>데이터를 어떻게 이해했는가</b>였습니다. "다 넣으면 되겠지"로 시작했다가, EDA를 하며 생각이 완전히 바뀐 이야기입니다.</p>
+    <p class="lead">전력 예측 대회에 나갔을 때, 같은 데이터와 같은 모델을 놓고 순위를 가른 것은 <b>데이터를 어떻게 이해했는가</b>였습니다. 저는 처음에 기상 데이터를 다 넣으면 되겠거니 생각하고 시작했는데, EDA를 해 보니 변수들이 서로 겹쳐 있었습니다. 그때 기온과 습도를 불쾌지수 하나로 묶으며 정리했던 과정을 적어 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
   <dl>
     <dt>EDA<span class="en">Exploratory Data Analysis</span></dt>
-    <dd>본격적으로 모델을 만들기 전에 데이터를 그래프로 그려 보고 이리저리 뜯어보며 성격을 파악하는 단계입니다. 처음 만난 사람과 대화해 보며 성향을 알아가는 것과 비슷합니다. 이 글에서 "다 넣으면 되겠지"라는 생각이 뒤집힌 것도 바로 이 EDA 덕분입니다.</dd>
+    <dd>본격적으로 모델을 만들기 전에 데이터를 그래프로 그려 보고 이리저리 뜯어보며 성격을 파악하는 단계입니다. 처음 만난 사람과 대화해 보며 성향을 알아가는 것과 비슷합니다. 이 글에서 "다 넣으면 되겠지"라는 생각을 바꾼 것도 이 단계였습니다.</dd>
     <dt>상관계수<span class="en">correlation, r</span></dt>
     <dd>두 값이 얼마나 나란히 움직이는지를 −1에서 1 사이 숫자로 나타낸 것입니다. 1에 가까울수록 한쪽이 오를 때 다른 쪽도 같이 오릅니다. 다만 함께 움직인다고 해서 한쪽이 다른 쪽의 <b>원인</b>이라는 뜻은 아닙니다. 이 글에서 기온과 전력사용량의 r≈0.85가 그 예입니다.</dd>
     <dt>다중공선성<span class="en">multicollinearity</span></dt>
@@ -66,19 +66,19 @@
     <dt>VIF<span class="en">Variance Inflation Factor</span></dt>
     <dd>다중공선성이 얼마나 심한지를 변수별로 재는 점수입니다. 보통 10을 넘으면 "겹침이 심하다"는 경고 신호로 봅니다. 눈대중이 아니라 숫자로 문제를 짚어 주기 때문에 어떤 변수를 손봐야 할지 판단하는 근거가 됩니다.</dd>
     <dt>파생변수<span class="en">derived feature</span></dt>
-    <dd>원본 데이터를 그대로 쓰지 않고 조합·가공해 새로 만든 변수입니다. 기온과 습도를 합쳐 만든 불쾌지수처럼요. 이 글의 핵심은 바로 이 파생변수를 도메인 지식으로 잘 만드는 일이 모델 선택보다 순위를 크게 좌우했다는 것입니다.</dd>
+    <dd>원본 데이터를 그대로 쓰지 않고 조합·가공해 새로 만든 변수입니다. 기온과 습도를 합쳐 만든 불쾌지수처럼요. 이 글에서는 도메인 지식으로 파생변수를 만드는 일이 모델 선택보다 순위에 더 크게 작용했습니다.</dd>
   </dl>
 </div>
 
 <h2>상관은 신호이자 함정</h2>
-<p>기온은 전력사용량과 강한 상관(r≈0.85), 강수량은 거의 무관(r≈0.12)이었습니다. 여기까지는 쉽습니다. 함정은 <b>기온·습도·풍속이 서로도 강하게 상관</b>한다는 것 — <span class="term" title="입력 변수들끼리 서로 너무 닮아 겹치는 상태">다중공선성</span>입니다. 이걸 그대로 넣으면 계수가 불안정해지고 해석이 무너집니다.</p>
+<p>상관계수부터 뽑아 보니 기온은 전력사용량과 강한 상관(r≈0.85)이었고, 강수량은 거의 무관(r≈0.12)했습니다. 여기까지는 예상한 대로였는데, 표를 더 들여다보니 <b>기온·습도·풍속이 서로도 강하게 상관</b>하고 있었습니다. <span class="term" title="입력 변수들끼리 서로 너무 닮아 겹치는 상태">다중공선성</span>입니다. 이 상태로 변수를 다 넣으면 계수가 불안정해지고 해석도 어려워집니다.</p>
 <pre class="code"><span class="c"># VIF로 다중공선성을 수치로 확인</span>
 <span class="k">from</span> statsmodels.stats.outliers_influence <span class="k">import</span> variance_inflation_factor
 vif = [variance_inflation_factor(X.values, i) <span class="k">for</span> i <span class="k">in</span> range(X.shape[<span class="s">1</span>])]
 <span class="c"># temp, humidity, wind 이 10을 훌쩍 넘김 → 손봐야 한다</span></pre>
 
 <h2>도메인 지식으로 압축한다</h2>
-<p>"사람이 냉방을 켜는 건 온도가 높아서가 아니라 <b>불쾌해서</b>가 아닐까?" 이 한 문장이 방향을 바꿨습니다. 얽힌 세 변수를 의미가 분명한 둘로 압축했습니다.</p>
+<p>사람이 냉방을 켜는 건 온도가 높아서가 아니라 <b>불쾌해서</b>가 아닐까 하는 생각이 들었습니다. 그렇게 놓고 보니 서로 얽혀 있던 세 변수를 의미가 분명한 둘로 압축할 수 있었습니다.</p>
 <pre class="code"><span class="c"># 불쾌지수(Thom) — 기온+습도를 하나로</span>
 df[<span class="s">"discomfort"</span>] = 0.81*T + 0.01*RH*(0.99*T - 14.3) + 46.3
 <span class="c"># 체감온도 — 기온+풍속을 하나로</span>
@@ -86,8 +86,8 @@ df[<span class="s">"apparent"</span>]  = T + 0.33*e - 0.70*wind - 4.0
 df = df.drop(columns=[<span class="s">"rain"</span>, <span class="s">"nonelec_cool"</span>, <span class="s">"solar"</span>])  <span class="c"># 무의미·중복 제거</span></pre>
 
 <h2>시간과 건물의 결</h2>
-<p>전력에는 하루의 리듬이 있습니다(22–05 저점, 10–16 고점). 데이터를 평평하게 다루면 이 구조를 놓칩니다. 시간대와 건물을 축으로 분류해, 각자의 고유 패턴을 모델이 볼 수 있게 했습니다.</p>
-<div class="callout"><span class="mark">*</span><p>교훈은 분명했습니다 — <b>원시 데이터를 그대로 쓰는 게 아니라, 도메인 지식으로 가공한다.</b> 결과는 AI 부문 리더보드 10위였지만, 남은 건 순위보다 이 확신이었습니다.</p></div>
+<p>전력사용량에는 하루의 리듬이 있었습니다(22–05 저점, 10–16 고점). 모든 시각을 같은 값으로 취급하면 이 구조가 드러나지 않아서, 시간대와 건물을 축으로 분류해 각자의 고유 패턴을 모델이 볼 수 있게 했습니다.</p>
+<div class="callout"><span class="mark">*</span><p>이 대회에서 배운 건 <b>원시 데이터를 그대로 넣기보다 도메인 지식으로 가공해서 넣는다</b>는 것이었습니다. 최종 결과는 AI 부문 리더보드 10위였는데, 지금까지 남아 있는 건 순위보다 이 습관 쪽입니다.</p></div>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">ML</a>

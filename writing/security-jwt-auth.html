@@ -83,7 +83,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">인증 미들웨어를 처음 붙일 때 가장 헷갈렸던 질문은 <b>"토큰이 대체 어디서 검증되는가"</b>였습니다. DB를 찌르지도 않는데, 서버는 이 요청이 진짜라고 어떻게 확신할까요. 답은 토큰 안에, 더 정확히는 <b>서명</b> 안에 있었습니다. SafeIn 백엔드를 혼자 설계하며 이 경계를 한곳으로 모았던 과정을 정리합니다.</p>
+    <p class="lead">SafeIn 백엔드에 인증 미들웨어를 붙이면서 가장 오래 붙잡고 있던 질문은 토큰이 어디서 검증되느냐였습니다. DB를 조회하지도 않는데 서버가 이 요청을 어떻게 믿는지 처음엔 감이 잡히지 않았는데, 판단은 토큰의 세 번째 조각인 <b>서명</b>에서 끝나고 있었습니다. 그때 검증 지점을 한곳으로 모으며 알게 된 것들을 적어 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -91,7 +91,7 @@
     <dt>JWT<span class="en">JSON Web Token</span></dt>
     <dd>로그인한 사용자가 "나는 이런 사람"이라고 들고 다니는 디지털 출입증입니다. 놀이공원의 손목 밴드처럼, 한 번 받으면 그다음부터는 밴드만 보여 주면 됩니다. 서버가 매번 회원 명부(DB)를 뒤지지 않아도 되는 게 이 글의 출발점입니다.</dd>
     <dt>서명<span class="en">Signature</span></dt>
-    <dd>토큰이 위조되지 않았음을 증명하는, 서버만 만들 수 있는 봉인입니다. 편지 봉투의 밀랍 도장과 같아서, 내용을 한 글자라도 고치면 도장이 깨집니다. 인증의 신뢰가 전부 이 도장 하나에 걸려 있어서 이 글의 핵심입니다.</dd>
+    <dd>토큰이 위조되지 않았음을 증명하는, 서버만 만들 수 있는 봉인입니다. 편지 봉투의 밀랍 도장과 같아서, 내용을 한 글자라도 고치면 도장이 깨집니다. 인증의 신뢰가 이 도장 하나에 걸려 있어서 이 글에서 가장 오래 다룹니다.</dd>
     <dt>클레임<span class="en">Claim</span></dt>
     <dd>토큰 안에 담긴 "나는 worker-92이고 역할은 근로자"라는 식의 정보 한 조각입니다. 말 그대로 <b>주장</b>이라, 그 자체로는 참이 아니고 서명이 뒷받침해 줘야 믿을 수 있습니다. 만료 시각(<code>exp</code>), 역할(<code>role</code>) 같은 것들이 모두 클레임입니다.</dd>
     <dt>대칭키 · 비대칭키<span class="en">Symmetric · Asymmetric key</span></dt>
@@ -102,7 +102,7 @@
 </div>
 
 <h2>세 조각으로 쪼개진 토큰</h2>
-<p>JWT는 이름 그대로 세 조각입니다. <code>header.payload.signature</code>, 점 두 개로 나뉩니다. 각 조각은 <b><span class="term" title="글자·기호를 URL에 넣어도 안전한 64가지 문자로 바꿔 적는 표기 방식. 암호화가 아니라 단순 변환이라 누구나 되돌려 읽을 수 있다">Base64URL</span></b>로 인코딩되어 있을 뿐, 암호문이 아닙니다.</p>
+<p>JWT는 <code>header.payload.signature</code> 형태로, 점 두 개를 기준으로 세 조각이 이어 붙은 문자열입니다. 각 조각은 <b><span class="term" title="글자·기호를 URL에 넣어도 안전한 64가지 문자로 바꿔 적는 표기 방식. 암호화가 아니라 단순 변환이라 누구나 되돌려 읽을 수 있다">Base64URL</span></b>로 인코딩되어 있을 뿐이라 암호문은 아닌데, 저는 한동안 이 부분을 반대로 알고 있었습니다.</p>
 <pre class="code"><span class="c"># 점 두 개가 토큰을 세 조각으로 나눈다</span>
 header . payload . signature
 
@@ -112,10 +112,10 @@ eyJhbGci… . eyJzdWIiOiJ3b3JrZXIt… . g0T5rQ8p…
 <span class="c"># payload를 그냥 디코드하면 — 암호화가 아니라 인코딩이다</span>
 { <span class="s">"sub"</span>: <span class="s">"worker-92"</span>, <span class="s">"role"</span>: <span class="s">"worker"</span>, <span class="s">"iat"</span>: 1651655520, <span class="s">"exp"</span>: 1651656420 }
 <span class="c">#  ↑ 서버 비밀 없이 누구나 읽는다. 그래서 여기엔 비밀번호를 담지 않는다.</span></pre>
-<p>여기서 첫 오해가 풀립니다. payload는 <b>암호화가 아니라 인코딩</b>이라, 서버 비밀이 없어도 누구나 디코드해 읽습니다. 그러니 비밀번호나 민감정보를 payload에 넣으면 안 됩니다. payload는 "이 사람은 worker-92이고 역할은 worker"라고 <b>주장</b>하는 자리일 뿐입니다. 그 주장을 믿어도 되는지는 세 번째 조각이 정합니다.</p>
+<p>payload는 암호화가 아니라 <b>인코딩</b>이라, 서버 비밀이 없어도 누구나 디코드해 읽을 수 있습니다. 토큰이 통째로 암호화되어 있다고 생각했던 게 첫 오해였고, 그래서 비밀번호나 민감정보는 payload에 넣지 않습니다. payload는 "이 사람은 worker-92이고 역할은 worker"라고 주장하는 자리일 뿐이고, 그 주장을 믿어도 되는지는 세 번째 조각이 정합니다.</p>
 
 <h2>서명이 신뢰의 전부다</h2>
-<p>서명은 "header와 payload가 위조되지 않았다"를 보장합니다. 한 글자라도 바꾸면 서명이 깨지고, 서버는 즉시 거부합니다. 그래서 인증의 신뢰는 전부 이 <b>서명 검증 한 번</b>에 걸려 있습니다. 남는 문제는 무엇으로 서명하느냐입니다.</p>
+<p>서명은 header와 payload가 발급 이후 바뀌지 않았음을 보장합니다. 한 글자라도 고치면 서명이 어긋나 서버가 거부하니, 인증에서 믿을 근거는 이 <b>서명 검증</b> 한 번에 모여 있는 셈입니다. 그다음에 정해야 했던 것은 무엇으로 서명하느냐였습니다.</p>
 <pre class="code"><span class="c">// HS256 — 하나의 비밀키가 서명도 검증도 한다 (대칭)</span>
 jwt.<span class="f">verify</span>(token, process.env.JWT_SECRET, { algorithms: [<span class="s">'HS256'</span>] });
 <span class="c">//   검증하는 모든 서비스가 '서명할 수도 있는' 키를 나눠 갖는다</span>
@@ -123,8 +123,8 @@ jwt.<span class="f">verify</span>(token, process.env.JWT_SECRET, { algorithms: [
 <span class="c">// RS256 — 개인키로 서명, 공개키로 검증만 한다 (비대칭)</span>
 jwt.<span class="f">verify</span>(token, PUBLIC_KEY, { algorithms: [<span class="s">'RS256'</span>] });
 <span class="c">//   서명 서버만 개인키를 쥔다 → 검증 측은 위조할 수 없다</span></pre>
-<p>HS256은 <b>대칭키</b>라 서명과 검증이 같은 비밀키를 씁니다. 단순하고 빠르지만, 검증하려는 모든 서비스가 "서명도 할 수 있는" 키를 나눠 가져야 합니다. 서비스 하나짜리 단일 서버라면 이걸로 충분합니다. 반대로 RS256은 <b>비대칭키</b>라, 서명 서버만 개인키를 쥐고 나머지는 공개키로 검증만 합니다. 검증 주체가 여럿으로 흩어지거나 검증하는 쪽이 토큰을 위조하면 안 되는 구조라면, 답은 RS256입니다.</p>
-<div class="callout"><span class="mark">*</span><p><code>algorithms</code>를 지정하지 않으면, 공격자가 토큰 헤더의 <code>alg</code>를 <code>none</code>이나 <code>HS256</code>으로 바꿔 넣을 수 있습니다. RS256을 기대하는 서버에서 공개키를 HMAC 비밀키로 재활용해 서명을 위조하는 <b><span class="term" title="검증 측이 기대한 서명 알고리즘을, 공격자가 토큰 헤더를 조작해 다른 알고리즘으로 바꿔치기하는 공격">알고리즘 혼동 공격</span></b>입니다. 방어는 간단합니다 — <code>alg</code>는 토큰이 아니라 <b>검증 측이 못 박습니다</b>.</p></div>
+<p>HS256은 <b>대칭키</b>라 서명과 검증이 같은 비밀키를 씁니다. 단순하고 빠른 대신 검증하려는 모든 서비스가 "서명도 할 수 있는" 키를 나눠 가져야 하는데, 서비스가 하나뿐인 단일 서버였을 때는 이걸로 충분했습니다. RS256은 <b>비대칭키</b>라 서명 서버만 개인키를 쥐고 나머지는 공개키로 검증만 하므로, 검증 주체가 여럿으로 흩어지거나 검증하는 쪽이 토큰을 위조하면 안 되는 구조에서는 RS256을 씁니다.</p>
+<div class="callout"><span class="mark">*</span><p><code>algorithms</code>를 지정하지 않으면, 공격자가 토큰 헤더의 <code>alg</code>를 <code>none</code>이나 <code>HS256</code>으로 바꿔 넣을 수 있습니다. RS256을 기대하는 서버에서 공개키를 HMAC 비밀키로 재활용해 서명을 위조하는 <b><span class="term" title="검증 측이 기대한 서명 알고리즘을, 공격자가 토큰 헤더를 조작해 다른 알고리즘으로 바꿔치기하는 공격">알고리즘 혼동 공격</span></b>입니다. 그래서 <code>alg</code>는 토큰이 주장하는 값을 그대로 따르지 않고, 검증 측에서 고정해 둡니다.</p></div>
 
 <div class="pw">
   <div class="pw-bar"><span class="dot"></span><span class="ttl">JWT 해부기 — 세 조각을 열고 서명을 다시 계산해 봅니다</span><span class="badge">직접 조작해 보세요</span></div>
@@ -164,8 +164,8 @@ jwt.<span class="f">verify</span>(token, PUBLIC_KEY, { algorithms: [<span class=
 </div>
 
 <h2>만료·리프레시·블랙리스트</h2>
-<p><code>exp</code> 클레임 덕분에 토큰은 스스로 만료됩니다. 검증기는 매번 <code>exp &gt; now</code>를 확인하죠. 그런데 이 자족성이 곧 약점입니다. 서명만 맞으면 만료 전까지 유효하니, 서버가 <b>중간에 돌려받을 방법이 없습니다</b>. 로그아웃했는데도, 토큰이 유출됐는데도 만료까지는 살아 있습니다.</p>
-<p>그래서 실무는 토큰을 둘로 나눕니다. 수명이 짧은 <b>access 토큰</b>과 긴 <b>refresh 토큰</b>. access가 15분 뒤 죽어도 refresh로 조용히 새로 받습니다. 그 15분의 틈마저 막아야 할 때 <b>블랙리스트</b>가 등장합니다.</p>
+<p><code>exp</code> 클레임 덕분에 토큰은 스스로 만료되고, 검증기는 매번 <code>exp &gt; now</code>를 확인합니다. 다만 토큰만 보고 판단이 끝난다는 점이 그대로 약점이 됩니다. 서명만 맞으면 만료 전까지는 유효하니 서버가 <b>중간에 돌려받을 방법</b>이 없고, 사용자가 로그아웃을 해도 토큰이 유출돼도 만료 시각까지는 살아 있습니다.</p>
+<p>그래서 토큰을 둘로 나눠 씁니다. 수명이 짧은 <b>access 토큰</b>과 상대적으로 긴 refresh 토큰을 함께 발급해, access가 15분 뒤 만료되면 refresh로 새로 받는 식입니다. 그 15분의 틈까지 막아야 할 때 쓴 것이 블랙리스트였습니다.</p>
 <pre class="code"><span class="c">// access는 검증 때마다 블랙리스트를 한 번 확인한다</span>
 <span class="k">async</span> <span class="f">assertNotRevoked</span>(payload: JwtPayload) {
   <span class="k">const</span> revoked = <span class="k">await</span> <span class="k">this</span>.redis.<span class="f">get</span>(<span class="s">`bl:${payload.jti}`</span>);
@@ -177,10 +177,10 @@ jwt.<span class="f">verify</span>(token, PUBLIC_KEY, { algorithms: [<span class=
   <span class="k">const</span> ttl = exp - Math.<span class="f">floor</span>(Date.<span class="f">now</span>() / 1000);
   <span class="k">if</span> (ttl &gt; 0) <span class="k">await</span> <span class="k">this</span>.redis.<span class="f">set</span>(<span class="s">`bl:${jti}`</span>, <span class="s">'1'</span>, <span class="s">'EX'</span>, ttl);
 }</pre>
-<p>블랙리스트는 JWT가 팔던 <b>무상태(stateless)</b>를 일부 반납하는 일입니다. 하지만 <code>jti</code>와 남은 수명(TTL)만 Redis에 올리므로, 상태는 <b>만료 시점까지만</b> 존재합니다. 무상태의 이점과 취소 가능성 사이의 타협점을 여기서 잡는 겁니다. 로그아웃, 토큰 탈취, 권한 강등처럼 <b>취소가 곧 요구사항</b>인 순간에만 이 비용을 치릅니다.</p>
+<p>블랙리스트를 두는 순간 JWT의 <b>무상태(stateless)</b>를 일부 반납하게 됩니다. 다만 Redis에 올리는 것은 <code>jti</code>와 남은 수명(TTL)뿐이라, 상태는 만료 시점까지만 남습니다. 무상태의 이점과 취소 가능성 사이의 타협점을 여기에 잡아 두었고, 로그아웃이나 토큰 탈취, 권한 강등처럼 취소가 요구사항인 경우에만 이 비용을 치르도록 했습니다.</p>
 
 <h2>검증을 한곳에 모으기 — Guard와 Strategy</h2>
-<p>이제 처음 질문으로 돌아옵니다. 토큰은 어디서 검증될까요. NestJS에서는 <b>passport-jwt Strategy</b>가 바로 그 자리입니다.</p>
+<p>처음의 질문으로 돌아오면, NestJS에서 토큰이 실제로 검증되는 자리는 <b>passport-jwt Strategy</b>였습니다.</p>
 <pre class="code"><span class="k">@Injectable</span>()
 <span class="k">export class</span> <span class="f">JwtStrategy</span> <span class="k">extends</span> <span class="f">PassportStrategy</span>(Strategy) {
   <span class="f">constructor</span>() {
@@ -196,21 +196,21 @@ jwt.<span class="f">verify</span>(token, PUBLIC_KEY, { algorithms: [<span class=
     <span class="k">return</span> { id: payload.sub, role: payload.role };  <span class="c">// → req.user</span>
   }
 }</pre>
-<p><code>secretOrKey</code>와 <code>algorithms</code>로 서명을, <code>ignoreExpiration: false</code>로 만료를 검사합니다. 이 둘을 통과한 요청만 <code>validate()</code>에 도착하고, 그 반환값이 <code>req.user</code>가 됩니다. 즉 <code>validate()</code>는 이미 "검증이 끝난 뒤"의 세계입니다.</p>
-<p>그리고 이 Strategy를 <b>Guard</b>로 감싸 경계에 세웁니다. 검증을 컨트롤러마다 흩어 놓으면 반드시 빠뜨리는 곳이 생깁니다. 대신 하나의 Guard 체인을 관문으로 두면, <b>그 선을 넘은 모든 요청은 이미 자신을 증명한 것</b>입니다. "토큰은 어디서 검증되는가"의 답은 결국 이 한 줄의 경계입니다.</p>
+<p><code>secretOrKey</code>와 <code>algorithms</code>로 서명을, <code>ignoreExpiration: false</code>로 만료를 검사합니다. 이 둘을 통과한 요청만 <code>validate()</code>에 도착하고, 그 반환값이 <code>req.user</code>가 됩니다. 그러니까 <code>validate()</code> 안은 이미 검증이 끝난 뒤의 코드입니다.</p>
+<p>이 Strategy는 <b>Guard</b>로 감싸 경계에 세워 두었습니다. 검증을 컨트롤러마다 흩어 놓으면 어디선가 빠뜨리게 되는데, 하나의 Guard 체인을 관문으로 두면 그 선을 넘은 요청은 이미 자신을 증명한 상태가 됩니다. 토큰이 어디서 검증되느냐는 질문의 답도 이 한 줄이었습니다.</p>
 
 <h2>같은 토큰, 다른 경계</h2>
-<p>SafeIn에는 두 종류의 사용자가 있습니다. 웹으로 전체를 처리하는 <b>관리자</b>와, 앱으로 자기 것만 다루는 <b>근로자</b>. 둘은 <b>같은 형식의 JWT</b>를 받지만 payload의 <code>role</code> 클레임이 다릅니다. 그리고 role은 서명 안에 묶여 있으니 사용자가 함부로 바꿀 수 없습니다.</p>
+<p>SafeIn에는 웹으로 전체를 처리하는 <b>관리자</b>와 앱으로 자기 것만 다루는 <b>근로자</b>, 두 종류의 사용자가 있습니다. 둘은 같은 형식의 JWT를 받고 payload의 <code>role</code> 클레임만 다릅니다. role은 서명 안에 묶여 있어서 사용자가 임의로 바꿀 수 없습니다.</p>
 <pre class="code"><span class="c">// 순서가 곧 경계다: 진짜인가? → 그다음, 허용되는가?</span>
 <span class="k">@UseGuards</span>(JwtAuthGuard, RolesGuard)
 <span class="k">@Roles</span>(<span class="s">'admin'</span>)
 <span class="k">@Patch</span>(<span class="s">'reports/:id/resolve'</span>)
 <span class="f">resolve</span>(<span class="k">@Param</span>(<span class="s">'id'</span>) id: string) { <span class="c">/* 관리자만 도달한다 */</span> }</pre>
-<p>경계는 순서로 만들어집니다. <code>JwtAuthGuard</code>가 "진짜인가"를 먼저 묻고, 통과하면 <code>RolesGuard</code>가 "허용되는가"를 묻습니다. 인증과 인가가 두 겹의 관문으로 분리되죠. 다만 role은 토큰이 발급된 <b>순간의 스냅샷</b>이라, 근로자가 관리자로 바뀌어도 옛 토큰엔 옛 역할이 남습니다. 앞서 만료를 짧게 잡고 블랙리스트를 둔 이유가 여기서 다시 맞물립니다. 역할별 경계를 코드로 어떻게 갈랐는지는 아래 링크에서 더 깊이 다뤘습니다.</p>
+<p>경계는 순서로 만들어집니다. <code>JwtAuthGuard</code>가 "진짜인가"를 먼저 묻고 통과하면 <code>RolesGuard</code>가 "허용되는가"를 묻는 식으로, 인증과 인가가 두 겹의 관문으로 나뉩니다. 다만 role은 토큰이 발급된 <b>순간의 스냅샷</b>이라, 근로자가 관리자로 바뀌어도 예전 토큰에는 예전 역할이 남아 있습니다. 앞서 만료를 짧게 잡고 블랙리스트를 둔 이유가 여기서 다시 걸립니다. 역할별 경계를 코드로 어떻게 갈랐는지는 아래 링크에 따로 적어 두었습니다.</p>
 
 <h2>정리 — 어디서 검증되는가</h2>
-<p>정리하면 이렇습니다. JWT의 payload는 <b>주장</b>을 나르고 signature는 <b>신뢰</b>를 나릅니다 — 그래서 비밀은 payload가 아니라 서명 키에 있습니다. 무상태를 택한 대가로 <b>취소가 어려워지고</b>, 짧은 만료·refresh·블랙리스트가 그 빈틈을 메웁니다. 마지막으로 검증은 컨트롤러에 흩어질 게 아니라 <b>하나의 경계</b>에 모여야 합니다.</p>
-<p>인증 미들웨어가 하는 일은 "로그인시키기"가 아닙니다. 이 선을 넘는 모든 요청이 <b>이미 자신을 증명했음을 보장</b>하는 것입니다. 토큰이 어디서 검증되느냐고 물으면, 저는 그 경계 한 곳을 가리킵니다.</p>
+<p>정리해 두면, JWT의 payload는 <b>주장</b>을 나르고 signature는 신뢰를 나릅니다. 그래서 지켜야 할 비밀은 payload가 아니라 서명 키 쪽에 있습니다. 무상태를 택한 대가로 이미 발급한 토큰을 취소하기 어려워지는데, 짧은 만료와 refresh, 블랙리스트가 그 빈틈을 메웁니다. 검증도 컨트롤러마다 흩어 놓지 않고 <b>하나의 경계</b>에 모아 두었습니다.</p>
+<p>작업을 마치고 나서는, 인증 미들웨어가 하는 일이 로그인을 시키는 게 아니라 이 선을 넘는 요청이 이미 자신을 증명했음을 보장하는 일이라고 정리하게 됐습니다. 지금도 토큰이 어디서 검증되느냐는 질문을 받으면 그 경계 한 곳을 가리킵니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">보안</a>

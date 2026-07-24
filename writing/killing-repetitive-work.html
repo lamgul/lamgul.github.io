@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">저는 반복 업무를 보면 가장 먼저 자동화를 떠올립니다. 같은 일을 두 번 하지 않는 것이, 늘어나는 업무를 감당하는 가장 확실한 방법이기 때문입니다. 협회에서는 매주 반복되는 보고서 생성이 첫 표적이었습니다.</p>
+    <p class="lead">협회에서 일할 때 매주 같은 보고서를 손으로 만들었습니다. 여러 곳에서 받은 자료를 붙여넣고 피벗을 돌리고 서식을 입히는 작업이었는데, 같은 순서를 매주 반복하다 보니 코드로 옮겨 두는 편이 낫겠다는 생각이 들었습니다. pandas와 openpyxl로 만들어 둔 스크립트와, 그렇게 줄인 시간을 어디에 썼는지 적어 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -69,7 +69,7 @@
 </div>
 
 <h2>수작업의 해부</h2>
-<p>먼저 사람이 하던 일을 단계로 쪼갰습니다. 여러 소스에서 데이터 내려받기 → 시트별로 붙여넣기 → <span class="term" title="흩어진 기록을 원하는 기준으로 다시 묶어 요약하는 표">피벗</span> → 서식 → 배포. 각 단계가 자동화 가능한지 따졌고, 대부분 가능했습니다. 사람의 판단이 필요한 건 마지막 검토 한 곳뿐이었죠.</p>
+<p>손으로 하던 일을 먼저 단계로 쪼개 적어 봤습니다. 여러 소스에서 데이터 내려받기 → 시트별로 붙여넣기 → <span class="term" title="흩어진 기록을 원하는 기준으로 다시 묶어 요약하는 표">피벗</span> → 서식 → 배포 순서였습니다. 단계마다 자동화가 되는지 따져 보니 대부분은 코드로 옮길 수 있었고, 사람의 판단이 필요한 곳은 마지막 검토 단계 정도였습니다.</p>
 
 <h2>집계는 pandas, 서식은 openpyxl</h2>
 <pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
@@ -80,10 +80,10 @@ pivot = df.pivot_table(index=<span class="s">"통신사"</span>, columns=<span c
 <span class="k">with</span> pd.ExcelWriter(<span class="s">"report.xlsx"</span>, engine=<span class="s">"openpyxl"</span>) <span class="k">as</span> w:
     pivot.to_excel(w, sheet_name=<span class="s">"요약"</span>)
     style_header(w.sheets[<span class="s">"요약"</span>])  <span class="c"># 사람이 보던 그 서식 그대로</span></pre>
-<p>핵심은 <b>산출물을 사람이 보던 형태 그대로</b> 만드는 것이었습니다. 자동화가 만든 결과물이 낯설면 아무도 안 씁니다. 통신사·협력기관별로 제각각이던 보고 프로세스를 하나로 표준화하니, 처리시간이 눈에 띄게(약 50%, 다른 보고선 30%) 줄었습니다.</p>
+<p>가장 신경 쓴 부분은 <b>산출물을 사람이 보던 형태 그대로</b> 유지하는 것이었습니다. 자동화한 결과물이 기존 보고서와 달라 보이면 받는 쪽에서 다시 손을 대게 되기 때문입니다. 통신사·협력기관별로 제각각이던 보고 프로세스를 이 형식으로 표준화하고 나니, 처리시간이 약 50%(다른 보고선은 30%) 줄었습니다.</p>
 
 <h2>남는 건 시간이 아니라 여유</h2>
-<p>자동화로 확보한 시간을 저는 <b>더 나은 일에 재투자</b>했습니다 — 회원사 렌터카 서비스 <span class="term" title="핵심 기능만 갖춘 가장 단순한 초기 버전">MVP</span> 설계와 임시 PM 역할이 그 시간에서 나왔습니다. 자동화의 진짜 가치는 절약한 시간이 아니라, 그 시간에 할 수 있게 된 <b>다른 일</b>에 있습니다.</p>
+<p>이렇게 생긴 시간에는 다른 일을 했습니다. 회원사 렌터카 서비스 <span class="term" title="핵심 기능만 갖춘 가장 단순한 초기 버전">MVP</span> 설계와 임시 PM 역할을 맡은 것도 여기서 확보한 시간 덕이었습니다. 돌아보면 자동화로 얻은 것은 줄어든 시간 자체보다 <b>그 시간에 할 수 있게 된 일</b> 쪽이었습니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">자동화</a>

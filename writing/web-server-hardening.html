@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">보안 감사의 첫 지적은 "서버 버전이 응답 헤더에 노출된다"였습니다. 사소해 보였지만, 공격자에게 <b>정확한 버전을 알려주는 건 <span class="term" title="공개적으로 알려진 보안 취약점에 붙는 고유 번호">CVE</span> 목록을 손에 쥐여주는 것</b>과 같습니다. 그 일을 계기로 정리한 체크리스트입니다.</p>
+    <p class="lead">보안 감사에서 처음 받은 지적은 서버 버전이 응답 헤더에 그대로 노출된다는 것이었습니다. 처음엔 사소한 지적이라고 생각했는데, 버전이 드러나면 공격자가 그 버전에 해당하는 <span class="term" title="공개적으로 알려진 보안 취약점에 붙는 고유 번호">CVE</span> 목록을 그대로 참고할 수 있다는 설명을 듣고 생각을 바꿨습니다. 그 뒤로 서버 설정을 하나씩 <b>점검</b>하면서 정리해 둔 체크리스트입니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -77,7 +77,7 @@ ServerSignature Off
 
 <span class="c"># Nginx</span>
 server_tokens off;</pre>
-<p>변경 자체는 한 줄이지만, <b>이 헤더를 참조하는 모니터링·LB가 있는지</b> 먼저 확인하고 개발 환경에서 테스트한 뒤 반영했습니다. "간단한 변경"이라는 방심이 장애를 만듭니다.</p>
+<p>설정 자체는 한 줄이라 금방 끝나지만, 이 헤더를 참조하는 <b>모니터링·LB</b>가 있는지 먼저 확인하고 개발 환경에서 테스트한 뒤에 반영했습니다. 간단해 보이는 변경일수록 확인 없이 넘어가기 쉬워서, 이 순서만은 지키기로 해 두었습니다.</p>
 
 <h2>2. 보안 헤더 세트</h2>
 <pre class="code"><span class="c"># 최소 세트 — 대부분의 서비스에 안전</span>
@@ -86,7 +86,7 @@ X-Content-Type-Options: nosniff
 X-Frame-Options: DENY            <span class="c"># 클릭재킹 방지</span>
 Referrer-Policy: strict-origin-when-cross-origin
 Content-Security-Policy: default-src 'self'   <span class="c"># 점진 도입</span></pre>
-<p><span class="term" title="불러올 수 있는 스크립트·자원의 출처를 제한하는 보안 정책">CSP</span>는 강력하지만 잘못 넣으면 화면이 깨집니다. <code>Content-Security-Policy-Report-Only</code>로 먼저 위반을 <b>수집만</b> 하다가, 리포트가 깨끗해지면 강제로 전환하는 게 안전합니다.</p>
+<p><span class="term" title="불러올 수 있는 스크립트·자원의 출처를 제한하는 보안 정책">CSP</span>는 효과가 큰 만큼 잘못 넣으면 정상 자원까지 막혀 화면이 깨집니다. 그래서 <code>Content-Security-Policy-Report-Only</code>로 위반 내역을 <b>수집만</b> 하며 한동안 지켜보다가, 리포트가 조용해진 뒤에 강제 적용으로 바꿨습니다.</p>
 
 <h2>3. 표면 줄이기</h2>
 <ul>
@@ -95,7 +95,7 @@ Content-Security-Policy: default-src 'self'   <span class="c"># 점진 도입</s
   <li>TLS는 1.2 이상만, 약한 cipher 제거</li>
   <li>관리자 경로는 IP 화이트리스트/별도 인증</li>
 </ul>
-<div class="callout"><span class="mark">*</span><p>보안은 하나의 큰 방패가 아니라 <b>작은 노출을 하나씩 닫는 일</b>의 합입니다. 화려하지 않지만, 정찰 단계에서 공격자를 지치게 만드는 게 방어의 절반입니다.</p></div>
+<div class="callout"><span class="mark">*</span><p>돌아보면 이 작업은 큰 조치 하나를 넣는 일이라기보다 <b>작은 노출을 하나씩 닫는 일</b>이 쌓이는 쪽에 가까웠습니다. 눈에 띄는 성과는 아니지만, 정찰 단계에서 공격자가 얻어 갈 정보를 줄여 두는 것만으로도 해 둘 만한 일이라고 생각합니다.</p></div>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">Apache</a>

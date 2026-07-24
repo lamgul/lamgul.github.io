@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">크롤링 파이프라인을 설계하면서 가장 오래 붙잡았던 질문은 "사이트별 크롤러를 <b>누가 고르고, 누가 넣어주는가</b>"였습니다. fashion_scrapy에서는 dependency-injector 라이브러리로 풀었고, FastAPI에는 <code>Depends</code>가 내장되어 있습니다. 이 글은 <code>Depends</code>가 실제로 어떻게 동작하는지 뜯어보고, 같은 문제 — 어댑터 교체 — 를 두 도구로 각각 풀어서 비교합니다.</p>
+    <p class="lead">크롤링 파이프라인을 설계하면서 사이트별 크롤러를 <b>누가 고르고 누가 넣어주는가</b>를 오래 고민했습니다. fashion_scrapy에서는 dependency-injector 라이브러리로 풀었고, 이후 FastAPI를 쓰면서는 같은 일을 내장된 <code>Depends</code>로 하게 됐습니다. 그때 <code>Depends</code>가 실제로 어떻게 동작하는지 뜯어본 내용과, 어댑터 교체라는 같은 문제를 두 도구로 각각 풀어 본 기록을 남겨 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -71,12 +71,12 @@
 </div>
 
 <h2>1. 크롤러에 왜 의존성 주입인가</h2>
-<p>크롤러의 본질적인 어려움은 크롤링 자체가 아니라 <b>사이트마다 전부 다르다</b>는 데 있습니다. URL 구조가 다르고, HTML 셀렉터가 다르고, 로그인·차단 정책이 다릅니다. 이 다름을 방치하면 <code>if site == "musinsa"</code> 분기가 파이프라인 전체로 번집니다.</p>
-<p>그래서 크롤링 파이프라인을 설계할 때 사이트별 차이를 <code>CrawlerAdapter</code> 인터페이스 뒤에 격리했습니다. 파이프라인(수집→정제→변환→저장)은 인터페이스만 알고, 구현은 사이트 수만큼 존재합니다. 여기까지가 <span class="term" title="다른 구현들을 공통 인터페이스 뒤에 숨겨 똑같이 다루게 하는 설계">Adapter 패턴</span>이고, 남는 질문이 하나 있습니다. <b>실행 시점에 어떤 구현체를 골라서, 어떻게 넣어주는가.</b> 그 "고르고 넣어주는" 일을 코드 바깥으로 빼는 것이 <span class="term" title="필요한 부품을 직접 만들지 않고 밖에서 받아 쓰는 방식">의존성 주입(DI)</span>의 전부입니다. 도구는 여러 가지지만 원리는 하나입니다 — 사용하는 쪽은 만들지 않는다.</p>
+<p>크롤러를 만들면서 힘들었던 건 크롤링 자체보다 <b>사이트마다 전부 다르다</b>는 점이었습니다. URL 구조가 다르고, HTML 셀렉터가 다르고, 로그인·차단 정책이 다릅니다. 이 차이를 그대로 두면 <code>if site == "musinsa"</code> 분기가 파이프라인 전체로 번져 나갑니다.</p>
+<p>그래서 크롤링 파이프라인을 설계할 때 사이트별 차이를 <code>CrawlerAdapter</code> 인터페이스 뒤에 격리했습니다. 파이프라인(수집→정제→변환→저장)은 인터페이스만 알고, 구현은 사이트 수만큼 두었습니다. 여기까지가 <span class="term" title="다른 구현들을 공통 인터페이스 뒤에 숨겨 똑같이 다루게 하는 설계">Adapter 패턴</span>인데, 실행 시점에 어떤 구현체를 골라서 어떻게 넣어줄지는 여전히 남는 문제였습니다. 그 고르고 넣어주는 일을 코드 바깥으로 빼는 것이 <span class="term" title="필요한 부품을 직접 만들지 않고 밖에서 받아 쓰는 방식">의존성 주입(DI)</span>이 하는 일입니다. 도구는 여러 가지지만, 사용하는 쪽이 자기가 쓸 것을 직접 만들지 않는다는 원리는 같습니다.</p>
 
 <h2>2. Depends는 마법이 아니다 — 시그니처가 그래프가 된다</h2>
-<p>FastAPI의 <code>Depends</code>는 프레임워크가 미리 준비한 마법 키워드가 아닙니다. 동작은 세 단계로 정리됩니다.</p>
-<p><b>첫째, 라우트를 등록하는 순간</b> FastAPI는 <code>inspect</code>로 핸들러의 시그니처를 읽어 의존성 트리(내부적으로 <code>Dependant</code> 객체)를 만듭니다. 파라미터의 타입 힌트와 <code>Depends(...)</code> 표시를 보고, 의존성 함수의 시그니처도 재귀적으로 읽습니다. 경로·쿼리·헤더 파라미터가 해석되는 것과 완전히 같은 메커니즘입니다. <b>둘째, 요청이 들어오면</b> 트리를 잎부터 차례로 실행해서 값을 채웁니다. <b>셋째, 같은 요청 안에서는</b> 같은 의존성 함수의 결과를 캐시해 한 번만 실행합니다.</p>
+<p>처음엔 <code>Depends</code>가 프레임워크가 알아서 해 주는 마법 같은 키워드인 줄 알았습니다. 소스를 따라가 보니 동작은 세 단계로 정리됐습니다.</p>
+<p>먼저 라우트를 등록하는 순간, FastAPI는 <code>inspect</code>로 핸들러의 시그니처를 읽어 의존성 트리(내부적으로 <code>Dependant</code> 객체)를 만듭니다. 파라미터의 타입 힌트와 <code>Depends(...)</code> 표시를 보고, 의존성 함수의 시그니처도 재귀적으로 읽습니다. 경로·쿼리·헤더 파라미터가 해석되는 것과 같은 메커니즘입니다. 그다음 요청이 들어오면 트리를 잎부터 차례로 실행해서 값을 채우고, <b>같은 요청 안에서는</b> 같은 의존성 함수의 결과를 캐시해 한 번만 실행합니다.</p>
 <pre class="code"><span class="k">from</span> typing <span class="k">import</span> Annotated
 <span class="k">import</span> httpx
 <span class="k">from</span> fastapi <span class="k">import</span> Depends, FastAPI
@@ -96,11 +96,11 @@ app = FastAPI()
 @app.get(<span class="s">"/preview"</span>)
 <span class="k">async def</span> <span class="f">preview</span>(html: Annotated[str, Depends(get_html)]):
     <span class="k">return</span> {<span class="s">"length"</span>: len(html)}</pre>
-<p>주목할 부분이 두 곳입니다. <code>get_html</code>의 <code>url: str</code>은 어디서 올까요 — <b>쿼리 파라미터</b>입니다. 의존성 함수의 시그니처도 라우트와 똑같이 해석되기 때문에, <code>/preview?url=...</code>의 값이 핸들러를 거치지 않고 의존성으로 직접 흘러듭니다. 그리고 <code>get_client</code>의 <code>yield</code> — 한 번 양보한 뒤 응답이 전송되고 나서 <code>async with</code> 블록이 닫힙니다. 커넥션 정리 같은 뒤처리를 의존성 안에 함께 두는 방식이고, DB 세션 패턴(<code>get_db</code>)이 전부 이 구조입니다.</p>
-<div class="callout"><span class="mark">*</span><p>같은 요청 안에서 같은 의존성은 <b>기본으로 한 번만 실행되고 캐시됩니다</b>. <code>get_client</code>를 세 곳에서 <code>Depends</code>해도 클라이언트는 하나입니다. 반대로 호출마다 새 값이 필요하면 <code>Depends(fn, use_cache=False)</code>를 명시해야 합니다. 이걸 모르면 "왜 값이 안 바뀌지"를 꽤 오래 헤매게 됩니다.</p></div>
+<p>이 코드에서 한참 들여다본 곳이 두 군데입니다. 하나는 <code>get_html</code>의 <code>url: str</code>인데, 이 값은 <b>쿼리 파라미터</b>에서 옵니다. 의존성 함수의 시그니처도 라우트와 똑같이 해석되기 때문에, <code>/preview?url=...</code>의 값이 핸들러를 거치지 않고 의존성으로 바로 들어옵니다. 다른 하나는 <code>get_client</code>의 <code>yield</code>로, 여기서 한 번 양보한 뒤 응답이 전송되고 나서야 <code>async with</code> 블록이 닫힙니다. 커넥션 정리 같은 뒤처리를 의존성 안에 함께 두는 방식이고, 흔히 쓰는 DB 세션 패턴(<code>get_db</code>)도 같은 구조였습니다.</p>
+<div class="callout"><span class="mark">*</span><p>같은 요청 안에서 같은 의존성은 <b>기본으로 한 번만 실행되고 캐시됩니다</b>. <code>get_client</code>를 세 곳에서 <code>Depends</code>해도 클라이언트는 하나입니다. 호출마다 새 값이 필요하면 <code>Depends(fn, use_cache=False)</code>를 명시해야 하는데, 저는 이걸 모르고 "왜 값이 안 바뀌지"를 한동안 헤맸습니다.</p></div>
 
 <h2>3. 어댑터를 주입으로 갈아끼운다</h2>
-<p>이제 크롤러 문제로 돌아갑니다. 인터페이스는 <code>Protocol</code>로 선언하고, 구현체 선택을 의존성 함수 하나에 몰아넣습니다.</p>
+<p>처음의 크롤러 문제로 돌아오면, 인터페이스는 <code>Protocol</code>로 선언하고 구현체를 고르는 일은 의존성 함수 하나에 모아 두었습니다.</p>
 <pre class="code"><span class="k">from</span> typing <span class="k">import</span> Annotated, Protocol
 <span class="k">from</span> fastapi <span class="k">import</span> Depends, FastAPI, HTTPException
 
@@ -132,10 +132,10 @@ _ADAPTERS: dict[str, type] = {<span class="s">"musinsa"</span>: MusinsaAdapter, 
 <span class="k">async def</span> <span class="f">crawl</span>(adapter: Annotated[CrawlerAdapter, Depends(get_adapter)]):
     html = <span class="k">await</span> adapter.fetch()
     <span class="k">return</span> adapter.parse(html)</pre>
-<p>핵심은 라우트 시그니처에 <code>site</code>가 <b>없다</b>는 점입니다. 경로의 <code>{site}</code>는 <code>get_adapter</code>의 시그니처가 끌어가고, 라우트는 <code>CrawlerAdapter</code>라는 계약만 봅니다. 구현체 선택 + HTTP 클라이언트 조립이 <code>get_adapter</code> 한 곳에서 끝나므로, 새 사이트 추가는 <b>클래스 하나 + 딕셔너리 한 줄</b>입니다. 파이프라인 코드는 그대로 — 크롤링 파이프라인 사례에서 지키려던 "새 소스를 추가할 때 기존 코드를 건드리지 않는다"가 웹 계층에서도 유지됩니다.</p>
+<p>써 놓고 보니 라우트 시그니처에 <code>site</code>가 <b>없습니다</b>. 경로의 <code>{site}</code>는 <code>get_adapter</code>의 시그니처가 가져가고, 라우트는 <code>CrawlerAdapter</code>라는 계약만 봅니다. 구현체 선택과 HTTP 클라이언트 조립이 <code>get_adapter</code> 한 곳에서 끝나기 때문에, 새 사이트를 붙일 때 하는 일은 클래스 하나를 쓰고 딕셔너리에 한 줄을 더하는 것이었습니다. 파이프라인 코드는 건드리지 않았고, 크롤링 파이프라인 사례에서 지키려던 "새 소스를 추가할 때 기존 코드를 건드리지 않는다"가 웹 계층에서도 그대로 유지됐습니다.</p>
 
 <h2>4. dependency-injector와 비교 — 컨테이너 대 시그니처</h2>
-<p>fashion_scrapy는 API 서버가 아니라 <b>스케줄러가 매일 돌리는 배치</b>였습니다. 요청(request)이라는 실행 단위가 없으니 <code>Depends</code>를 쓸 자리도 없었고, 프레임워크 무관하게 동작하는 dependency-injector를 썼습니다. 객체 그래프를 컨테이너 클래스 한 곳에 명시적으로 선언하는 방식입니다.</p>
+<p>fashion_scrapy는 API 서버가 아니라 <b>스케줄러가 매일 돌리는 배치</b>였습니다. 요청(request)이라는 실행 단위가 없어서 <code>Depends</code>를 쓸 자리도 없었고, 프레임워크와 무관하게 동작하는 dependency-injector를 골랐습니다. 객체 그래프를 컨테이너 클래스 한 곳에 명시적으로 선언하는 방식입니다.</p>
 <pre class="code"><span class="k">from</span> dependency_injector <span class="k">import</span> containers, providers
 <span class="k">from</span> dependency_injector.wiring <span class="k">import</span> Provide, inject
 
@@ -154,11 +154,11 @@ _ADAPTERS: dict[str, type] = {<span class="s">"musinsa"</span>: MusinsaAdapter, 
 container = Container()
 container.config.site.from_env(<span class="s">"CRAWL_SITE"</span>, default=<span class="s">"musinsa"</span>)
 container.wire(modules=[__name__])</pre>
-<p>두 도구의 차이는 "어디에 그래프를 적는가"입니다. dependency-injector는 <b>컨테이너 한 파일</b>에 전체 조립도가 모입니다. <code>Singleton</code>·<code>Factory</code>·<code>Resource</code>로 수명(스코프)을 명시적으로 고를 수 있고, 설정(<code>Configuration</code>)과 선택(<code>Selector</code>)이 일급으로 지원됩니다. 대신 <code>@inject</code>와 <code>wire()</code>라는 부트스트랩 비용이 있고, 팀원이 처음 보면 낯설어합니다.</p>
-<p><code>Depends</code>는 반대로 그래프가 <b>시그니처에 분산</b>됩니다. 조립도를 한눈에 보긴 어렵지만, 경로·쿼리·헤더와 자연스럽게 섞이고 요청 스코프가 공짜로 따라옵니다. 다만 싱글턴 스코프는 내장되어 있지 않습니다 — 앱 전역 자원(커넥션 풀, 모델 핸들 등)은 <code>lifespan</code>에서 만들어 <code>app.state</code>에 두거나, 설정처럼 가벼운 것은 <code>@lru_cache</code>를 붙인 함수로 흉내 냅니다. 온프레미스 vLLM 서빙에서 게이트웨이를 만들 때도 백엔드 클라이언트는 이렇게 <code>lifespan</code>에서 한 번 만들고, 요청마다 바뀌는 것만 <code>Depends</code>로 풀었습니다.</p>
+<p>두 도구를 다 써 보고 느낀 차이는 그래프를 어디에 적느냐였습니다. dependency-injector는 <b>컨테이너 한 파일</b>에 전체 조립도가 모입니다. <code>Singleton</code>·<code>Factory</code>·<code>Resource</code>로 수명(스코프)을 명시적으로 고를 수 있고, 설정(<code>Configuration</code>)과 선택(<code>Selector</code>)도 일급으로 지원됩니다. 대신 <code>@inject</code>와 <code>wire()</code>를 갖춰 두는 부트스트랩 비용이 있고, 이 코드를 처음 보는 사람에게는 낯선 방식입니다.</p>
+<p><code>Depends</code>는 반대로 그래프가 <b>시그니처에 흩어져</b> 있습니다. 조립도를 한눈에 보기는 어렵지만, 경로·쿼리·헤더와 자연스럽게 섞이고 요청 스코프는 따로 준비하지 않아도 따라옵니다. 다만 싱글턴 스코프는 내장되어 있지 않아서, 앱 전역 자원(커넥션 풀, 모델 핸들 등)은 <code>lifespan</code>에서 만들어 <code>app.state</code>에 두거나 설정처럼 가벼운 것은 <code>@lru_cache</code>를 붙인 함수로 흉내 냈습니다. 온프레미스 vLLM 서빙에서 게이트웨이를 만들 때도 백엔드 클라이언트는 <code>lifespan</code>에서 한 번 만들고, 요청마다 바뀌는 것만 <code>Depends</code>로 풀었습니다.</p>
 
 <h2>5. 테스트에서 갈아끼우기 — dependency_overrides</h2>
-<p>주입 구조의 진짜 배당금은 테스트에서 나옵니다. FastAPI는 의존성 함수를 통째로 갈아끼우는 공식 통로 <code>app.dependency_overrides</code>를 제공합니다. 실제 사이트를 때리지 않고 어댑터 계약만 검증합니다.</p>
+<p>주입 구조가 가장 고마웠던 건 테스트를 쓸 때였습니다. FastAPI는 의존성 함수를 통째로 갈아끼우는 공식 통로로 <code>app.dependency_overrides</code>를 제공합니다. 덕분에 실제 사이트를 호출하지 않고 어댑터 계약만 검증할 수 있었습니다.</p>
 <pre class="code"><span class="k">from</span> fastapi.testclient <span class="k">import</span> TestClient
 
 <span class="k">class</span> <span class="f">FakeAdapter</span>:
@@ -174,12 +174,12 @@ container.wire(modules=[__name__])</pre>
         <span class="k">assert</span> res.json() == [{<span class="s">"title"</span>: <span class="s">"고정된 기사"</span>}]
     <span class="k">finally</span>:
         app.dependency_overrides.clear()</pre>
-<p>오버라이드 대상은 함수 객체 자체(<code>get_adapter</code>)가 키입니다. 네트워크도, 실제 어댑터도, <code>get_client</code>도 전부 우회됩니다 — <code>get_adapter</code>가 통째로 대체되니 그 하위 의존성도 실행되지 않습니다. dependency-injector에도 같은 용도의 <code>container.override()</code>가 있어서, 배치 쪽 테스트도 같은 감각으로 작성할 수 있었습니다.</p>
-<div class="callout"><span class="mark">*</span><p><code>dependency_overrides</code>는 <b>앱 전역 딕셔너리</b>입니다. 테스트가 끝나면 반드시 <code>clear()</code>로 되돌리세요. pytest라면 fixture의 <code>yield</code> 뒤에서 정리하는 편이 안전합니다. 어느 테스트의 가짜 어댑터가 다른 테스트로 새어 들어가는 순간, 실패가 실행 순서에 따라 랜덤하게 보이기 시작합니다.</p></div>
+<p>오버라이드의 키는 함수 객체 자체(<code>get_adapter</code>)입니다. <code>get_adapter</code>가 통째로 대체되기 때문에 그 아래에 달린 <code>get_client</code>도, 실제 어댑터도, 네트워크 호출도 실행되지 않습니다. dependency-injector에도 같은 용도의 <code>container.override()</code>가 있어서, 배치 쪽 테스트도 비슷한 감각으로 작성했습니다.</p>
+<div class="callout"><span class="mark">*</span><p><code>dependency_overrides</code>는 <b>앱 전역 딕셔너리</b>라서, 테스트가 끝나면 <code>clear()</code>로 되돌려 놓아야 합니다. pytest라면 fixture의 <code>yield</code> 뒤에서 정리하는 편이 안전합니다. 한 테스트의 가짜 어댑터가 다른 테스트로 새어 들어가면, 실패가 실행 순서에 따라 들쭉날쭉하게 보이기 시작합니다.</p></div>
 
 <h2>6. 무엇을 언제 쓰나</h2>
-<p>제 기준은 단순합니다. <b>실행 단위가 HTTP 요청이면 <code>Depends</code></b>로 충분합니다. 요청 스코프·정리(<code>yield</code>)·오버라이드까지 내장이고, 의존성이 곧 문서(OpenAPI 파라미터)로 이어집니다. <b>배치·CLI거나 웹 프레임워크 밖에서도 같은 그래프를 써야 하면 컨테이너</b>(dependency-injector)가 맞습니다. 조립도가 한 파일에 모이고 수명 제어가 명시적입니다.</p>
-<p>도구가 무엇이든 원리는 같습니다. 정산 모듈을 리팩토링할 때도 결론은 결국 — 시계와 수수료 정책을 밖에서 주입하고 나서야 테스트가 가능해졌다는 것이었습니다. 사용하는 쪽은 만들지 않는다. 이 한 문장을 지키면, 크롤러 어댑터든 LLM 백엔드든 갈아끼우는 일은 설정 한 줄의 문제가 됩니다.</p>
+<p>지금 제가 쓰는 기준은 단순합니다. 실행 단위가 HTTP 요청이면 <b><code>Depends</code></b>로 충분했습니다. 요청 스코프와 정리(<code>yield</code>), 오버라이드가 모두 내장이고, 의존성이 그대로 문서(OpenAPI 파라미터)로 이어집니다. 배치나 CLI처럼 웹 프레임워크 밖에서도 같은 그래프를 써야 하면 <b>컨테이너</b>(dependency-injector) 쪽이 편했습니다. 조립도가 한 파일에 모이고 수명 제어가 명시적입니다.</p>
+<p>도구가 무엇이든 원리는 같았습니다. 정산 모듈을 리팩토링할 때도 시계와 수수료 정책을 밖에서 주입하고 나서야 테스트를 쓸 수 있었습니다. 사용하는 쪽이 자기가 쓸 것을 직접 만들지 않게 해 두면, 크롤러 어댑터든 LLM 백엔드든 갈아끼우는 일이 설정을 바꾸는 정도로 줄어듭니다.</p>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">FastAPI</a>

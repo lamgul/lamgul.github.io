@@ -52,7 +52,7 @@
     </div>
   </section>
   <article class="post-body" id="body">
-    <p class="lead">다섯 곳에 흩어진 정산 로직을 한 곳으로 모으고 나니 다음 질문이 따라왔습니다. <b>정산 저장과 이력 저장은 같이 롤백되어야 하는가?</b> 답은 <code>@Transactional</code>의 전파(propagation) 옵션이 정하는데, 문서만 읽어서는 커밋·롤백 경계가 눈에 안 보입니다. REQUIRED · REQUIRES_NEW · NESTED 세 옵션을 실험 코드와 로그로 확인합니다.</p>
+    <p class="lead">다섯 곳에 흩어져 있던 정산 로직을 한 곳으로 모으고 나니, 정산 저장과 이력 저장이 <b>같이 롤백되어야 하는지</b>가 남았습니다. 이 답은 <code>@Transactional</code>의 전파(propagation) 옵션이 정하는데, 문서를 읽어도 커밋·롤백 경계가 잘 그려지지 않았습니다. 그래서 REQUIRED · REQUIRES_NEW · NESTED 세 옵션을 실험 코드와 로그로 하나씩 확인해 봤고, 그때 정리한 내용을 적어 둡니다.</p>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -66,22 +66,22 @@
     <dt>프록시 기반 AOP<span class="en">Proxy-based AOP</span></dt>
     <dd>스프링은 원본 객체를 <b>얇게 감싼 대리인(프록시)</b>을 만들어, 트랜잭션을 열고 닫는 코드를 그 대리인이 대신 실행합니다. 그래서 같은 클래스 안에서 <code>this.메서드()</code>로 직접 부르면 대리인을 건너뛰어 트랜잭션 설정이 무시됩니다(6장의 함정).</dd>
     <dt>세이브포인트<span class="en">Savepoint</span></dt>
-    <dd>하나의 트랜잭션 안에 찍어 두는 <b>중간 저장 지점</b>입니다. 문제가 생기면 처음까지 다 되돌리지 않고 이 지점까지만 부분 롤백할 수 있어요. NESTED 옵션이 이 기능을 쓰는데, JPA에서는 지원되지 않는다는 게 5장의 벽입니다.</dd>
+    <dd>하나의 트랜잭션 안에 찍어 두는 <b>중간 저장 지점</b>입니다. 문제가 생기면 처음까지 다 되돌리지 않고 이 지점까지만 부분 롤백할 수 있어요. NESTED 옵션이 이 기능을 쓰는데, JPA에서는 지원되지 않습니다(5장).</dd>
   </dl>
 </div>
 
 <h2>1. 전파는 "경계를 어떻게 이어붙일 것인가"의 문제</h2>
-<p><code>@Transactional</code> 메서드가 또 다른 <code>@Transactional</code> 메서드를 호출할 때, 두 번째 메서드가 첫 번째의 트랜잭션에 <b>참여할지, 새로 만들지, 중첩할지</b>를 정하는 규칙이 전파 옵션입니다. 이때 두 개념을 구분해야 사고가 정리됩니다.</p>
-<p><b>논리 트랜잭션</b>은 <code>@Transactional</code> 스코프 하나하나이고, <b>물리 트랜잭션</b>은 실제 DB 커넥션 위에서 도는 <code>BEGIN … COMMIT</code>입니다. REQUIRED는 여러 논리 트랜잭션을 하나의 물리 트랜잭션에 태우고, REQUIRES_NEW는 물리 트랜잭션을 하나 더 만듭니다. 롤백 관련 사고는 대부분 이 둘을 혼동할 때 생깁니다.</p>
+<p><code>@Transactional</code> 메서드가 또 다른 <code>@Transactional</code> 메서드를 호출할 때, 두 번째 메서드가 첫 번째의 트랜잭션에 <b>참여할지, 새로 만들지, 중첩할지</b>를 정하는 규칙이 전파 옵션입니다. 저는 여기서 두 개념을 나눠 놓고 나서야 로그가 읽히기 시작했습니다.</p>
+<p><b>논리 트랜잭션</b>은 <code>@Transactional</code> 스코프 하나하나이고, <b>물리 트랜잭션</b>은 실제 DB 커넥션 위에서 도는 <code>BEGIN … COMMIT</code>입니다. REQUIRED는 여러 논리 트랜잭션을 하나의 물리 트랜잭션에 태우고, REQUIRES_NEW는 물리 트랜잭션을 하나 더 만듭니다. 롤백이 예상과 다르게 흘러갈 때는 대개 제 머릿속에서 이 둘이 섞여 있었습니다.</p>
 
 <h2>2. 실험 준비 — 경계를 로그로 보이게 만든다</h2>
-<p>트랜잭션 매니저의 DEBUG 로그를 켜면 트랜잭션이 언제 만들어지고, 참여하고, 정지(suspend)되는지 전부 찍힙니다. 이 글의 모든 로그는 이 설정으로 뽑았습니다.</p>
+<p>실험을 하려면 경계가 보여야 해서 트랜잭션 매니저의 DEBUG 로그부터 켰습니다. 이렇게 해 두면 트랜잭션이 언제 만들어지고, 참여하고, 정지(suspend)되는지가 로그에 남습니다. 아래 로그는 모두 이 설정으로 뽑은 것입니다.</p>
 <pre class="code"><span class="c"># application.yml — 트랜잭션 경계를 로그로 확인</span>
 <span class="k">logging</span>:
   <span class="k">level</span>:
     <span class="f">org.springframework.orm.jpa.JpaTransactionManager</span>: DEBUG
     <span class="f">org.springframework.transaction.interceptor</span>: TRACE</pre>
-<p>실험 시나리오는 정산 시스템에서 그대로 가져왔습니다. <code>SettlementService.settle()</code>이 정산을 저장하고, <code>HistoryService.record()</code>가 정산 이력을 남깁니다. 이력 저장이 실패했을 때 정산까지 함께 롤백되는지가 관전 포인트입니다.</p>
+<p>실험 시나리오는 정산 시스템에서 그대로 가져왔습니다. <code>SettlementService.settle()</code>이 정산을 저장하고, <code>HistoryService.record()</code>가 정산 이력을 남깁니다. 확인하고 싶었던 것은 이력 저장이 실패했을 때 정산까지 함께 롤백되는지 하나였습니다.</p>
 <pre class="code"><span class="k">@Service</span>
 <span class="k">public class</span> <span class="f">SettlementService</span> {
   <span class="k">private final</span> SettlementRepository repository;
@@ -99,7 +99,7 @@
 }</pre>
 
 <h2>3. REQUIRED — 함께 살고, 함께 죽는다</h2>
-<p><code>record()</code>가 REQUIRED(기본값)이고 내부에서 <code>RuntimeException</code>이 터지면, 바깥에서 <code>try-catch</code>로 잡았으니 정산은 커밋될 것 같습니다. 실제로는 <b>정산까지 전부 롤백되고, 커밋을 시도한 바깥이 <code>UnexpectedRollbackException</code>을 받습니다.</b></p>
+<p><code>record()</code>가 REQUIRED(기본값)이고 내부에서 <code>RuntimeException</code>이 터져도, 바깥에서 <code>try-catch</code>로 잡았으니 정산은 커밋되리라고 생각했습니다. 실행해 보니 정산까지 함께 <b>롤백</b>됐고, 커밋을 시도한 바깥은 <code>UnexpectedRollbackException</code>을 받았습니다.</p>
 <pre class="code">JpaTransactionManager : Creating new transaction with name
   [..SettlementService.settle]: <span class="k">PROPAGATION_REQUIRED</span>,ISOLATION_DEFAULT
 JpaTransactionManager : <span class="k">Participating in existing transaction</span>
@@ -111,11 +111,11 @@ JpaTransactionManager : Global transaction is marked as rollback-only
 <span class="c">-- 바깥으로 던져지는 예외 --</span>
 UnexpectedRollbackException: Transaction rolled back because
   it has been marked as <span class="k">rollback-only</span></pre>
-<p>이유는 로그 세 번째 줄에 있습니다. REQUIRED로 참여한 논리 트랜잭션이 예외로 끝나는 순간, 스프링은 공유 중인 물리 트랜잭션에 <b>rollback-only 마크</b>를 찍습니다. 바깥이 예외를 잡아도 마크는 지워지지 않으니, 커밋 시점에 "커밋해 달라더니 롤백 예약이 돼 있다"며 예외가 나는 겁니다. <code>try-catch</code>는 예외 전파만 막을 뿐 트랜잭션의 운명은 못 바꿉니다.</p>
-<p>참고로 이 롤백 규칙은 기본적으로 <code>RuntimeException</code>과 <code>Error</code>에만 적용됩니다. 체크 예외는 기본값으로는 롤백을 일으키지 않으므로, 필요하면 <code>@Transactional(rollbackFor = …)</code>로 명시해야 합니다.</p>
+<p>이유는 로그 세 번째 줄에 적혀 있었습니다. REQUIRED로 참여한 논리 트랜잭션이 예외로 끝나면 스프링은 공유 중인 물리 트랜잭션에 <b>rollback-only 마크</b>를 찍고, 바깥에서 예외를 잡아도 이 마크는 지워지지 않습니다. 그래서 커밋 시점에 "커밋해 달라고 했는데 롤백 예약이 돼 있다"며 예외가 납니다. <code>try-catch</code>가 막아 주는 범위는 예외 전파까지였고, 트랜잭션이 어떻게 끝날지는 거기서 바뀌지 않았습니다.</p>
+<p>참고로 이 롤백 규칙은 기본적으로 <code>RuntimeException</code>과 <code>Error</code>에만 적용됩니다. 체크 예외는 기본값으로는 롤백을 일으키지 않아서, 필요하면 <code>@Transactional(rollbackFor = …)</code>로 명시해 줘야 합니다.</p>
 
 <h2>4. REQUIRES_NEW — 따로 커밋되지만, 예외는 남는다</h2>
-<p>이력은 정산과 운명을 같이할 필요가 없다고 판단하면 <code>record()</code>를 REQUIRES_NEW로 바꿉니다.</p>
+<p>이력은 정산과 함께 롤백될 필요가 없다고 판단해서, <code>record()</code>를 REQUIRES_NEW로 바꿔 봤습니다.</p>
 <pre class="code"><span class="k">@Service</span>
 <span class="k">public class</span> <span class="f">HistoryService</span> {
   <span class="k">private final</span> HistoryRepository historyRepository;
@@ -130,14 +130,14 @@ UnexpectedRollbackException: Transaction rolled back because
 JpaTransactionManager : Committing JPA transaction on EntityManager [..]
 JpaTransactionManager : <span class="k">Resuming suspended transaction</span> after
   completion of inner transaction</pre>
-<p>바깥 트랜잭션은 정지되고, <b>새 커넥션 위에 새 물리 트랜잭션</b>이 열립니다. 이제 제목의 질문에 답할 수 있습니다. <b>REQUIRES_NEW는 자기 스코프 안에서 예외가 던져질 때, 그때만 롤백됩니다.</b> 방향을 나눠 보면:</p>
-<p><b>안쪽이 실패하면</b> — 안쪽 물리 트랜잭션만 롤백됩니다. 다만 예외 객체 자체는 그대로 바깥으로 던져지므로, 바깥이 안 잡으면 바깥도 (자기 예외로) 롤백됩니다. 잡으면 바깥은 무사히 커밋됩니다. REQUIRED와 달리 rollback-only 마크가 바깥에 찍히지 않기 때문에, 이번에는 <code>try-catch</code>가 진짜로 통합니다.</p>
-<p><b>바깥이 실패하면</b> — 안쪽이 이미 커밋된 뒤라면 <b>되돌릴 방법이 없습니다.</b> 정산은 롤백됐는데 "정산 완료" 이력만 남는, 데이터가 서로를 부정하는 상태가 됩니다. 독립 커밋은 공짜가 아니라, "바깥이 죽어도 이 기록은 남아야 하는가"라는 업무 질문에 예라고 답했을 때만 쓰는 도구입니다. 감사 로그나 실패 기록처럼 <b>실패했다는 사실 자체를 남기고 싶을 때</b> 적합합니다.</p>
-<div class="callout"><span class="mark">*</span><p>REQUIRES_NEW는 바깥 커넥션을 반납하지 않은 채 <b>커넥션을 하나 더</b> 잡습니다. 요청 하나가 커넥션 두 개를 점유하므로, 풀 크기가 빠듯하면 서로가 서로의 반납을 기다리는 교착으로 풀이 말라붙을 수 있습니다. REQUIRES_NEW를 늘릴 때는 HikariCP <code>maximum-pool-size</code>를 같이 봐야 합니다.</p></div>
+<p>바깥 트랜잭션은 정지되고, 새 커넥션 위에 <b>새 물리 트랜잭션</b>이 열립니다. 제목에 적어 둔 질문의 답은 여기에 있었습니다. REQUIRES_NEW는 자기 스코프 안에서 예외가 던져질 때만 롤백됩니다. 실패가 어느 쪽에서 나느냐로 나눠 보면 이렇습니다.</p>
+<p><b>안쪽이 실패하면</b> — 안쪽 물리 트랜잭션만 롤백됩니다. 다만 예외 객체 자체는 그대로 바깥으로 던져지므로, 바깥이 잡지 않으면 바깥도 자기 예외로 롤백됩니다. 잡으면 바깥은 그대로 커밋됩니다. REQUIRED와 달리 rollback-only 마크가 바깥에 찍히지 않아서, 이번에는 <code>try-catch</code>가 의도한 대로 동작했습니다.</p>
+<p><b>바깥이 실패하면</b> — 안쪽이 이미 커밋된 뒤라면 되돌릴 방법이 없습니다. 정산은 롤백됐는데 "정산 완료" 이력만 남아서, 두 데이터가 서로 어긋난 상태가 됩니다. 그래서 독립 커밋은 "바깥이 실패해도 이 기록은 남아야 하는가"라는 업무 질문에 예라고 답할 수 있을 때만 쓰기로 했습니다. 감사 로그나 실패 기록처럼 실패했다는 사실 자체를 남겨야 하는 경우가 여기에 해당합니다.</p>
+<div class="callout"><span class="mark">*</span><p>REQUIRES_NEW는 바깥 커넥션을 반납하지 않은 채 <b>커넥션을 하나 더</b> 잡습니다. 요청 하나가 커넥션 두 개를 점유하므로, 풀 크기가 빠듯하면 서로가 서로의 반납을 기다리는 교착으로 풀이 고갈될 수 있습니다. REQUIRES_NEW를 늘릴 때는 HikariCP <code>maximum-pool-size</code>도 같이 봐 두는 편이 좋았습니다.</p></div>
 
 <h2>5. NESTED — 세이브포인트, 그리고 JPA의 벽</h2>
-<p>NESTED는 새 물리 트랜잭션을 만들지 않습니다. 대신 바깥 물리 트랜잭션 안에 JDBC <span class="term" title="트랜잭션 중간에 찍어 두는 저장 지점 — 여기까지만 부분 롤백할 수 있다"><b>세이브포인트</b></span>를 찍고, 안쪽이 실패하면 그 지점까지만 부분 롤백합니다. 안쪽이 성공해도 독립 커밋은 없고, 최종 커밋은 바깥과 함께 일어납니다. "안쪽 실패가 바깥을 죽이면 안 되지만, 바깥이 죽으면 안쪽도 같이 사라져야 한다"는 요구에 정확히 맞는 옵션입니다.</p>
-<p>다만 JPA에서는 벽에 부딪힙니다. <code>JpaTransactionManager</code>는 세이브포인트 기반 중첩 트랜잭션을 지원하지 않아서, NESTED를 걸면 시작조차 못 하고 예외가 납니다.</p>
+<p>NESTED는 새 물리 트랜잭션을 만들지 않습니다. 대신 바깥 물리 트랜잭션 안에 JDBC <span class="term" title="트랜잭션 중간에 찍어 두는 저장 지점 — 여기까지만 부분 롤백할 수 있다"><b>세이브포인트</b></span>를 찍고, 안쪽이 실패하면 그 지점까지만 부분 롤백합니다. 안쪽이 성공해도 독립 커밋은 없고, 최종 커밋은 바깥과 함께 일어납니다. "안쪽 실패가 바깥을 무너뜨리면 안 되지만, 바깥이 롤백되면 안쪽도 같이 사라져야 한다"는 요구에는 이 옵션이 맞습니다.</p>
+<p>다만 제가 쓰던 JPA 환경에서는 쓸 수 없었습니다. <code>JpaTransactionManager</code>는 세이브포인트 기반 중첩 트랜잭션을 지원하지 않아서, NESTED를 걸면 트랜잭션이 시작되지 않고 예외가 납니다.</p>
 <pre class="code"><span class="k">@Transactional</span>(propagation = Propagation.<span class="k">NESTED</span>)
 <span class="k">public void</span> <span class="f">record</span>(Order order) { .. }
 
@@ -145,10 +145,10 @@ JpaTransactionManager : <span class="k">Resuming suspended transaction</span> af
 NestedTransactionNotSupportedException:
   JpaDialect does not support savepoints
   - check your JPA provider's capabilities</pre>
-<p>JdbcTemplate이나 MyBatis처럼 <code>DataSourceTransactionManager</code>를 쓰는 환경에서는 NESTED가 세이브포인트로 동작합니다. 정리하면, <b>JPA 위에서는 사실상 REQUIRED와 REQUIRES_NEW의 양자택일</b>이고, 부분 롤백이 꼭 필요하면 해당 작업만 JDBC 경로로 내리는 식의 우회가 필요합니다.</p>
+<p>JdbcTemplate이나 MyBatis처럼 <code>DataSourceTransactionManager</code>를 쓰는 환경에서는 NESTED가 세이브포인트로 동작합니다. 정리하면 JPA 위에서는 <b>REQUIRED와 REQUIRES_NEW 중에서 고르는</b> 셈이고, 부분 롤백이 꼭 필요하면 해당 작업만 JDBC 경로로 내리는 식으로 우회해야 합니다.</p>
 
 <h2>6. 정산 코드에서 부딪힌 함정 — 프록시를 거치지 않는 호출</h2>
-<p>정산 로직을 한 곳으로 모으는 리팩토링 중에 부딪힌 함정입니다. 이력 저장을 같은 클래스의 메서드로 옮기고 REQUIRES_NEW를 걸었는데, 로그에 <code>Suspending current transaction</code>이 한 번도 안 찍혔습니다.</p>
+<p>정산 로직을 한 곳으로 모으는 리팩토링 중에 한동안 헤맸던 부분입니다. 이력 저장을 같은 클래스의 메서드로 옮기고 REQUIRES_NEW를 걸었는데, 로그에 <code>Suspending current transaction</code>이 한 번도 찍히지 않았습니다.</p>
 <pre class="code"><span class="k">@Service</span>
 <span class="k">public class</span> <span class="f">SettlementService</span> {
   <span class="k">@Transactional</span>
@@ -162,8 +162,8 @@ NestedTransactionNotSupportedException:
     historyRepository.save(History.of(order));  <span class="c">// 그냥 REQUIRED처럼 동작</span>
   }
 }</pre>
-<p><code>@Transactional</code>은 <span class="term" title="원본 객체를 감싼 대리인이 트랜잭션을 대신 열고 닫는 방식">프록시 기반 AOP</span>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 있는데, 같은 클래스 안에서의 <code>this.record()</code> 호출은 프록시를 우회해 원본 객체로 직행합니다. 그래서 <code>record()</code>의 전파 설정은 <b>조용히 무시되고</b>, 호출자의 트랜잭션에 그대로 묻어갑니다. 예외도 로그도 없이 의도와 다르게 동작하니 알아채기 어렵습니다. 해법은 위 실험처럼 <b>별도 빈으로 분리</b>하거나, 경계를 코드로 직접 긋는 <code>TransactionTemplate</code>을 쓰는 것입니다.</p>
-<div class="callout"><span class="mark">*</span><p>전파 옵션은 기술이 아니라 업무 요구가 정합니다. "이력은 정산이 실패해도 남아야 하는가?"에 답할 수 있어야 옵션을 고를 수 있습니다 — 같이 죽어야 하면 <b>REQUIRED</b>, 바깥과 무관하게 남아야 하면 <b>REQUIRES_NEW</b>, 부분 롤백이 필요하고 JDBC라면 <b>NESTED</b>.</p></div>
+<p><code>@Transactional</code>은 <span class="term" title="원본 객체를 감싼 대리인이 트랜잭션을 대신 열고 닫는 방식">프록시 기반 AOP</span>입니다. 트랜잭션을 열고 닫는 코드는 빈을 감싼 프록시에 있는데, 같은 클래스 안에서의 <code>this.record()</code> 호출은 프록시를 거치지 않고 원본 객체로 바로 갑니다. 그래서 <code>record()</code>의 전파 설정은 무시되고, 호출자의 트랜잭션에 그대로 묻어갑니다. 예외도 로그도 남지 않은 채 의도와 다르게 동작해서, 저는 로그에서 <code>Suspending</code>이 빠진 걸 보고서야 알았습니다. 정리한 해결책은 위 실험처럼 <b>별도 빈으로 분리</b>하거나, 경계를 코드로 직접 긋는 <code>TransactionTemplate</code>을 쓰는 것이었습니다.</p>
+<div class="callout"><span class="mark">*</span><p>이 실험을 하고 나서 전파 옵션은 기술보다 업무 요구가 정한다고 정리해 두었습니다. "이력은 정산이 실패해도 남아야 하는가?"에 답이 서야 옵션이 골라집니다 — 같이 롤백돼야 하면 <b>REQUIRED</b>, 바깥과 무관하게 남아야 하면 <b>REQUIRES_NEW</b>, 부분 롤백이 필요하고 JDBC라면 <b>NESTED</b>.</p></div>
     <div class="post-tags">
       <span class="pt-head">태그</span>
       <a class="tag" href="index.html">Spring</a>
