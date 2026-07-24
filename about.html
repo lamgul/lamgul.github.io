@@ -43,10 +43,11 @@
     <p class="eyebrow reveal">About · 안성진</p>
     <h1 class="reveal" style="--rd:60ms">표면이 아니라<br><span class="em">근본</span>을 고칩니다.</h1>
     <p class="lead reveal" style="--rd:120ms">
-      백엔드 개발자 안성진입니다. 클린 아키텍처와 유지보수에 초점을 둔 개발을 지향합니다.
-      이전 직장들에서 다양한 장애를 마주했고, 그것을 개선하는 미션을 수행해 왔습니다.
-      <b>동작하는 것과 오래 버티는 것은 다르다</b>는 걸 — 7일마다 죽던 서버를 근본까지 고치며 배웠습니다.
-      개발을 좋아하고 자신 있지만, 팀에 지금 필요한 일을 해내는 순간이 가장 즐겁습니다.
+      백엔드 개발자 안성진입니다. 2019년에 가르쳐 주는 사람 없이 <b>독학으로 개발을 시작</b>했습니다.
+      막히면 GitHub에서 남의 코드를 읽고 스택오버플로와 레딧에 물으며 배웠고, 그 과정에서
+      <b>코드가 왜 이렇게 되어야 하는지 스스로 설명할 수 있어야 한다</b>는 기준이 생겼습니다.
+      일하지 않는 기간에도 자격증 공부, 창업 준비, 대회와 발표로 손을 계속 움직였습니다.
+      개발을 좋아하지만, 팀에 지금 필요한 일을 해내는 순간이 가장 즐겁습니다.
     </p>
     <div class="reveal" style="--rd:180ms;margin-top:var(--sp-5);display:flex;gap:0.7rem;flex-wrap:wrap">
       <a class="chip primary" href="cases/">실무 사례 보기 →</a>
@@ -173,6 +174,42 @@
 
   <hr class="hr wrap" style="max-width:var(--page)">
 
+  <!-- ============ side work (studying / building between jobs) ============ -->
+  <section class="section wrap">
+    <div class="grid-2">
+      <p class="side-label">그 외 · 창업과 연구 / Side</p>
+      <div class="timeline">
+        <div class="job reveal">
+          <p class="when">틈틈이</p>
+          <h3><span class="role">folder</span> · <span class="place">아키텍처 패턴 시범연구</span></h3>
+          <ul>
+            <li>"folder"라는 팀을 만들어 아키텍처 패턴을 실제 코드에 <b>극한까지 적용해 보는 시범연구</b>를 진행. 레이어드·헥사고날·Repository·Template Method·Strategy·Pipe&amp;Filter를 직접 밀어붙이며, 어디까지가 힘이고 어디부터가 과함(over-engineering)인지 몸으로 확인. <a class="u-link" href="writing/folder-architecture-lab.html">기록 →</a></li>
+            <li>패턴 전문서적(PoEAA·DDD·클린 아키텍처)과 파이썬·데이터 서적을 꾸준히 읽고 적용. <a class="u-link" href="writing/#list">서평·분석 글 →</a></li>
+          </ul>
+          <div class="stack"><span class="tag">아키텍처 패턴</span><span class="tag">DDD</span><span class="tag">기술 독서</span></div>
+        </div>
+        <div class="job reveal">
+          <p class="when">창업 준비</p>
+          <h3><span class="role">반려동물 플랫폼</span> · <span class="place">제안서 · 프로토타입</span></h3>
+          <ul>
+            <li>반려동물 서비스 플랫폼 사업을 준비하며 <b>사업 제안서 작성부터 프로토타입 구현까지</b> 직접 수행. 앱·관리자·백엔드를 혼자 설계. <a class="u-link" href="projects/lookie/">데모 →</a></li>
+          </ul>
+          <div class="stack"><span class="tag">기획</span><span class="tag">제품 설계</span><span class="tag">프로토타입</span></div>
+        </div>
+        <div class="job reveal">
+          <p class="when">꾸준히</p>
+          <h3><span class="role">대회 · 발표 · 커뮤니티</span></h3>
+          <ul>
+            <li>데이콘(DACON) 데이터 대회 참가, 파이콘(PyCon) 발표, 패션 커뮤니티 시도. 특별한 성적을 낸 건 아니지만, 쉬지 않고 만들고 배운 기록입니다. <a class="u-link" href="writing/side-quests-competitions.html">회고 →</a></li>
+          </ul>
+          <div class="stack"><span class="tag">DACON</span><span class="tag">PyCon</span><span class="tag">사이드 프로젝트</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="hr wrap" style="max-width:var(--page)">
+
   <!-- ============ education & certificates ============ -->
   <section class="section wrap">
     <div class="grid-2">
@@ -239,6 +276,11 @@
         <h3>계속 배우고, 나눈다</h3>
         <p>부족한 역량은 교육과 사이드 프로젝트로 채워 왔고, 백엔드 외에 앱·게임 개발까지 범위를 가리지 않았습니다. 개발 문화가 없던 환경에선 직접 모임을 만들어 PyCon에 참여했고, 최근엔 vLLM·양자화·GPU 서빙을 학습해 바로 운영에 적용했습니다.</p>
       </div>
+      <div class="principle reveal" style="--rd:350ms">
+        <span class="n">06</span>
+        <h3>설명할 수 있는 코드만 통과시킨다</h3>
+        <p>"이 코드가 왜 이렇게 되어야 하는가"를 설명하지 못하면 리뷰를 통과시키지 않습니다. 이 기준을 저 자신에게 먼저 적용했고, 그 덕에 신입 때부터 직위와 무관하게 코드 리뷰와 인터페이스 설계를 맡았습니다. 아키텍처를 바꾸자고 제안할 때는 근거와 대안을 함께 내놓아, 팀이 그 근거를 보고 받아들였습니다.</p>
+      </div>
     </div>
   </section>
 
@@ -275,5 +317,6 @@
 </footer>
 
 <script src="assets/js/site.js" defer></script>
+<script src="assets/js/critters.js" defer></script>
 </body>
 </html>

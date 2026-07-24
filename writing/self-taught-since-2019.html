@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>독학으로 시작한 개발 — 스승은 GitHub와 스택오버플로였다 — 안성진</title>
+<meta name="description" content="2019년, 가르쳐 주는 사람 없이 개발을 시작했다. GitHub 코드를 읽고 스택오버플로와 레딧에 물으며 배운 방식과, 그때 생긴 기준을 적어 둔다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="독학으로 시작한 개발 — 스승은 GitHub와 스택오버플로였다">
+<meta property="og:description" content="2019년, 가르쳐 주는 사람 없이 개발을 시작했다. GitHub 코드를 읽고 스택오버플로와 레딧에 물으며 배운 방식과, 그때 생긴 기준을 적어 둔다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"독학으로 시작한 개발 — 스승은 GitHub와 스택오버플로였다","datePublished":"2019-11-12","dateModified":"2019-11-12","inLanguage":"ko","description":"2019년, 가르쳐 주는 사람 없이 개발을 시작했다. GitHub 코드를 읽고 스택오버플로와 레딧에 물으며 배운 방식과, 그때 생긴 기준을 적어 둔다.","keywords":"독학 · 학습 · 커리어","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/self-taught-since-2019.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / self-taught-since-2019</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">회고 · 학습</p>
+    <h1>독학으로 시작한 개발 — 스승은 GitHub와 스택오버플로였다</h1>
+    <div class="post-meta">
+      <span>2019년 11월</span><span class="dot-sep">•</span>
+      <span>독학 · 학습 · 커리어</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">2019년에 개발을 처음 시작했습니다. 주변에 코드를 가르쳐 줄 사람이 없어서, 무엇을 배울지뿐 아니라 <b>어떻게 배울지</b>도 스스로 찾아야 했습니다. 그때 제 교재는 GitHub에 공개된 남의 코드였고, 막히면 스택오버플로와 레딧에 물었습니다. 특별한 성적을 낸 시기는 아니지만, 그 무렵에 생긴 습관 하나가 이후로 오래 남아서 적어 둡니다.</p>
+
+<h2>가르쳐 주는 사람이 없었다</h2>
+<p>배움을 시작할 때 옆에서 코드를 봐 주는 선배나 동료가 없었습니다. 강의를 따라 하면 예제는 돌아갔지만, 조금만 벗어난 걸 만들려고 하면 어디서부터 손대야 할지 막막했습니다. 돌아가는 것과 <b>내가 이해한 것</b>이 다르다는 감각이 그 무렵 계속 남아 있었습니다.</p>
+<p>그 간격이 저는 유독 신경 쓰였습니다. 코드가 동작하는데도 왜 그렇게 짜야 하는지 설명하지 못하는 상태가 불편했고, 그 불편함이 다음 걸 찾아보게 만드는 힘이 됐습니다. 물어볼 사람이 없다는 조건이 오히려 <b>스스로 답을 만드는 쪽</b>으로 저를 밀었던 것 같습니다.</p>
+
+<h2>GitHub를 교과서처럼 읽었다</h2>
+<p>가장 많이 한 일은 남이 짜 둔 저장소를 여는 것이었습니다. 내가 만들고 싶은 것과 비슷한 프로젝트를 찾아, 파일을 위에서 아래로 읽어 내려갔습니다. 처음에는 절반도 이해하지 못했지만, 같은 구조가 여러 저장소에서 반복되는 걸 보면서 <b>왜 다들 이렇게 쓰는가</b>를 짐작하게 됐습니다.</p>
+<p>그렇게 알게 된 것 하나가 조건을 다루는 방식이었습니다. 저는 처음에 조건을 만나면 <code>if</code> 안에 또 <code>if</code>를 넣어 로직을 안쪽으로 파묻곤 했는데, 남의 코드는 예외 상황을 먼저 걸러 내보내고 본 로직을 바깥에 두고 있었습니다. 같은 결과인데 읽기가 달랐습니다.</p>
+<pre class="code"><span class="c"># 처음 제가 짜던 방식 — 조건이 깊어질수록 본 로직이 안으로 파묻힌다</span>
+<span class="k">def</span> price(user, cart):
+    <span class="k">if</span> user <span class="k">is not</span> <span class="k">None</span>:
+        <span class="k">if</span> cart:
+            <span class="k">if</span> user.is_member:
+                <span class="k">return</span> discount(cart)
+    <span class="k">return</span> full(cart)
+
+<span class="c"># 남의 코드에서 배운 방식 — 예외를 먼저 내보내고, 본 로직은 들여쓰기 밖으로</span>
+<span class="k">def</span> price(user, cart):
+    <span class="k">if</span> user <span class="k">is</span> <span class="k">None</span>:        <span class="k">return</span> full(cart)
+    <span class="k">if</span> <span class="k">not</span> cart:            <span class="k">return</span> full(cart)
+    <span class="k">if</span> <span class="k">not</span> user.is_member:  <span class="k">return</span> full(cart)
+    <span class="k">return</span> discount(cart)</pre>
+<p>나중에야 이런 걸 가드 절(guard clause)이나 이른 반환(early return)이라고 부른다는 것을 알았습니다. 이름은 뒤에 붙었고, 저는 이름보다 먼저 <b>여러 사람의 코드에서 같은 모양</b>을 본 셈입니다. 용어를 몰라도 반복을 관찰하면 배울 수 있다는 걸 이때 알았습니다.</p>
+
+<h2>막히면 물었고, 답을 따라갔다</h2>
+<p>읽는 것만으로 풀리지 않을 때는 스택오버플로에 검색어를 넣거나, 레딧의 관련 게시판에 질문을 올렸습니다. 질문을 글로 정리하는 과정 자체가 도움이 됐는데, 무엇이 막혔는지 남이 알아듣게 쓰려다 보면 절반은 스스로 정리되곤 했습니다.</p>
+<p>초창기에 자주 만난 문제 하나는 목록 두 개를 맞춰 보는 코드가 느려지는 것이었습니다. 저는 바깥 목록을 돌면서 안쪽 목록을 매번 처음부터 훑고 있었는데, 어느 답변이 이 반복 탐색을 사전(map)으로 한 번만 인덱싱하는 방식으로 바꿔 두었습니다.</p>
+<pre class="code"><span class="c"># 내가 짠 것 — 주문마다 사용자 목록을 처음부터 다시 훑는다</span>
+<span class="k">for</span> order <span class="k">in</span> orders:
+    <span class="k">for</span> user <span class="k">in</span> users:
+        <span class="k">if</span> user.id == order.user_id:
+            order.user = user
+
+<span class="c"># 답변에서 배운 것 — 사용자를 한 번만 인덱싱해 두고 바로 찾는다</span>
+by_id = {u.id: u <span class="k">for</span> u <span class="k">in</span> users}
+<span class="k">for</span> order <span class="k">in</span> orders:
+    order.user = by_id[order.user_id]</pre>
+<p>당장 급했던 것은 답을 복사해 붙이는 일이었지만, 저는 그 아래에 달린 설명을 끝까지 읽는 편이었습니다. 왜 사전 조회가 반복 탐색보다 빠른지, 어떤 경우에는 이 방식이 오히려 손해인지까지 적혀 있을 때가 있었기 때문입니다. <b>답보다 답의 이유</b>가 다음에 비슷한 문제를 만났을 때 더 오래 남았습니다.</p>
+
+<h2>베끼기에서 기준으로</h2>
+<p>남의 코드를 그대로 옮겨 쓰면 그 순간은 넘어갔지만, 얼마 지나 같은 코드를 다시 봤을 때 왜 이렇게 짰는지 스스로 답하지 못하는 일이 생겼습니다. 그 경험이 몇 번 반복되면서, 붙여 넣기 전에 <b>한 줄씩 왜 이래야 하는지</b>를 제 말로 설명해 보는 습관이 들었습니다.</p>
+<p>설명이 되지 않는 줄은 아직 제 것이 아니라고 봤습니다. 그럴 때는 그 줄만 따로 떼어 다시 찾아보거나, 값을 바꿔 가며 결과가 어떻게 달라지는지 직접 돌려 봤습니다. 이 과정을 거치고 나면 코드가 짧아지지는 않아도, 적어도 남이 왜 그렇게 물어봐도 답할 수 있는 상태가 됐습니다. 저에게 학습은 <b>설명할 수 있게 되는 일</b>과 거의 같은 뜻이 됐습니다.</p>
+
+<h2>그 기준이 남긴 것</h2>
+<p>혼자 배우며 생긴 이 기준은 이후에 팀에서 코드를 리뷰하거나 구조를 정할 때도 그대로 이어졌습니다. 저는 리뷰에서 "이 코드가 왜 이렇게 되어야 하는지" 제 입으로 정리가 되는지를 먼저 봅니다. 정리가 되지 않으면 아직 제가 이해하지 못한 것이라 보고, 그 자리를 더 들여다봅니다.</p>
+<p>설계를 맡을 때도 비슷합니다. 어떤 선택을 하기 전에 왜 이 방향인지, 다른 방향은 왜 접었는지를 스스로 설명해 보는 편입니다. 화려한 방법을 아는 것보다, <b>고른 이유를 담담하게 말할 수 있는 상태</b>가 저에게는 더 든든했습니다. 2019년에 물어볼 사람이 없어서 몸에 붙은 습관이, 지금은 제가 일을 판단하는 기준으로 남아 있습니다. 그 뒤로 무엇을 왜 공부해 나갔는지는 <a class="u-link" href="learning-since-2020.html">2020년부터의 학습 지도</a>에 이어서 적어 두었습니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">독학</a>
+      <a class="tag" href="index.html">학습</a>
+      <a class="tag" href="index.html">커리어</a>
+    </div>
+    <div class="post-cta"><span class="t">그다음의 학습 순서 → <b>2020년부터의 학습 지도</b></span><a class="chip primary" href="learning-since-2020.html">이어 읽기 ↗</a></div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-next" href="research-etri-vision.html"><span class="pn-label">다음 글</span><span class="pn-title">연구 회고: ETRI에서 만난 Vision AI — 법학도가 객체탐지로</span><span class="pn-date">2020 · 02</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script src="../assets/js/critters.js" defer></script>
+</body>
+</html>

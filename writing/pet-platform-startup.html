@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반려동물 플랫폼 창업을 준비하며 — 제안서에서 프로토타입까지 — 안성진</title>
+<meta name="description" content="반려동물 플랫폼 사업을 준비하며 제안서를 쓰고 프로토타입을 구현했다. 아이디어를 돌아가는 화면으로 옮기는 동안 배운 것.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="반려동물 플랫폼 창업을 준비하며 — 제안서에서 프로토타입까지">
+<meta property="og:description" content="반려동물 플랫폼 사업을 준비하며 제안서를 쓰고 프로토타입을 구현했다. 아이디어를 돌아가는 화면으로 옮기는 동안 배운 것.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"반려동물 플랫폼 창업을 준비하며 — 제안서에서 프로토타입까지","datePublished":"2025-12-03","dateModified":"2025-12-03","inLanguage":"ko","description":"반려동물 플랫폼 사업을 준비하며 제안서를 쓰고 프로토타입을 구현했다. 아이디어를 돌아가는 화면으로 옮기는 동안 배운 것.","keywords":"창업 · 제품 · 프로토타입","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/pet-platform-startup.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / pet-platform-startup</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">회고 · 제품</p>
+    <h1>반려동물 플랫폼 창업을 준비하며 — 제안서에서 프로토타입까지</h1>
+    <div class="post-meta">
+      <span>2025년 12월</span><span class="dot-sep">•</span>
+      <span>창업 · 제품 · 프로토타입</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">한동안 반려동물 서비스 플랫폼으로 사업을 준비했습니다. 사업 제안서를 쓰고, 거기 적어 둔 것을 돌아가는 화면으로 옮겨 보는 일이 제 몫이었습니다. 특별한 성적을 낸 것은 아니고 창업 준비 단계에서 멈췄지만, 그때 만든 프로토타입은 이 포트폴리오의 <a href="../projects/lookie/">루키 데모</a>로 남아 있습니다. 개발자로서가 아니라 무언가를 <b>만드는 사람</b>의 자리에서 배운 것을 잊기 전에 적어 둡니다.</p>
+
+<h2>제안서부터 시작했다</h2>
+<p>코드보다 문서가 먼저였습니다. 어떤 문제를 누구를 위해 풀 것인지, 무엇을 만들 것인지를 사업 제안서에 글로 정리하는 일부터 했습니다. 반려동물을 키우면서 흩어져 있던 것들 — 병원과 미용 예약, 보호자들이 모이는 커뮤니티, 사료나 용품을 사는 곳 — 을 한 앱 안에 모아 보자는 구상이었습니다. 제안서에서는 이걸 몇 문단으로 정리할 수 있었습니다.</p>
+<p>글로 적을 때는 모든 것이 매끄럽게 이어졌습니다. "예약을 하고, 피드에서 다른 보호자와 이야기를 나누고, 필요한 것을 산다"는 문장은 읽기에 아무 걸림이 없었습니다. 문제는 그 문장을 화면으로 옮기려 할 때부터 시작됐습니다.</p>
+
+<h2>제안서의 문장이 화면이 되지 않을 때</h2>
+<p>"예약하고 관리한다"는 한 줄을 화면으로 옮기려니, 그 한 줄 안에 숨어 있던 것들이 한꺼번에 튀어나왔습니다. 예약에는 대기·확정·완료·취소 같은 상태가 있어야 했고, 보호자가 보는 앱 화면과 업주가 보는 관리자 화면이 같은 예약을 서로 다른 각도에서 봐야 했습니다. 제안서에서는 한 단어였던 것이, 화면에서는 여러 개의 상태와 두 개의 시점으로 갈라졌습니다.</p>
+<p>이 간극이 제가 가장 많이 배운 지점이었습니다. 글은 "무엇을 한다"까지만 말해도 넘어가지지만, 화면은 "그게 지금 어떤 상태인지"를 하나도 빠짐없이 보여 줘야 했습니다. 제안서를 다시 읽으면서, 문장 하나하나가 실제로는 몇 개의 화면과 몇 개의 상태를 요구하는지 헤아려 보는 습관이 이때 생겼습니다.</p>
+
+<h2>목데이터로 흐름을 먼저 증명했다</h2>
+<p>진짜 데이터베이스를 붙이기 전에, 저는 목데이터로 화면 흐름부터 세웠습니다. 이유는 단순했습니다. 스키마를 잡고 서버를 붙이는 데 시간을 쓰기 전에, 이 화면들을 이어 놓았을 때 흐름이 말이 되는지를 먼저 눈으로 확인하고 싶었기 때문입니다. 흐름이 어색하면 데이터 구조를 아무리 잘 잡아도 소용이 없다고 생각했습니다.</p>
+<p>그래서 유저와 게시글, 예약 펫, 그리고 관리자 쪽 KPI와 주문 같은 것을 전부 손으로 채운 목데이터로 만들었습니다. 다만 이 값들을 아무렇게나 두지는 않고, <b>결정적인 공식</b>으로 채워 매번 같은 화면이 나오게 했습니다. 그래야 흐름을 볼 때마다 데이터가 흔들리지 않아서, 화면 자체에만 집중할 수 있었습니다.</p>
+<pre class="code"><span class="c">// content.mock.ts — 서버 없이 화면 흐름부터 세웠습니다</span>
+<span class="k">export const</span> pets  = [ <span class="c">/* 예약 펫 12마리 */</span> ];
+<span class="k">export const</span> posts = [ <span class="c">/* 피드 게시글 24건 */</span> ];
+
+<span class="c">// 좋아요 수는 랜덤이 아니라 결정적 공식으로 채웠습니다</span>
+<span class="k">const</span> base = 36 + index * 5 + weight * 18 + boost * 20;</pre>
+<p>이렇게 흐름을 먼저 세워 두니, 나중에 어디에 진짜 데이터가 필요한지가 오히려 또렷하게 보였습니다. 목데이터는 임시방편이 아니라 설계의 초안 같은 것이었습니다.</p>
+
+<h2>앱·관리자·백엔드를 혼자 설계하며</h2>
+<p>이 프로토타입은 보호자용 앱, 업주용 관리자 콘솔, 그리고 각각을 받치는 NestJS 백엔드 두 벌로 이루어져 있었고, 그걸 혼자 설계했습니다. 나눠서 맡을 사람이 없었기 때문이기도 하지만, 덕분에 한 예약이 앱에서 만들어져 관리자 화면까지 어떻게 흘러가는지를 처음부터 끝까지 한 사람의 머릿속에서 그려 볼 수 있었습니다.</p>
+<p>가장 신경 쓴 것은 앱과 관리자가 <b>같은 사건을 함께 보는</b> 부분이었습니다. 앱에서 예약을 하나 만들면 관리자 대시보드의 테이블과 숫자가 같이 움직여야 하고, 관리자가 상태를 바꾸면 앱의 예약 카드가 따라 바뀌어야 했습니다. 두 화면이 하나의 데이터를 서로 다른 방향에서 바라보는 구조를, 목데이터 위에서 먼저 맞춰 봤습니다. 혼자 다 설계한다는 것은 부담이었지만, 경계마다 어떤 정보가 오가야 하는지를 남에게 설명하기 전에 스스로 먼저 납득해야 한다는 점에서 배운 게 많았습니다.</p>
+
+<h2>남은 것</h2>
+<p>사업은 창업 준비 단계에서 더 나아가지 못했고, 내세울 만한 성적을 낸 것도 아닙니다. 그 점은 담담하게 적어 둡니다. 다만 제안서 한 편과, 그 문장들을 옮겨 담은 프로토타입은 손에 남았습니다. 지금 포트폴리오의 <a href="../projects/lookie/">루키 데모</a>가 그때 만든 앱·관리자·백엔드를 한 화면짜리 정적 데모로 다시 꾸린 것입니다.</p>
+<p>만드는 사람의 자리에서 배운 것을 한 줄로 줄이면, 아이디어와 돌아가는 화면 사이에는 늘 옮겨 담는 수고가 있다는 것이었습니다. 제안서의 문장은 화면의 상태로 풀어야 했고, 흐름은 데이터를 붙이기 전에 목데이터로 먼저 증명해 두는 편이 나았습니다. 다음에 무언가를 다시 시작한다면, 이 순서는 그대로 가져갈 생각입니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">창업</a>
+      <a class="tag" href="index.html">제품</a>
+      <a class="tag" href="index.html">프로토타입</a>
+    </div>
+    <div class="post-cta">
+      <span class="t">이 글에서 만든 프로토타입 → <b>루키 — 반려동물 슈퍼앱 데모</b></span>
+      <a class="chip primary" href="../projects/lookie/">데모 보기 ↗</a>
+    </div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-prev" href="postgres-slow-list.html"><span class="pn-label">이전 글</span><span class="pn-title">PostgreSQL 느린 목록 화면 — 인덱스와 keyset 페이지네이션</span><span class="pn-date">2025 · 11</span></a>
+    <a class="pn-next" href="borg-paper-analysis.html"><span class="pn-label">다음 글</span><span class="pn-title">논문 분석: Borg — 쿠버네티스의 아버지</span><span class="pn-date">2025 · 12</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script src="../assets/js/critters.js" defer></script>
+</body>
+</html>

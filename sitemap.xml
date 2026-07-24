@@ -19,6 +19,7 @@
   <url><loc>https://lamgul.github.io/writing/nestjs-role-based-api.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/prisma-transactions-n1.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/borg-paper-analysis.html</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/writing/pet-platform-startup.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/postgres-slow-list.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/docker-image-diet.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/study-spring-vs-fastapi.html</loc><priority>0.7</priority></url>
@@ -41,6 +42,7 @@
   <url><loc>https://lamgul.github.io/writing/security-rate-limiting.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/feature-engineering-in-practice.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/security-owasp-top10.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/folder-architecture-lab.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/observability-basics.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-clean-architecture.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/memcache-paper-analysis.html</loc><priority>0.6</priority></url>
@@ -57,6 +59,7 @@
   <url><loc>https://lamgul.github.io/writing/security-jwt-auth.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/gfs-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/spring-transaction-propagation.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/side-quests-competitions.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/mapreduce-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/pattern-template-strategy.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-clean-code.html</loc><priority>0.6</priority></url>
@@ -69,6 +72,7 @@
   <url><loc>https://lamgul.github.io/writing/clean-code-functions.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/clean-code-naming.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/research-etri-vision.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/self-taught-since-2019.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/projects/safein/</loc><priority>0.8</priority></url>
   <url><loc>https://lamgul.github.io/projects/ddangddeul/</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/projects/lookie/</loc><priority>0.7</priority></url>

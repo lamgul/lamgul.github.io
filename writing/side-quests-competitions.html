@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>성적표 밖에서 — 데이콘, 파이콘, 그리고 만들다 만 것들 — 안성진</title>
+<meta name="description" content="일하지 않을 때는 대회에 나가고 발표를 하고 커뮤니티를 만들어 봤다. 특별한 성적은 없었지만 계속 손을 움직인 기록.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="성적표 밖에서 — 데이콘, 파이콘, 그리고 만들다 만 것들">
+<meta property="og:description" content="일하지 않을 때는 대회에 나가고 발표를 하고 커뮤니티를 만들어 봤다. 특별한 성적은 없었지만 계속 손을 움직인 기록.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"성적표 밖에서 — 데이콘, 파이콘, 그리고 만들다 만 것들","datePublished":"2022-01-16","dateModified":"2022-01-16","inLanguage":"ko","description":"일하지 않을 때는 대회에 나가고 발표를 하고 커뮤니티를 만들어 봤다. 특별한 성적은 없었지만 계속 손을 움직인 기록.","keywords":"회고 · DACON · 파이콘","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/side-quests-competitions.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / side-quests-competitions</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">회고 · 학습</p>
+    <h1>성적표 밖에서 — 데이콘, 파이콘, 그리고 만들다 만 것들</h1>
+    <div class="post-meta">
+      <span>2022년 1월</span><span class="dot-sep">•</span>
+      <span>회고 · DACON · 파이콘</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">회사 일과 별개로, 일하지 않는 시간에 혼자 벌여 본 것들이 몇 개 있습니다. 데이콘에 나가 데이터 대회를 풀어 봤고, 파이콘에서 발표를 한 번 해 봤고, 패션 쪽 커뮤니티를 만들어 보려다 접었습니다. <b>내세울 만한 성적은 어느 쪽에서도 내지 못했습니다.</b> 그래도 그때 손을 움직이며 배운 것들은 남아서, 잊기 전에 적어 둡니다.</p>
+
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>데이콘<span class="en">DACON</span></dt>
+    <dd>국내 데이터 분석·머신러닝 경진 대회 플랫폼입니다. 주최 측이 데이터셋과 평가 지표를 공개하면 참가자가 예측 결과를 제출하고, 검증 점수로 순위가 매겨집니다. 대회마다 예측할 대상과 채점 방식이 정해져 있어서, 같은 문제를 두고 여러 사람이 각자의 전처리와 모델로 붙는 구조입니다. 순위는 공개 리더보드와 최종 리더보드로 나뉘는데, 공개 점수만 보고 맞추다 보면 최종에서 순위가 크게 밀리기도 합니다.</dd>
+    <dt>파이콘<span class="en">PyCon</span></dt>
+    <dd>파이썬 사용자들이 모여 발표하고 이야기를 나누는 커뮤니티 콘퍼런스입니다. 발표는 심사를 거쳐 채택되며, 짧게 나누는 라이트닝 토크부터 정규 세션까지 길이가 다양합니다. 발표 자체가 상을 다투는 자리는 아니고, 자기가 해 본 것을 정리해 남 앞에서 말해 보는 경험에 가깝습니다.</dd>
+    <dt>피처 엔지니어링<span class="en">Feature Engineering</span></dt>
+    <dd>모델에 넣을 입력 변수를 원시 데이터로부터 만들고 다듬는 전처리 단계입니다. 값의 척도를 맞추거나 여러 컬럼을 조합해 새 변수를 파생시키는 일이 여기에 들어가며, 모델이 스스로 찾아야 할 관계의 복잡도를 사람이 미리 덜어 주는 것이 목적입니다.</dd>
+  </dl>
+</div>
+
+<h2>데이콘 — 등수는 못 얻고 습관을 얻었다</h2>
+<p>데이콘에는 몇 번 나가 봤습니다. 결과부터 적자면 <b>기억에 남을 만한 등수는 없었습니다.</b> 상위권에 든 대회는 없었고, 제출 마감까지 붙잡다가 그대로 끝난 대회도 있었습니다. 그래도 대회를 붙잡고 있던 며칠은 회사에서 하던 것과 결이 다른 연습이 됐습니다. 정답과 채점 기준이 정해져 있으니, 내 판단이 맞았는지 틀렸는지가 점수로 곧장 돌아왔습니다.</p>
+<p>가장 많이 배운 건 모델을 바꾸는 일보다 <b>데이터를 다시 보는 일</b>이었습니다. 좋다는 모델을 가져다 붙여도 점수가 잘 움직이지 않았고, 정작 순위를 바꾼 건 변수를 어떻게 만들었느냐였습니다. 원시 값을 그대로 넣는 대신, 도메인을 생각해서 두 컬럼을 하나로 묶어 파생 변수를 만들면 점수가 눈에 띄게 달라지곤 했습니다.</p>
+<pre class="code"><span class="c"># 원시 기상값을 그대로 넣는 대신, 체감을 나타내는 파생 변수 하나로</span>
+df[<span class="s">"discomfort"</span>] = 0.81*df[<span class="s">"temp"</span>] + 0.01*df[<span class="s">"humidity"</span>]*(0.99*df[<span class="s">"temp"</span>] - 14.3) + 46.3</pre>
+<p>이 경험은 나중에 전력 예측 문제를 붙잡았을 때 다시 꺼내 쓰게 됐고, 그 과정은 <a class="u-link" href="feature-engineering-in-practice.html">Feature Engineering 실전</a>에 따로 적어 두었습니다. 대회에서 얻은 등수는 없었지만, 데이터를 한 번 의심하고 손으로 가공해 본다는 습관은 그 뒤로도 남았습니다.</p>
+<div class="callout"><span class="mark">*</span><p>공개 리더보드 점수만 보고 변수를 자꾸 끼워 맞추다가 최종에서 순위가 밀린 적이 있습니다. 검증에서만 오르고 실제로는 도움이 안 되는 변수를 걸러 내는 감각은, 그렇게 한 번 밀려 보고 나서야 조금 생겼습니다.</p></div>
+
+<h2>파이콘 — 남 앞에서 말해 보기</h2>
+<p>파이콘에서는 발표를 한 번 해 봤습니다. 대단한 주제는 아니었고, 그동안 회사에서 손으로 하던 일을 파이썬으로 <a class="u-link" href="killing-repetitive-work.html">자동화했던 이야기</a>를 정리해 나간 정도였습니다. 발표가 채택됐다고 해서 그게 무슨 성적이 되는 것도 아니었습니다. 그냥 내가 해 본 것을 남 앞에서 말해 보는 자리였습니다.</p>
+<p>준비하면서 알게 된 건, <b>남에게 설명하려고 하면 내가 뭘 모르는지가 드러난다</b>는 것이었습니다. 슬라이드를 만들다 보면 혼자 코드를 짤 때는 그냥 넘어갔던 부분에서 자꾸 막혔습니다. "이건 왜 이렇게 했더라" 하고 스스로 되물어야 했고, 그 질문에 답을 만들다가 오히려 코드를 다시 손보게 된 적도 있었습니다. 발표는 아는 걸 전하는 자리인 줄 알았는데, 준비하는 동안은 내가 모르는 걸 찾는 자리에 가까웠습니다.</p>
+<p>실제로 사람들 앞에 서 보니 말은 생각보다 잘 나오지 않았고, 시간 배분도 어긋났습니다. 그래도 끝나고 나서 몇 마디 질문을 받으며, 내가 당연하게 여기던 부분이 남에게는 당연하지 않다는 걸 알았습니다. 그 감각은 이후에 <a class="u-link" href="shipping-this-portfolio.html">글을 정리해 두는 습관</a>으로 조금씩 이어졌습니다.</p>
+
+<h2>패션 커뮤니티 — 만들다 만 것</h2>
+<p>한동안은 패션 쪽에 관심이 있어서, 옷을 좋아하는 사람들이 모일 만한 작은 커뮤니티를 만들어 보려 했습니다. 서비스라고 부르기도 민망한 수준이었습니다. 화면을 몇 개 그리고, 글을 올리고 반응을 남기는 정도의 기능을 붙이다가 <b>결국 끝을 보지 못하고 접었습니다.</b></p>
+<p>사람이 모이지 않으면 커뮤니티는 성립하지 않는데, 저는 기능을 만드는 쪽에만 오래 매달려 있었습니다. 로그인과 글쓰기 화면을 다듬는 동안에도 정작 "누가 왜 여기 와서 글을 쓸까"라는 질문에는 답을 만들지 못했습니다. 기술로 풀 수 없는 문제를 기술로 풀려고 붙잡고 있었던 셈입니다. 이걸 도중에 인정하는 게 생각보다 어려웠습니다.</p>
+<p>다 만들지는 못했지만 남은 것도 있었습니다. 혼자 화면부터 데이터까지 처음부터 끝까지 엮어 본 건 이때가 처음이었고, <b>제품이 기능의 합만으로 되는 게 아니라는 것</b>을 몸으로 배웠습니다. 무엇을 안 만들지 정하는 일이 무엇을 만들지 정하는 일만큼 중요하다는 생각도 이 실패에서 왔습니다.</p>
+
+<h2>자격증 — 조용히 병행한 것</h2>
+<p>이런 것들을 벌이는 동안, 한편으로는 자격증 공부도 같이 했습니다. 대회나 발표처럼 눈에 띄는 일은 아니었고, 정해진 범위를 꾸준히 읽고 문제를 푸는 조용한 시간이었습니다. 화려하지 않은 대신, 기초를 한 번 넓게 훑는 데는 이만한 게 없었습니다.</p>
+<p>자격증 공부의 좋은 점은 <b>내가 대충 알고 넘어가던 개념을 빠짐없이 짚게 한다는 것</b>이었습니다. 실무에서는 자주 쓰는 것만 반복해서 쓰게 되는데, 시험 범위는 자주 안 쓰는 부분까지 강제로 보게 만들었습니다. 그렇게 훑어 둔 것들이 나중에 전혀 다른 자리에서 문득 이어지는 경험을 몇 번 했습니다. 당장 쓸 데가 없어 보여도 한 번 넓게 봐 두는 게 손해는 아니었습니다.</p>
+
+<h2>성적표 밖에서</h2>
+<p>여기 적은 것들에는 공통점이 있습니다. <b>어느 것도 자랑할 만한 결과로 끝나지 않았다</b>는 점입니다. 데이콘에서 등수를 얻지 못했고, 파이콘 발표가 상을 준 것도 아니고, 커뮤니티는 만들다 말았습니다. 성적표에 적을 칸이 있었다면 대부분 비어 있었을 겁니다.</p>
+<p>그런데도 이걸 적어 두는 이유는, 성적이 안 나온 시간에도 배운 게 남았기 때문입니다. 대회에서는 데이터를 의심하는 습관을, 발표에서는 설명해 봐야 안다는 걸, 만들다 만 서비스에서는 기술만으로 안 되는 게 있다는 걸 배웠습니다. 자격증 공부는 그 사이를 넓게 메워 줬습니다. <b>결과가 없다고 배움까지 없는 건 아니었습니다.</b></p>
+<p>일하지 않는 시간에도 저는 대체로 뭔가를 손에 쥐고 있었던 것 같습니다. 잘하려고 했다기보다, 궁금하면 일단 벌여 보는 편이었습니다. 그 대부분은 특별한 성적으로 이어지지 않았지만, 계속 손을 움직였다는 사실 자체는 지금의 저를 만든 재료가 됐습니다. 다음에 벌일 일도 아마 성적표와는 상관없이 시작할 것 같습니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">회고</a>
+      <a class="tag" href="index.html">DACON</a>
+      <a class="tag" href="index.html">파이콘</a>
+    </div>
+    <div class="post-cta"><span class="t">대회에서 데이터를 다뤘던 이야기 → <b>Feature Engineering 실전</b></span><a class="chip primary" href="feature-engineering-in-practice.html">글 읽기 ↗</a></div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-prev" href="mapreduce-paper-analysis.html"><span class="pn-label">이전 글</span><span class="pn-title">논문 분석: MapReduce — 큰 데이터를 작게 쪼개는 법</span><span class="pn-date">2021 · 12</span></a>
+    <a class="pn-next" href="spring-transaction-propagation.html"><span class="pn-label">다음 글</span><span class="pn-title">Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가</span><span class="pn-date">2022 · 02</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script src="../assets/js/critters.js" defer></script>
+</body>
+</html>
