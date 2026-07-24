@@ -30,25 +30,31 @@
   }
 
   const css = `
-  .quicknav{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:54;
-    display:flex;flex-direction:column;gap:3px;padding:6px 0;}
-  .quicknav a{display:flex;align-items:center;justify-content:flex-end;gap:.55em;
-    height:30px;padding:0 .7em 0 .8em;font-size:.8rem;line-height:1;text-decoration:none;
-    color:var(--ink-3);background:var(--bg-elev);border:1px solid var(--line);border-right:0;
-    border-radius:100px 0 0 100px;white-space:nowrap;
-    transform:translateX(calc(100% - 30px));
-    transition:transform .28s var(--ease-out,cubic-bezier(.16,1,.3,1)),color .2s,background .2s,box-shadow .2s;}
-  .quicknav a .qn-label{opacity:0;transition:opacity .2s;}
-  .quicknav a .qn-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--line-2);
-    transition:background .2s,transform .2s;}
-  .quicknav a:hover,.quicknav a:focus-visible{transform:translateX(0);color:var(--ink);
-    background:var(--surface);box-shadow:var(--shadow-1);outline:none;}
-  .quicknav a:hover .qn-label,.quicknav a:focus-visible .qn-label{opacity:1;}
-  .quicknav a:hover .qn-dot,.quicknav a:focus-visible .qn-dot{background:var(--accent);}
-  .quicknav a.active{color:var(--ink);}
-  .quicknav a.active .qn-dot{background:var(--accent);transform:scale(1.25);}
-  .quicknav .qn-top{margin-top:6px;color:var(--ink-3);cursor:pointer;font-family:var(--mono);}
-  .quicknav .qn-top .qn-dot{background:transparent;width:auto;height:auto;font-size:.9em;}
+  .quicknav{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:54;
+    display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;
+    background:color-mix(in srgb,var(--bg-elev) 82%,transparent);
+    border:1px solid var(--line);border-radius:100px;box-shadow:var(--shadow-1);
+    -webkit-backdrop-filter:saturate(1.3) blur(8px);backdrop-filter:saturate(1.3) blur(8px);}
+  .quicknav a{position:relative;display:grid;place-items:center;width:26px;height:26px;
+    text-decoration:none;border-radius:50%;transition:background .2s;outline:none;}
+  .quicknav a:hover,.quicknav a:focus-visible{background:var(--surface);}
+  .quicknav a .qn-dot{width:7px;height:7px;border-radius:50%;background:var(--line-2);
+    transition:background .2s,transform .2s,box-shadow .2s;}
+  .quicknav a:hover .qn-dot,.quicknav a:focus-visible .qn-dot{background:var(--accent);transform:scale(1.35);}
+  .quicknav a.active .qn-dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+  /* 왼쪽으로 나오는 툴팁 라벨 (화면 밖으로 안 잘리게) */
+  .quicknav a .qn-label{position:absolute;right:calc(100% + 9px);top:50%;
+    transform:translateY(-50%) translateX(5px);white-space:nowrap;
+    background:var(--ink);color:var(--bg);font-size:.72rem;font-weight:500;
+    padding:.32em .6em;border-radius:6px;opacity:0;pointer-events:none;
+    box-shadow:var(--shadow-1);transition:opacity .16s,transform .16s;}
+  .quicknav a .qn-label::after{content:"";position:absolute;left:100%;top:50%;
+    transform:translateY(-50%);border:4px solid transparent;border-left-color:var(--ink);}
+  .quicknav a:hover .qn-label,.quicknav a:focus-visible .qn-label{opacity:1;transform:translateY(-50%) translateX(0);}
+  .quicknav .qn-sep{width:14px;height:1px;background:var(--line);margin:4px 0;}
+  .quicknav .qn-top .qn-dot{width:auto;height:auto;background:transparent!important;
+    box-shadow:none!important;font-family:var(--mono);font-size:.8rem;color:var(--ink-3);line-height:1;}
+  .quicknav .qn-top:hover .qn-dot{color:var(--accent);transform:none;}
   @media (max-width:900px){.quicknav{display:none;}}
   @media print{.quicknav{display:none!important;}}
   `;
@@ -65,6 +71,7 @@
       `<a href="${it.href}"${it.key === act ? ' class="active" aria-current="page"' : ""}>` +
       `<span class="qn-label">${it.label}</span><span class="qn-dot" aria-hidden="true"></span></a>`
     ).join("") +
+    `<span class="qn-sep" aria-hidden="true"></span>` +
     `<a class="qn-top" href="#" role="button" aria-label="맨 위로"><span class="qn-label">맨 위로</span><span class="qn-dot" aria-hidden="true">↑</span></a>`;
 
   function boot() {
