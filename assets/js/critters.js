@@ -28,6 +28,17 @@
   .cr-prop.tree{right:5%;width:66px;height:96px;bottom:14px;}
   .cr-prop.ball{left:64%;width:22px;height:22px;bottom:16px;}
   @media (max-width:640px){.cr-prop.ball{display:none;}.cr-ground,.cr-paws{height:76px;}}
+  /* 밤(다크): 발자국이 옅어지고 방석이 깔림 */
+  .critters-layer.is-night .cr-paws{opacity:.24;}
+  .critters-layer.is-night .cr-prop.ball{opacity:.35;}
+  .cr-beds{position:absolute;inset:0;}
+  .cr-bed{position:absolute;bottom:12px;width:66px;height:30px;transform:translateX(-50%);opacity:.92;}
+  .cr-bed svg{width:100%;height:100%;display:block;}
+  .critter.sleeping .leg{animation:none!important;}
+  .critter.sleeping .tail{animation-duration:2.6s;}
+  .critter.sleeping .body-bob{animation:cr-breathe 2.9s infinite ease-in-out!important;}
+  @keyframes cr-breathe{0%,100%{transform:translateY(0) scaleY(1);}50%{transform:translateY(1px) scaleY(.95);}}
+  .critter .emote.zzz{font-size:13px;}
   .critter{position:absolute;width:46px;height:38px;will-change:transform;transform:translate3d(0,0,0);}
   .critter svg{width:100%;height:100%;overflow:visible;display:block;
     filter:drop-shadow(0 1.5px 1.5px rgba(30,25,18,.18));}
@@ -108,10 +119,15 @@
       `<g fill="#7a8a6a" transform="translate(${x},${y})"><ellipse cx="0" cy="4" rx="4.2" ry="5.2"/>` +
       `<circle cx="-5" cy="-3" r="1.8"/><circle cx="-1.5" cy="-5.5" r="1.8"/><circle cx="2.5" cy="-5" r="1.8"/><circle cx="5.5" cy="-2" r="1.8"/></g>`
     ).join("") + `</svg>`);
+  const BED_SVG = `<svg viewBox="0 0 66 30" fill="none">
+    <ellipse cx="33" cy="20" rx="31" ry="9" fill="#5b4c3d"/>
+    <ellipse cx="33" cy="17" rx="27" ry="7.5" fill="#7a6552"/>
+    <ellipse cx="33" cy="16" rx="20" ry="5" fill="#8f7761"/></svg>`;
   function sceneHTML() {
     return `<div class="cr-scene" aria-hidden="true">
       <div class="cr-ground"></div>
       <div class="cr-paws" style="background-image:url('data:image/svg+xml,${PAW}')"></div>
+      <div class="cr-beds"></div>
       <div class="cr-prop bush"><svg viewBox="0 0 70 46" fill="none">
         <ellipse cx="20" cy="34" rx="18" ry="12" fill="#7ea36a"/><ellipse cx="42" cy="30" rx="20" ry="15" fill="#6f9a5c"/>
         <ellipse cx="56" cy="36" rx="12" ry="9" fill="#84ad70"/><ellipse cx="34" cy="24" rx="12" ry="9" fill="#8cb679"/></svg></div>
@@ -148,6 +164,8 @@
       this.speed = rand(26, 42);
       this.curious = Math.random() < 0.4; // 마우스에 다가가는 성향
       this.emoteT = 0;
+      this.bedEl = null; this.inBed = false; // 밤에 잘 방석
+      this.playing = false;
 
       const el = document.createElement("div");
       el.className = "critter";
@@ -186,8 +204,42 @@
       this.say("♥", 0.9);
       setTimeout(() => this.el.classList.remove("hop"), 500);
     }
+    sleepEmote(on) {
+      if (on) { this.emoteEl.textContent = "💤"; this.emoteEl.classList.add("zzz"); this.el.classList.add("emoting"); }
+      else { this.emoteEl.classList.remove("zzz"); this.el.classList.remove("emoting"); this.emoteEl.textContent = "‼"; }
+    }
     update(dt, mouse) {
       if (reduced) { this.place(); return; }
+      // ---- 밤: 방석으로 가서 잔다 ----
+      if (night && this.bedEl) {
+        const r = this.bedEl.getBoundingClientRect();
+        const bx = clampX(r.left + r.width / 2 - 23);
+        const by = clampY(r.top + r.height / 2 - 22);
+        if (!this.inBed) {
+          const gx = bx - this.x, gy = by - this.y, gd = Math.hypot(gx, gy);
+          if (gd > 4) {
+            this.x += (gx / gd) * this.speed * 1.7 * dt; this.y += (gy / gd) * this.speed * 1.7 * dt;
+            if (Math.abs(gx) > 2) this.dir = gx > 0 ? 1 : -1;
+            this.el.classList.add("walk");
+          } else {
+            this.inBed = true; this.el.classList.remove("walk");
+            this.el.classList.add("sleeping"); this.sleepEmote(true);
+          }
+        } else {
+          // 자는 중 — 마우스가 가까이 오면 잠깐 깼다가 다시 눕는다
+          if (mouse.on) {
+            const d = Math.hypot((this.x + 23) - mouse.x, (this.y + 20) - mouse.y);
+            if (d < 62) {
+              this.inBed = false; this.el.classList.remove("sleeping"); this.sleepEmote(false);
+              this.say("?", 0.7);
+              this.x = clampX(this.x + ((this.x + 23 - mouse.x) / (d || 1)) * 10);
+            }
+          }
+        }
+        if (this.emoteT > 0) { this.emoteT -= dt; if (this.emoteT <= 0) this.el.classList.remove("emoting"); }
+        this.x = clampX(this.x); this.y = clampY(this.y); this.place(); return;
+      }
+      if (this.el.classList.contains("sleeping")) { this.el.classList.remove("sleeping"); this.sleepEmote(false); }
       // 마우스 반응
       if (mouse.on) {
         const dx = (this.x + 23) - mouse.x, dy = (this.y + 20) - mouse.y;
@@ -239,8 +291,41 @@
   }
 
   /* ---------------- 무대 ---------------- */
-  let layer, toggleBtn, critters = [], raf = 0, last = 0;
+  let layer, toggleBtn, critters = [], raf = 0, last = 0, night = false;
   const mouse = { x: 0, y: 0, on: false };
+  const darkMQ = matchMedia("(prefers-color-scheme: dark)");
+
+  function computeNight() {
+    const t = document.documentElement.getAttribute("data-theme");
+    if (t === "dark") return true;
+    if (t === "light") return false;
+    return darkMQ.matches;
+  }
+  function applyNight(v) {
+    night = v;
+    if (!layer) return;
+    layer.classList.toggle("is-night", v);
+    const beds = layer.querySelector(".cr-beds");
+    if (!beds) return;
+    beds.innerHTML = "";
+    if (v) {
+      const c = Math.max(1, critters.length);
+      for (let i = 0; i < c; i++) {
+        const b = document.createElement("div");
+        b.className = "cr-bed";
+        b.style.left = (9 + (82 * (i + 0.5) / c)) + "%";
+        b.innerHTML = BED_SVG;
+        beds.appendChild(b);
+      }
+      const bedEls = beds.querySelectorAll(".cr-bed");
+      critters.forEach((cr, i) => { cr.bedEl = bedEls[i % bedEls.length]; cr.inBed = false; });
+    } else {
+      critters.forEach((cr) => { cr.bedEl = null; cr.inBed = false; cr.el.classList.remove("sleeping"); cr.sleepEmote(false); });
+    }
+  }
+  darkMQ.addEventListener("change", () => applyNight(computeNight()));
+  new MutationObserver(() => applyNight(computeNight()))
+    .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   function spawnFresh() {
     const specs = [["dog", 0], ["cat", 0], ["dog", 1], ["cat", 1]];
@@ -282,6 +367,7 @@
     layer.innerHTML = sceneHTML();
     document.body.appendChild(layer);
     restore();
+    applyNight(computeNight());
     if (!reduced) { last = performance.now(); raf = requestAnimationFrame(loop); }
     else { for (const c of critters) c.place(); }
   }
