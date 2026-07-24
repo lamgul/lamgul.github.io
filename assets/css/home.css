@@ -86,13 +86,16 @@
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
+.hero { text-align: center; }
+.hero-status { justify-content: center; }
 .hero h1 {
   font-family: var(--serif);
   font-weight: 300;
   font-size: var(--t-3);
   line-height: 1.06;
   letter-spacing: -0.022em;
-  max-width: 20ch;
+  max-width: 22ch;
+  margin-inline: auto;
 }
 .hero h1 .em {
   font-style: italic;
@@ -102,6 +105,7 @@
 .hero h1 .line { display: block; }
 .hero-sub {
   margin-top: var(--sp-4);
+  margin-inline: auto;
   max-width: 58ch;
   font-size: var(--t-0);
   color: var(--ink-2);
@@ -114,6 +118,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-4) var(--sp-5);
 }
 .btn {
