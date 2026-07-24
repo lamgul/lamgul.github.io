@@ -84,8 +84,8 @@ cd projects/rail && npm i && npm run build            # TS 파서 컴파일
 ├── index.html            허브 (실무 사례 + 실험)
 ├── about.html            이력 · CV (인쇄 시 깔끔한 이력서로)
 ├── cases/                실무 사례 9건
-├── projects/             프로젝트 데모 6종 + 인터랙티브 실험 5종
-├── writing/              개발 기록 4편
+├── projects/             프로젝트 데모 7종 + 인터랙티브 실험 5종
+├── writing/              기술 블로그 60편
 └── assets/               css(디자인 시스템) · js · fonts · img
 ```
 

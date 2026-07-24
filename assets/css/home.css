@@ -49,11 +49,12 @@
 .nav a:hover { color: var(--ink); }
 .nav .num {
   font-family: var(--mono);
-  color: var(--accent);
-  font-size: 0.66em;
-  vertical-align: super;
-  margin-right: 0.15em;
+  color: var(--ink-3);
+  font-size: 0.72em;
+  margin-left: 0.22em;
+  vertical-align: baseline;
 }
+.nav a:hover .num { color: var(--accent); }
 
 /* .icon-btn / .theme-toggle moved to base.css (shared chrome) */
 
