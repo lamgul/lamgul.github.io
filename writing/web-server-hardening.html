@@ -58,15 +58,15 @@
   <span class="c-head">먼저 짚고 가기</span>
   <dl>
     <dt>응답 헤더<span class="en">Response Header</span></dt>
-    <dd>서버가 웹 요청에 답할 때 본문(화면 내용) 앞에 붙여 보내는 짧은 부가 정보입니다. 편지로 치면 내용물이 아니라 봉투에 적힌 메모에 가깝습니다. 여기에 서버 종류·버전 같은 정보가 무심코 담겨 나가는 게 이 글의 출발점입니다.</dd>
+    <dd>HTTP 응답에서 상태 줄(status line) 다음, 본문 앞에 놓이는 <code>이름: 값</code> 형식의 메타데이터 필드들입니다. 각 필드는 CRLF로 구분되고 빈 줄 하나가 헤더와 본문의 경계가 됩니다(RFC 9110·9112). <code>Server</code>, <code>Content-Type</code>처럼 응답을 처리하는 데 필요한 정보를 담지만 화면에 렌더링되는 본문 자체는 아니며, 여기에 서버 종류·버전이 실려 나가는 게 이 글의 출발점입니다.</dd>
     <dt>CVE<span class="en">Common Vulnerabilities and Exposures</span></dt>
-    <dd>공개적으로 알려진 보안 취약점 하나하나에 붙는 전 세계 공통 번호표입니다. 서버 버전이 노출되면 공격자는 "그 버전에 해당하는 CVE"를 목록에서 바로 찾아 공격할 수 있어, 버전 숨기기가 첫 번째 방어가 됩니다.</dd>
+    <dd>공개적으로 알려진 보안 취약점 하나하나에 <code>CVE-연도-일련번호</code> 형식의 고유 식별자를 부여하는 체계입니다. MITRE가 관장하고 번호 발급 기관(CNA)이 ID를 매겨, 서로 다른 보안 도구·문서가 같은 취약점을 같은 번호로 가리키게 합니다. CVE는 식별자일 뿐 심각도 점수(그것은 CVSS)는 아니며, 서버 버전이 노출되면 공격자가 그 버전에 걸린 CVE 목록을 그대로 조회할 수 있어 버전 숨기기가 첫 방어가 됩니다.</dd>
     <dt>HSTS<span class="en">HTTP Strict Transport Security</span></dt>
-    <dd>"앞으로 이 사이트는 반드시 암호화된 HTTPS로만 접속하라"고 브라우저에 못 박는 규칙입니다. 중간에서 통신을 가로채 평문(HTTP)으로 유도하는 공격을 막아 줍니다.</dd>
+    <dd>서버가 <code>Strict-Transport-Security</code> 응답 헤더로 브라우저에 "이 호스트는 <code>max-age</code> 기간 동안 HTTPS로만 접속하라"고 지시하는 정책입니다(RFC 6797). 헤더를 받은 브라우저는 그 기간 내 모든 요청을 HTTPS로 자동 승격시키고, 인증서 오류가 나도 사용자가 경고를 무시하고 진입하는 것을 막습니다. 다만 헤더를 처음 받기 전의 최초 접속은 보호되지 않아, 이 공백은 브라우저 내장 preload 목록으로 메웁니다.</dd>
     <dt>CSP<span class="en">Content Security Policy</span></dt>
-    <dd>페이지가 어떤 출처의 스크립트·이미지만 불러올 수 있는지 정해 두는 허용 목록입니다. 공격자가 몰래 심은 악성 스크립트 실행을 막지만, 잘못 설정하면 정상 자원까지 막혀 화면이 깨지므로 조심스럽게 도입합니다.</dd>
+    <dd><code>Content-Security-Policy</code> 응답 헤더에 <code>default-src</code>, <code>script-src</code> 같은 지시어로 자원 종류별 허용 출처를 선언하는 정책입니다. 브라우저는 이 목록에 어긋나는 스크립트·이미지 로드와 인라인 실행을 차단해, 주입된 악성 스크립트(XSS) 실행을 어렵게 만드는 심층 방어 계층으로 작동합니다. 완전한 XSS 차단은 아니며 허용 출처를 좁게 잡으면 정상 자원까지 막혀 화면이 깨지므로, <code>Content-Security-Policy-Report-Only</code>로 위반만 수집하며 지켜본 뒤 강제 적용합니다.</dd>
     <dt>TLS<span class="en">Transport Layer Security</span></dt>
-    <dd>인터넷 통신을 암호화해 도청·변조를 막는 기술로, HTTPS의 자물쇠를 담당합니다. 오래된 버전(1.0·1.1)에는 알려진 약점이 있어 1.2 이상만 허용하는 것이 권장됩니다.</dd>
+    <dd>TCP 같은 전송 계층 위에서 통신을 암호화하고 무결성을 보장하는 프로토콜로, SSL의 후속입니다. 핸드셰이크에서 인증서로 서버를 인증하고 키를 교환한 뒤 대칭키 암호로 이후 트래픽을 암호화하며, HTTPS는 HTTP를 이 TLS 위에 실어 나른 것입니다. 1.0·1.1은 알려진 약점으로 폐기되어(RFC 8996) 1.2(RFC 5246)·1.3(RFC 8446)만 허용하는 것이 권장됩니다.</dd>
   </dl>
 </div>
 

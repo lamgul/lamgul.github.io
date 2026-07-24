@@ -58,15 +58,15 @@
   <span class="c-head">먼저 짚고 가기</span>
   <dl>
     <dt>의존성 주입<span class="en">Dependency Injection</span></dt>
-    <dd>어떤 객체가 필요로 하는 부품(의존성)을 자기가 직접 만들지 않고, 밖에서 만들어 건네받는 방식입니다. 요리사가 재료를 직접 재배하지 않고 받아 쓰는 것과 같습니다. 이 글의 핵심 주제로, "사이트별 크롤러를 누가 골라 넣어주는가"라는 문제를 푸는 열쇠입니다.</dd>
+    <dd>객체가 협력할 다른 객체를 자기 안에서 직접 생성하지 않고, 생성자 인자나 함수 파라미터로 외부에서 건네받게 하는 설계 원칙입니다. 제어의 역전(IoC)을 객체 생성에 적용한 형태로, "무엇을 쓸지 고르고 조립하는 책임"을 사용하는 코드 바깥으로 옮깁니다. 컨테이너나 프레임워크가 있어야 성립하는 것은 아니어서 인자로 넘기는 순간 이미 주입이고, <code>Depends</code>나 dependency-injector는 그 조립을 대신해 주는 도구일 뿐입니다.</dd>
     <dt>어댑터 패턴<span class="en">Adapter Pattern</span></dt>
-    <dd>사이트마다 다른 세부 구현을 공통된 껍데기(인터페이스) 뒤에 숨겨, 바깥에서는 다 똑같은 모양으로 다루게 하는 설계입니다. 이 글에서 사이트마다 다른 URL·셀렉터·차단 정책을 <code>CrawlerAdapter</code> 하나로 격리하는 근거입니다.</dd>
+    <dd>호출하는 쪽이 기대하는 인터페이스와 실제 구현이 가진 인터페이스가 다를 때, 그 사이에 변환 계층을 두어 호출을 위임하는 구조 패턴(GoF)입니다. 이 글에서는 사이트마다 다른 URL·셀렉터·차단 정책을 <code>MusinsaAdapter</code>·<code>W29Adapter</code>가 각각 흡수하고, 바깥에는 <code>fetch()</code>/<code>parse()</code>라는 같은 시그니처만 남깁니다. 통일되는 것은 시그니처까지이며 응답 지연이나 실패하는 방식까지 같아지지는 않으므로, 타임아웃·재시도 같은 정책은 어댑터 바깥에서 따로 정해야 합니다.</dd>
     <dt>인터페이스<span class="en">Interface / Protocol</span></dt>
-    <dd>"이런 기능은 반드시 있어야 한다"는 약속(계약)만 정하고 실제 내용은 비워 둔 틀입니다. 파이썬에서는 <code>Protocol</code>로 표현합니다. 사용하는 쪽은 이 약속만 믿으면 되므로, 구현체를 자유롭게 갈아끼울 수 있습니다.</dd>
+    <dd>구현은 비워 두고 메서드 이름과 시그니처만 정해 둔 타입 수준의 계약입니다. 파이썬의 <code>typing.Protocol</code>은 구조적 부분 타이핑(PEP 544)이라, 아래 <code>MusinsaAdapter</code>처럼 <code>CrawlerAdapter</code>를 상속하지 않아도 <code>fetch()</code>와 <code>parse()</code>만 갖추면 그 타입으로 인정됩니다. 다만 이 판정은 mypy 같은 정적 타입 검사기가 하는 일이라 런타임에는 강제되지 않고, <code>@runtime_checkable</code>을 붙여 <code>isinstance</code>로 확인해도 메서드가 존재하는지만 볼 뿐 시그니처가 맞는지까지는 보지 않습니다.</dd>
     <dt>요청 스코프<span class="en">Request Scope</span></dt>
-    <dd>웹 서버가 요청 하나를 처리하는 동안만 유효한 생명 범위입니다. 이 범위 안에서 만든 값은 그 요청이 끝나면 정리됩니다. <code>Depends</code>가 요청마다 자원을 만들고 뒤처리하는 단위가 바로 이것입니다.</dd>
+    <dd>HTTP 요청 하나가 들어와 응답이 나갈 때까지로 한정된 객체 수명 범위입니다. FastAPI는 이 범위 안에서 의존성 함수의 결과를 캐시하므로, 같은 함수를 여러 곳에서 <code>Depends</code>해도 요청당 한 번만 실행됩니다(기본값 <code>use_cache=True</code>). <code>yield</code>로 값을 내보낸 의존성은 응답이 전송된 뒤에야 <code>yield</code> 아래의 정리 코드가 실행되고, 다음 요청은 이 캐시를 물려받지 않아 처음부터 다시 만듭니다.</dd>
     <dt>싱글턴<span class="en">Singleton</span></dt>
-    <dd>프로그램 전체에서 인스턴스를 딱 하나만 만들어 계속 재사용하는 방식입니다. 커넥션 풀처럼 매번 새로 만들면 낭비인 무거운 자원에 씁니다. <code>Depends</code>에는 없고 컨테이너 방식에는 내장돼 있어, 두 도구를 비교하는 기준이 됩니다.</dd>
+    <dd>인스턴스를 한 번만 만들어 두고 이후의 모든 요청이 같은 참조를 돌려받게 하는 수명 범위이자 생성 패턴입니다. 커넥션 풀처럼 만드는 비용이 크고 상태를 공유해야 이득인 자원에 씁니다. <code>Depends</code>에는 이 스코프가 내장돼 있지 않아 <code>lifespan</code>과 <code>app.state</code>, 또는 <code>@lru_cache</code>를 붙인 함수로 대신하고, dependency-injector에는 <code>providers.Singleton</code>으로 들어 있습니다. 여기서 "하나"는 프로세스 단위라, 워커를 여러 개 띄우면 워커 수만큼 생긴다는 점은 따로 염두에 둬야 합니다.</dd>
   </dl>
 </div>
 
