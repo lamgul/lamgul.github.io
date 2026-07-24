@@ -259,8 +259,8 @@
 .work-preview {
   position: fixed;
   top: 0; left: 0;
-  width: min(30vw, 340px);
-  aspect-ratio: 4 / 3;
+  width: min(36vw, 440px);
+  aspect-ratio: 16 / 9;
   border-radius: 10px;
   overflow: hidden;
   pointer-events: none;
