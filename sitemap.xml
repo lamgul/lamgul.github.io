@@ -18,40 +18,49 @@
   <url><loc>https://lamgul.github.io/writing/pagedattention-paper.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/nestjs-role-based-api.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/prisma-transactions-n1.html</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/writing/borg-paper-analysis.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/postgres-slow-list.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/docker-image-diet.html</loc><priority>0.7</priority></url>
-  <url><loc>https://lamgul.github.io/writing/reading-heap-dumps.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/study-spring-vs-fastapi.html</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/writing/reading-heap-dumps.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/adapter-and-backoff.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/kubernetes-oomkilled.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/shipping-this-portfolio.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/state-without-a-database.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/killing-repetitive-work.html</loc><priority>0.7</priority></url>
-  <url><loc>https://lamgul.github.io/writing/parsing-regex-by-hand.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-k8s-in-action.html</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/writing/parsing-regex-by-hand.html</loc><priority>0.7</priority></url>
+  <url><loc>https://lamgul.github.io/writing/tail-at-scale-analysis.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/fastapi-dependency-injection.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/variable-fonts-in-ui.html</loc><priority>0.7</priority></url>
   <url><loc>https://lamgul.github.io/writing/web-server-hardening.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/aws-small-team-architecture.html</loc><priority>0.6</priority></url>
-  <url><loc>https://lamgul.github.io/writing/redis-cache-invalidation.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/security-tls-reverse-proxy.html</loc><priority>0.6</priority></url>
-  <url><loc>https://lamgul.github.io/writing/feature-engineering-in-practice.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/redis-cache-invalidation.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/spanner-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/security-rate-limiting.html</loc><priority>0.6</priority></url>
-  <url><loc>https://lamgul.github.io/writing/observability-basics.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/feature-engineering-in-practice.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/security-owasp-top10.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/observability-basics.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-clean-architecture.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/memcache-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-ddd-evans.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/ddd-aggregate-boundaries.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/pattern-pipe-filter.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/kafka-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-poeaa.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/yolo-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/pattern-usecase-repository.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/postgres-mvcc-vacuum.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/dynamo-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/security-cors-csrf.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/security-jwt-auth.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/gfs-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/spring-transaction-propagation.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/mapreduce-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/pattern-template-strategy.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/review-clean-code.html</loc><priority>0.6</priority></url>
+  <url><loc>https://lamgul.github.io/writing/resnet-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/pattern-layered-hexagonal.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/attention-paper-analysis.html</loc><priority>0.6</priority></url>
   <url><loc>https://lamgul.github.io/writing/clean-code-tests.html</loc><priority>0.6</priority></url>

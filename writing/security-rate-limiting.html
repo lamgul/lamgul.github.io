@@ -23,6 +23,32 @@
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
+<style>
+/* 토큰 버킷 시뮬레이터 위젯 전용 (pw-rl- 접두) */
+.pw-rl-modes{display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-3)}
+.pw-rl-controls{display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-4)}
+.pw-rl-ctl{display:flex;flex-direction:column;gap:var(--sp-1);flex:1 1 10rem;min-width:0;font-size:var(--t--1);color:var(--ink-2)}
+.pw-rl-ctl b{color:var(--ink);font-variant-numeric:tabular-nums}
+.pw-rl-ctl input[type="range"]{width:100%}
+.pw-rl-off{opacity:.35}
+.pw-rl-stage{display:flex;gap:var(--sp-4);flex-wrap:wrap;align-items:stretch}
+.pw-rl-bucketcol{display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);flex:none}
+.pw-rl-bucket{position:relative;width:3.6rem;height:9rem;border:1px solid var(--line-2);border-top:none;border-radius:0 0 var(--radius) var(--radius);background:var(--surface);overflow:hidden}
+.pw-rl-fill{position:absolute;left:0;right:0;bottom:0;height:100%;background:var(--accent-tint);border-top:2px solid var(--accent);transition:height .12s linear}
+.pw-rl-count{font-family:var(--mono);font-size:var(--t--1);color:var(--ink);font-variant-numeric:tabular-nums}
+.pw-rl-winwrap{width:3.6rem;height:.3rem;border:1px solid var(--line-2);border-radius:100px;overflow:hidden;background:var(--surface)}
+.pw-rl-winbar{height:100%;width:0;background:var(--teal)}
+.pw-rl-winleft{font-family:var(--mono);font-size:.66rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.pw-rl-side{flex:1 1 12rem;min-width:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.pw-rl-btns{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.pw-rl-stats{display:flex;gap:var(--sp-3);flex-wrap:wrap;font-family:var(--mono);font-size:var(--t--1);color:var(--ink-3)}
+.pw-rl-stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.pw-rl-stats b.pw-rl-hot{color:var(--accent)}
+.pw-rl-log{min-height:6.5rem}
+.pw-rl-log .pw-rl-ok{color:var(--ink-2)}
+.pw-rl-log .pw-rl-err{color:var(--accent);font-weight:600}
+.pw-rl-log .pw-rl-sys{color:var(--ink-3);font-style:italic}
+</style>
 </head>
 <body>
 <a class="skip" href="#body">본문으로 건너뛰기</a>
@@ -106,6 +132,48 @@
 
 <h2>토큰 버킷과 Lua 원자성</h2>
 <p>지금까지는 "몇 번 왔나"를 셌습니다. <b>토큰 버킷</b>은 관점이 다릅니다. 용량이 정해진 버킷에 토큰이 <b>일정 속도로 채워지고</b>, 요청은 토큰을 하나씩 씁니다. 토큰이 있으면 통과, 없으면 거절. 이 방식의 진짜 미덕은 <b><span class="term" title="짧은 순간에 요청이 한꺼번에 몰리는 것">버스트</span>를 우아하게 허용</b>한다는 데 있습니다. 평소 놀다가 잠깐 몰아 쓰는 사용자는 쌓인 토큰으로 통과시키고, <b>지속적인</b> 남용만 막습니다. 사람이 화면을 클릭하는 패턴은 원래 몰렸다 뜸했다 하니, 사용자 대면 API에는 이 관용이 딱 맞습니다. vLLM 앞에 이걸 고른 이유이기도 합니다.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">토큰 버킷 시뮬레이터</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-rl-modes" role="group" aria-label="알고리즘 선택">
+      <button type="button" id="pw-rl-mode-tb" class="on" aria-pressed="true">토큰 버킷</button>
+      <button type="button" id="pw-rl-mode-fw" aria-pressed="false">고정 윈도우 (창 5초)</button>
+    </div>
+    <div class="pw-rl-controls">
+      <label class="pw-rl-ctl">
+        <span><span id="pw-rl-cap-lab">용량</span> <b id="pw-rl-cap-val">10</b>개</span>
+        <input type="range" id="pw-rl-cap" min="2" max="20" step="1" value="10">
+      </label>
+      <label class="pw-rl-ctl" id="pw-rl-refill-row">
+        <span>리필 <b id="pw-rl-refill-val">1.0</b>개/초</span>
+        <input type="range" id="pw-rl-refill" min="0.5" max="5" step="0.5" value="1">
+      </label>
+    </div>
+    <div class="pw-rl-stage">
+      <div class="pw-rl-bucketcol">
+        <div class="pw-rl-bucket"><div class="pw-rl-fill" id="pw-rl-fill"></div></div>
+        <span class="pw-rl-count" id="pw-rl-count">10.0 / 10</span>
+        <div class="pw-rl-winwrap" id="pw-rl-winwrap" hidden><div class="pw-rl-winbar" id="pw-rl-winbar"></div></div>
+        <span class="pw-rl-winleft" id="pw-rl-winleft" hidden>리셋까지 5.0초</span>
+      </div>
+      <div class="pw-rl-side">
+        <div class="pw-rl-btns">
+          <button type="button" class="primary" id="pw-rl-req">요청</button>
+          <button type="button" id="pw-rl-burst">버스트 10발</button>
+        </div>
+        <div class="pw-rl-stats">
+          <span>통과 <b id="pw-rl-ok">0</b></span>
+          <span>429 <b id="pw-rl-err">0</b></span>
+          <span>직전 5초 실제 통과 <b id="pw-rl-roll">0</b></span>
+        </div>
+        <div class="pw-log pw-rl-log" id="pw-rl-log" role="log"></div>
+      </div>
+    </div>
+  </div>
+  <p class="pw-cap">고정 윈도우 모드에서 [버스트 10발]을 창 경계 직전·직후에 나눠 쏘면, "직전 5초 실제 통과"가 한도의 두 배까지 벌어지는 걸 볼 수 있습니다</p>
+</div>
+
 <p>그런데 토큰 버킷은 <code>INCR</code> 하나로 안 끝납니다. <b>토큰을 읽고 → 흐른 시간만큼 채우고 → 검사하고 → 차감해 다시 쓰는</b> 읽기-수정-쓰기입니다. 이걸 애플리케이션 코드에서 <code>GET</code> 후 <code>SET</code>으로 하면, 두 요청이 동시에 같은 잔량을 읽고 <b>둘 다 통과</b>시켜 버립니다. 한도가 새는 겁니다. 여러 대의 API 서버가 한 Redis를 볼 때 이 경쟁은 반드시 터집니다. 해법은 이 전체를 <b>하나의 원자적 연산</b>으로 묶는 것 — Redis에서는 Lua 스크립트가 그 역할을 합니다.</p>
 <pre class="code"><span class="c">-- token_bucket.lua  |  KEYS[1]=버킷,  ARGV=capacity, refill, now, cost</span>
 <span class="k">local</span> tokens = tonumber(redis.call(<span class="s">'HGET'</span>, KEYS[1], <span class="s">'tokens'</span>))
@@ -162,7 +230,7 @@ redis.call(<span class="s">'EXPIRE'</span>, KEYS[1], math.ceil(cap / refill) * 2
 <span class="c">//     → 3 + 5 × 0.7 = 6.5 → 6, 한도 이하이므로 통과</span>
 <span class="k">return</span> estimate &lt;= limit;</pre>
 <p>하지만 실무에 옮길 때 가장 크게 남은 건 알고리즘이 아니라 <b>분산 환경 절</b>이었습니다. 책은 여러 대의 리미터가 생기는 순간 두 문제가 따라온다고 못 박습니다 — <b>경쟁 상태</b>와 <b>동기화</b>. 카운터를 읽고 쓰는 사이 다른 요청이 끼어드는 경쟁은 <b>Lua 스크립트나 정렬 집합</b>으로 풀고, 여러 서버가 상태를 공유하려면 스티키 세션이 아니라 <b>중앙 저장소(Redis)</b>를 둬야 한다는 것. 앞 절에서 제가 토큰 버킷의 읽기-수정-쓰기를 통째로 Lua에 밀어 넣은 건, 책이 "여기서 조용히 깨진다"고 표시해 둔 바로 그 지점을 막은 것이었습니다.</p>
-<p>세부까지 실무 감각에 붙는 책입니다. <code>429</code> 응답과 함께 <code>X-Ratelimit-Remaining</code>·<code>X-Ratelimit-Limit</code>·<code>X-Ratelimit-Retry-After</code> 같은 헤더로 <b>남은 한도와 재시도 시점</b>을 돌려주라는 계약, Redis의 <code>INCR</code>·<code>EXPIRE</code>로 카운터를 구현하는 밑그림까지 짚어 줍니다. 인터뷰 대비서라 깊이는 넓고 얕지만, <b>결정을 어떤 순서로 내려야 하는지</b>를 몸에 새겨 준다는 점에서, 실제로 리미터를 얹기 전에 한 번 통과하기 좋은 장이었습니다.</p>
+<p>세부까지 실무 감각에 붙는 책입니다. <code>429</code> 응답과 함께 <code>X-Ratelimit-Remaining</code>·<code>X-Ratelimit-Limit</code>·<code>X-Ratelimit-Retry-After</code> 같은 헤더로 <b>남은 한도와 재시도 시점</b>을 돌려주라는 계약, Redis의 <code>INCR</code>·<code>EXPIRE</code>로 카운터를 구현하는 밑그림까지 짚어 줍니다. 인터뷰 대비서라 다루는 폭은 넓고 깊이는 얕지만, <b>결정을 어떤 순서로 내려야 하는지</b>를 몸에 새겨 준다는 점에서, 실제로 리미터를 얹기 전에 한 번 통과하기 좋은 장이었습니다.</p>
 
 <h2>정리 — 방어선을 어디에 긋나</h2>
 <p>레이트 리미팅은 라이브러리를 하나 붙이는 일처럼 보이지만, 실은 <b>일련의 결정</b>입니다. 그 결정들을 순서대로 추리면 이렇습니다.</p>
@@ -190,7 +258,7 @@ redis.call(<span class="s">'EXPIRE'</span>, KEYS[1], math.ceil(cap / refill) * 2
 
   <nav class="post-nav" aria-label="글 이동">
     <a class="pn-prev" href="feature-engineering-in-practice.html"><span class="pn-label">이전 글</span><span class="pn-title">Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</span><span class="pn-date">2024 · 06</span></a>
-    <a class="pn-next" href="redis-cache-invalidation.html"><span class="pn-label">다음 글</span><span class="pn-title">Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</span><span class="pn-date">2024 · 09</span></a>
+    <a class="pn-next" href="spanner-paper-analysis.html"><span class="pn-label">다음 글</span><span class="pn-title">논문 분석: Spanner — 시계로 트랜잭션을 줄 세우다</span><span class="pn-date">2024 · 08</span></a>
   </nav>
 </main>
 
@@ -200,5 +268,135 @@ redis.call(<span class="s">'EXPIRE'</span>, KEYS[1], math.ceil(cap / refill) * 2
 
 <script src="../assets/js/site.js" defer></script>
 <script src="../assets/js/article.js" defer></script>
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id);};
+var capEl=$("pw-rl-cap"),refEl=$("pw-rl-refill"),capVal=$("pw-rl-cap-val"),refVal=$("pw-rl-refill-val"),capLab=$("pw-rl-cap-lab"),refRow=$("pw-rl-refill-row"),fillEl=$("pw-rl-fill"),countEl=$("pw-rl-count"),winWrap=$("pw-rl-winwrap"),winBar=$("pw-rl-winbar"),winLeft=$("pw-rl-winleft"),btnReq=$("pw-rl-req"),btnBurst=$("pw-rl-burst"),modeTbBtn=$("pw-rl-mode-tb"),modeFwBtn=$("pw-rl-mode-fw"),okEl=$("pw-rl-ok"),errEl=$("pw-rl-err"),rollEl=$("pw-rl-roll"),logEl=$("pw-rl-log");
+if(!capEl||!logEl)return;
+
+var WIN_MS=5000;                 // 고정 윈도우 길이 = 롤링 측정 구간
+var mode="tb";                   // "tb" 토큰 버킷 | "fw" 고정 윈도우
+var cap=parseInt(capEl.value,10);
+var refill=parseFloat(refEl.value);
+var t0=performance.now();
+var lastTs=t0;                   // 지연 충전 기준 시각
+var tokens=cap;
+var fwSlot=0,fwCount=0,fwSeen=false;
+var okN=0,errN=0,passTimes=[];
+
+function nowMs(){return performance.now()-t0;}
+function fmtT(ms){return (ms/1000).toFixed(1)+"s";}
+
+function addLog(cls,text){
+  var line=document.createElement("div");
+  line.className=cls;
+  line.textContent=text;
+  logEl.insertBefore(line,logEl.firstChild);
+  while(logEl.childNodes.length>40)logEl.removeChild(logEl.lastChild);
+}
+
+// 본문의 Lua와 같은 지연 충전: 흐른 시간만큼 그때그때 채운다
+function refillNow(){
+  var n=performance.now(),dt=(n-lastTs)/1000;
+  lastTs=n;
+  if(mode==="tb")tokens=Math.min(cap,tokens+dt*refill);
+}
+
+function syncWindow(){
+  if(mode!=="fw")return;
+  var slot=Math.floor(nowMs()/WIN_MS);
+  if(slot!==fwSlot){
+    fwSlot=slot;
+    if(fwSeen)addLog("pw-rl-sys",fmtT(nowMs())+" ─ 창 경계 · 카운터 리셋, 다시 "+cap+"개 허용 ─");
+    fwCount=0;fwSeen=false;
+  }
+}
+
+function pruneRoll(){
+  var cut=nowMs()-WIN_MS;
+  while(passTimes.length&&passTimes[0]<cut)passTimes.shift();
+}
+
+function doRequest(){
+  refillNow();syncWindow();
+  var t=nowMs(),ok,detail;
+  if(mode==="tb"){
+    if(tokens>=1){tokens-=1;ok=true;detail="남은 토큰 "+tokens.toFixed(1);}
+    else{ok=false;detail="토큰 부족";}
+  }else{
+    fwSeen=true;
+    if(fwCount<cap){fwCount+=1;ok=true;detail="창 카운트 "+fwCount+"/"+cap;}
+    else{ok=false;detail="창 한도 "+cap+" 초과";}
+  }
+  if(ok){okN+=1;passTimes.push(t);addLog("pw-rl-ok",fmtT(t)+" ✓ 200 통과 · "+detail);}
+  else{errN+=1;addLog("pw-rl-err",fmtT(t)+" ✕ 429 Too Many Requests · "+detail);}
+  render();
+}
+
+function render(){
+  pruneRoll();
+  var ratio,label;
+  if(mode==="tb"){ratio=cap>0?tokens/cap:0;label=tokens.toFixed(1)+" / "+cap;}
+  else{var rem=Math.max(0,cap-fwCount);ratio=cap>0?rem/cap:0;label=rem+" / "+cap;}
+  fillEl.style.height=(Math.max(0,Math.min(1,ratio))*100).toFixed(1)+"%";
+  countEl.textContent=label;
+  okEl.textContent=String(okN);
+  errEl.textContent=String(errN);
+  rollEl.textContent=String(passTimes.length);
+  // 고정 윈도우의 약속은 "5초에 cap개" — 롤링 실측이 그걸 넘으면 경계 폭주가 새는 순간
+  rollEl.classList.toggle("pw-rl-hot",mode==="fw"&&passTimes.length>cap);
+  if(mode==="fw"){
+    var inWin=nowMs()%WIN_MS;
+    winBar.style.width=((inWin/WIN_MS)*100).toFixed(1)+"%";
+    winLeft.textContent="리셋까지 "+((WIN_MS-inWin)/1000).toFixed(1)+"초";
+  }
+}
+
+function setMode(m){
+  if(mode===m)return;
+  refillNow();
+  mode=m;
+  tokens=cap;fwCount=0;fwSeen=false;fwSlot=Math.floor(nowMs()/WIN_MS);
+  okN=0;errN=0;passTimes=[];
+  lastTs=performance.now();
+  while(logEl.firstChild)logEl.removeChild(logEl.firstChild);  // 통계를 0으로 되돌렸으니 로그도 같이 비운다
+  modeTbBtn.classList.toggle("on",m==="tb");
+  modeFwBtn.classList.toggle("on",m==="fw");
+  modeTbBtn.setAttribute("aria-pressed",m==="tb"?"true":"false");
+  modeFwBtn.setAttribute("aria-pressed",m==="fw"?"true":"false");
+  refRow.classList.toggle("pw-rl-off",m==="fw");
+  refEl.disabled=(m==="fw");
+  capLab.textContent=(m==="tb")?"용량":"창당 한도";
+  winWrap.hidden=(m!=="fw");
+  winLeft.hidden=(m!=="fw");
+  addLog("pw-rl-sys",m==="tb"
+    ?"─ 토큰 버킷 모드: 버킷 가득, 리필 "+refill.toFixed(1)+"개/초 ─"
+    :"─ 고정 윈도우 모드: 창 5초 · 창당 "+cap+"개, 경계에서 카운터가 통째로 리셋됩니다 ─");
+  render();
+}
+
+capEl.addEventListener("input",function(){
+  cap=parseInt(capEl.value,10);
+  capVal.textContent=String(cap);
+  if(mode==="tb")tokens=Math.min(tokens,cap);
+  render();
+});
+refEl.addEventListener("input",function(){
+  refillNow();                    // 속도 바꾸기 전, 흐른 시간은 이전 속도로 정산
+  refill=parseFloat(refEl.value);
+  refVal.textContent=refill.toFixed(1);
+  render();
+});
+btnReq.addEventListener("click",doRequest);
+btnBurst.addEventListener("click",function(){for(var i=0;i<10;i+=1)doRequest();});
+modeTbBtn.addEventListener("click",function(){setMode("tb");});
+modeFwBtn.addEventListener("click",function(){setMode("fw");});
+
+setInterval(function(){refillNow();syncWindow();render();},100);
+addLog("pw-rl-sys","준비 완료 — [요청]을 연타하거나 [버스트 10발]로 몰아쳐 보세요");
+render();
+})();
+</script>
 </body>
 </html>

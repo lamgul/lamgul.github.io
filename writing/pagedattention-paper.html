@@ -20,6 +20,32 @@
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
 <link rel="stylesheet" href="../assets/css/article.css">
+<style>
+/* pagedattention 글 전용 — KV 블록 매니저 위젯(.pw-kv-*) */
+.pw-kv-modes,.pw-kv-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:var(--sp-3)}
+.pw-kv-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:var(--sp-3)}
+.pw-kv-cell{aspect-ratio:1;min-width:0;border:1.5px dashed var(--line-2);border-radius:var(--radius);background:var(--surface)}
+.pw-kv-sw{width:12px;height:12px;flex:none;border:1.5px dashed var(--line-2);border-radius:var(--radius);background:var(--surface)}
+.pw-kv-c0{--pw-kv-c:var(--accent)}
+.pw-kv-c1{--pw-kv-c:var(--teal)}
+.pw-kv-c2{--pw-kv-c:color-mix(in srgb,var(--accent) 55%,var(--ink))}
+.pw-kv-c3{--pw-kv-c:color-mix(in srgb,var(--teal) 55%,var(--ink))}
+.pw-kv-c4{--pw-kv-c:var(--ink-3)}
+.pw-kv-c5{--pw-kv-c:color-mix(in srgb,var(--accent) 45%,var(--bg))}
+.pw-kv-full{border-style:solid;border-color:var(--pw-kv-c);background:var(--pw-kv-c)}
+.pw-kv-half{border-style:solid;border-color:var(--pw-kv-c);background:linear-gradient(to top,var(--pw-kv-c) 0 50%,var(--surface) 50% 100%)}
+.pw-kv-resv{border-style:solid;border-color:var(--pw-kv-c);background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--pw-kv-c) 22%,var(--bg-elev)) 0 4px,var(--bg-elev) 4px 8px)}
+.pw-kv-legend{display:flex;flex-wrap:wrap;gap:.4rem .9rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-3);margin-bottom:var(--sp-3)}
+.pw-kv-lg{display:inline-flex;align-items:center;gap:.35rem}
+.pw-kv-seqs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:var(--sp-3)}
+.pw-kv-chip{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-2);border:1px solid var(--line-2);border-radius:100px;padding:.2em .7em}
+.pw-kv-dot{width:9px;height:9px;flex:none;border-radius:var(--radius);background:var(--pw-kv-c)}
+.pw-kv-stats{display:grid;gap:.4rem;margin-bottom:var(--sp-3)}
+.pw-kv-stat{display:flex;flex-wrap:wrap;gap:.2rem .6rem;align-items:baseline;font-family:var(--mono);font-size:.76rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.5rem .8rem}
+.pw-kv-k{color:var(--ink-3);flex:none}
+.pw-kv-v{color:var(--ink);min-width:0}
+.pw-kv-msg{font-family:var(--mono);font-size:.76rem;line-height:1.6;color:var(--ink-2);background:var(--surface);border-left:3px solid var(--teal);border-radius:var(--radius);padding:.55rem .8rem;margin:0}
+</style>
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -53,6 +79,13 @@
   </section>
   <article class="post-body" id="body">
     <p class="lead">온프레미스에서 vLLM으로 서빙하면서 <code>gpu_memory_utilization</code> 숫자 하나에 동시 처리량이 널뛰는 것을 봤습니다. 왜 그런지 제대로 알고 싶어서 vLLM의 근간이 된 논문 — <b>Efficient Memory Management for Large Language Model Serving with PagedAttention</b>(Kwon et al., SOSP 2023) — 을 읽었습니다. 결론부터 말하면 이건 어텐션 논문이 아니라 <b>메모리 관리 논문</b>입니다. 그리고 그게 핵심입니다.</p>
+
+<div class="paper-cite">
+  <span class="pc-head">출처</span>
+  <p class="pc-title">Efficient Memory Management for Large Language Model Serving with PagedAttention</p>
+  <p class="pc-meta">Woosuk Kwon 외 · SOSP 2023 · arXiv:2309.06180</p>
+  <p class="pc-links"><a href="https://arxiv.org/pdf/2309.06180" target="_blank" rel="noopener">PDF ↗</a> · <a href="https://arxiv.org/abs/2309.06180" target="_blank" rel="noopener">arXiv ↗</a></p>
+</div>
 
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
@@ -108,11 +141,41 @@ BLOCK = <span class="s">16</span>                                <span class="c"
     <span class="k">def</span> <span class="f">free</span>(self):
         self.pool.extend(self.blocks); self.blocks.clear()
 
-pool = <span class="f">list</span>(<span class="f">range</span>(<span class="s">1024</span>))
+pool = [<span class="s">301</span>, <span class="s">12</span>, <span class="s">990</span>, <span class="s">47</span>, <span class="s">588</span>, <span class="s">3</span>]  <span class="c"># 먼저 끝난 시퀀스들이 반납해 뒤섞인 빈 블록 풀</span>
 seq = BlockTable(pool)
 seq.grow_to(<span class="s">37</span>)          <span class="c"># 37토큰 → 블록 3개. 낭비는 마지막 블록의 11칸뿐</span>
-<span class="f">print</span>(seq.blocks)        <span class="c"># [1023, 1022, 1021] — 물리적으로는 불연속</span></pre>
+<span class="f">print</span>(seq.blocks)        <span class="c"># [3, 588, 47] — 논리 순서는 0,1,2지만 물리 위치는 흩어져 있다</span></pre>
 <p>이러면 어텐션 커널이 달라져야 합니다. K·V가 연속 텐서가 아니니까요. 어텐션의 정의 자체는 그대로입니다 — 출력은 <code>o_i = Σ_j softmax(q_i·Kᵀ/√d)_j · v_j</code> — 다만 PagedAttention 커널은 이 합을 <b>블록 단위로 순회</b>하며 계산합니다. 블록 테이블에서 물리 블록 주소를 찾아 K 블록·V 블록을 하나씩 가져와 부분 어텐션을 누적하는 식입니다. 논문은 이 간접 참조 때문에 커널 지연이 소폭 늘어난다는 것도 숨기지 않는데, 그 비용을 내고 메모리 낭비를 없애 <b>배치를 키우는 쪽이 처리량에서 압도적으로 이득</b>이라는 게 논문의 계산입니다. 초록의 주장 그대로, 동일 지연 수준에서 기존 최고 시스템(FasterTransformer, Orca) 대비 <b>처리량 2~4배</b>. 시퀀스가 길수록, 모델이 클수록 격차는 더 벌어집니다.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">KV 블록 매니저 — 풀 24블록 시뮬레이션</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-kv-modes" role="group" aria-label="할당 방식 선택">
+      <button type="button" id="pw-kv-mode-paged" class="on" aria-pressed="true">PagedAttention (블록 단위)</button>
+      <button type="button" id="pw-kv-mode-contig" aria-pressed="false">연속 할당 (기존 방식)</button>
+    </div>
+    <div class="pw-kv-controls">
+      <button type="button" id="pw-kv-start" class="primary">시퀀스 시작</button>
+      <button type="button" id="pw-kv-gen">토큰 생성 +8</button>
+      <button type="button" id="pw-kv-end">가장 오래된 시퀀스 종료</button>
+      <button type="button" id="pw-kv-reset">초기화</button>
+    </div>
+    <div class="pw-kv-grid" id="pw-kv-grid" role="group" aria-label="GPU 메모리 블록 24칸 그리드"></div>
+    <div class="pw-kv-legend">
+      <span class="pw-kv-lg pw-kv-c0"><span class="pw-kv-sw pw-kv-full"></span>토큰이 채운 블록</span>
+      <span class="pw-kv-lg pw-kv-c0"><span class="pw-kv-sw pw-kv-half"></span>반만 찬 마지막 블록</span>
+      <span class="pw-kv-lg pw-kv-c0"><span class="pw-kv-sw pw-kv-resv"></span>예약만 하고 빈 칸</span>
+      <span class="pw-kv-lg"><span class="pw-kv-sw"></span>빈 블록</span>
+    </div>
+    <div class="pw-kv-seqs" id="pw-kv-seqs"></div>
+    <div class="pw-kv-stats">
+      <div class="pw-kv-stat"><span class="pw-kv-k">PagedAttention</span><span class="pw-kv-v" id="pw-kv-stat-paged">—</span></div>
+      <div class="pw-kv-stat"><span class="pw-kv-k">연속 할당</span><span class="pw-kv-v" id="pw-kv-stat-contig">—</span></div>
+    </div>
+    <p class="pw-kv-msg" id="pw-kv-msg" aria-live="polite"></p>
+  </div>
+  <p class="pw-cap">블록 1개 = 16토큰. 연속 할당은 요청마다 최대 길이 128토큰(8블록)을 통째로 예약한다고 가정합니다 — 두 모드를 토글하며 같은 요청들이 어떻게 담기는지 비교해 보세요.</p>
+</div>
 
 <h2>4. 공유와 copy-on-write — 페이징이 공짜로 주는 것</h2>
 <p>페이징을 도입하면 OS가 그랬듯 공유도 따라옵니다. 한 프롬프트에서 후보 답변을 <code>n</code>개 뽑는 병렬 샘플링을 생각해 보면, 프롬프트 구간의 KV 캐시는 <code>n</code>개 시퀀스가 완전히 동일합니다. vLLM은 물리 블록에 <b>참조 카운트</b>를 두고 프롬프트 블록을 그대로 공유하다가, 시퀀스가 갈라져 공유 블록에 새 토큰을 써야 하는 순간에만 그 블록 하나를 복사합니다. 정확히 <b>copy-on-write</b>이고, 단위는 블록입니다. <span class="term" title="한 번에 하나만 고르지 않고 유력한 후보 여러 개를 동시에 이어가며 가장 좋은 문장을 찾는 생성 방식">빔 서치</span>처럼 후보들이 긴 앞부분을 공유하는 디코딩일수록 절감 폭이 커지고, 여러 요청이 같은 시스템 프롬프트를 쓰는 경우에도 같은 원리가 적용됩니다.</p>
@@ -142,7 +205,7 @@ vllm serve Qwen2.5-7B-Instruct-AWQ \
 <span class="c"># 기동 로그에서 이 줄을 봐야 한다 — 풀의 실제 크기</span>
 <span class="c"># INFO ... # GPU blocks: 9490, # CPU blocks: 2048</span>
 <span class="c"># 동시 수용 가능한 토큰 ≈ 9490 × 16 (블록 크기)</span></pre>
-<p>연속 할당 방식이었다면 <code>max-model-len 4096</code>은 요청마다 4096칸 예약을 뜻했을 겁니다. PagedAttention 아래에서는 상한일 뿐이라, 평균 수백 토큰짜리 요청이 대부분인 워크로드에서 동시성이 확 올라갑니다. 제가 겪었던 "<code>gpu-memory-utilization</code>과 <code>max-num-seqs</code>의 균형 잡기"도 결국 블록 풀 크기와 슬롯 수의 균형 문제였던 것이고, 슬롯을 과하게 늘렸을 때 터지던 OOM은 풀이 바닥나 선점·스왑이 연쇄되던 상황이었습니다. 논문을 읽고 나서야 로그의 어떤 줄을 봐야 하는지 알게 됐습니다.</p>
+<p>연속 할당 방식이었다면 <code>max-model-len 4096</code>은 요청마다 4096칸 예약을 뜻했을 겁니다. PagedAttention 아래에서는 상한일 뿐이라, 평균 수백 토큰짜리 요청이 대부분인 워크로드에서 동시성이 확 올라갑니다. 제가 겪었던 "<code>gpu-memory-utilization</code>과 <code>max-num-seqs</code>의 균형 잡기"도 결국 블록 풀 크기와 슬롯 수의 균형 문제였던 것이고, 슬롯을 과하게 늘렸을 때 겪던 처리량 붕괴도 OOM이 아니라 풀이 바닥나 선점·스왑이 연쇄되던 상황이었습니다. 논문을 읽고 나서야 로그의 어떤 줄을 봐야 하는지 알게 됐습니다.</p>
 <div class="callout"><span class="mark">*</span><p>vLLM 로그에 <code>preempted</code> 경고가 반복되면 블록 풀이 모자란다는 신호입니다. 처리량이 조용히 무너지기 전에 — <code>max_num_seqs</code>를 낮추거나, <code>max_model_len</code>을 워크로드의 실제 상한으로 줄이거나, 더 센 양자화로 가중치를 줄여 풀을 키우세요. 기동 로그의 <code># GPU blocks</code> 줄과 운영 중 KV 캐시 사용률 지표를 함께 보면 어느 쪽 다이얼을 돌려야 할지 보입니다.</p></div>
 
 <h2>7. 남는 것</h2>
@@ -168,5 +231,216 @@ vllm serve Qwen2.5-7B-Instruct-AWQ \
 
 <script src="../assets/js/site.js" defer></script>
 <script src="../assets/js/article.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  var N = 24, BLOCK = 16, RESERVE = 8, MAX_TOK = RESERVE * BLOCK, MAX_SEQ = 6;
+  var PROMPTS = [40, 24, 56, 32, 48, 16];
+  var SCATTER = [9, 2, 17, 5, 21, 12, 0, 19, 7, 14, 3, 22, 10, 1, 16, 6, 23, 11, 4, 18, 8, 15, 13, 20];
+  var NAMES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  function $(id) { return document.getElementById(id); }
+  var grid = $("pw-kv-grid"), seqsBox = $("pw-kv-seqs"),
+      statPaged = $("pw-kv-stat-paged"), statContig = $("pw-kv-stat-contig"),
+      msgBox = $("pw-kv-msg"),
+      btnModePaged = $("pw-kv-mode-paged"), btnModeContig = $("pw-kv-mode-contig");
+  if (!grid) return;
+
+  var seqs = [];   // {id, name, tokens, blocks:[물리 블록 번호]}
+  var nextId = 0;
+  var mode = "paged";
+
+  function needBlocks(tok) { return Math.ceil(tok / BLOCK); }
+  function freeBlocks() {
+    var used = {};
+    seqs.forEach(function (s) { s.blocks.forEach(function (b) { used[b] = true; }); });
+    var out = [];
+    for (var i = 0; i < SCATTER.length; i++) if (!used[SCATTER[i]]) out.push(SCATTER[i]);
+    return out;
+  }
+  function say(t) { msgBox.textContent = t; }
+
+  // 연속 할당 모드: 같은 시퀀스 목록을 first-fit으로 8블록 연속 예약해 본다
+  function contigLayout() {
+    var free = [], i, j;
+    for (i = 0; i < N; i++) free.push(true);
+    var placed = [], waiting = [];
+    seqs.forEach(function (s) {
+      var at = -1;
+      for (i = 0; i + RESERVE <= N; i++) {
+        var ok = true;
+        for (j = i; j < i + RESERVE; j++) if (!free[j]) { ok = false; break; }
+        if (ok) { at = i; break; }
+      }
+      if (at < 0) { waiting.push(s); return; }
+      for (j = at; j < at + RESERVE; j++) free[j] = false;
+      placed.push({ seq: s, start: at });
+    });
+    return { placed: placed, waiting: waiting };
+  }
+
+  function startSeq() {
+    if (seqs.length >= MAX_SEQ) {
+      say("색 구분을 위해 동시 시퀀스는 " + MAX_SEQ + "개까지만 시연합니다. 하나를 종료해 보세요.");
+      return;
+    }
+    var prompt = PROMPTS[nextId % PROMPTS.length];
+    var need = needBlocks(prompt);
+    var free = freeBlocks();
+    if (free.length < need) {
+      say("블록 풀 부족 — 새 요청을 받을 수 없습니다. 실제 vLLM이라면 이 요청은 대기하거나 다른 시퀀스가 선점됩니다(본문 5장).");
+      return;
+    }
+    var s = { id: nextId, name: NAMES[nextId % 26], tokens: prompt, blocks: free.slice(0, need) };
+    seqs.push(s); nextId++;
+    say("시퀀스 " + s.name + " 시작 — 프롬프트 " + prompt + "토큰, 블록 " + need + "개를 흩어진 자리에 할당했습니다.");
+    render();
+  }
+
+  function genTokens() {
+    if (!seqs.length) { say("먼저 [시퀀스 시작]으로 요청을 넣어 보세요."); return; }
+    var grown = 0, added = 0, starved = false, capped = false;
+    seqs.forEach(function (s) {
+      if (s.tokens >= MAX_TOK) { capped = true; return; }
+      var next = Math.min(s.tokens + 8, MAX_TOK);
+      var extra = needBlocks(next) - s.blocks.length;
+      if (extra > 0) {
+        var free = freeBlocks();
+        if (free.length < extra) { starved = true; return; }
+        s.blocks = s.blocks.concat(free.slice(0, extra));
+        added += extra;
+      }
+      s.tokens = next;
+      grown++;
+    });
+    var m;
+    if (!grown) m = "성장한 시퀀스가 없습니다";
+    else m = "시퀀스 " + grown + "개에 8토큰씩 생성" +
+      (added ? " — 새 블록 " + added + "개를 빈자리에서 꺼내 씀" : " — 마지막 블록의 남은 칸을 채움(추가 할당 없음)");
+    if (starved) m += " · 블록 풀 소진! 실제 vLLM이라면 여기서 선점·스왑이 일어납니다(본문 5장)";
+    if (capped) m += " · 최대 길이 128토큰에 도달한 시퀀스는 멈춤";
+    say(m + ".");
+    render();
+  }
+
+  function endSeq() {
+    if (!seqs.length) { say("종료할 시퀀스가 없습니다."); return; }
+    var s = seqs.shift();
+    say("시퀀스 " + s.name + " 종료 — 블록 " + s.blocks.length + "개 즉시 반납. 다음 요청이 이 자리를 그대로 재사용합니다.");
+    render();
+  }
+
+  function seed() {
+    for (var i = 0; i < 4; i++) {
+      var p = PROMPTS[nextId % PROMPTS.length];
+      var free = freeBlocks();
+      seqs.push({ id: nextId, name: NAMES[nextId % 26], tokens: p, blocks: free.slice(0, needBlocks(p)) });
+      nextId++;
+    }
+  }
+
+  function reset() {
+    seqs = []; nextId = 0; seed();
+    say("초기 상태 — 요청 4개가 들어와 있습니다. 연속 할당 모드로 토글해 몇 개나 수용되는지 확인해 보세요.");
+    render();
+  }
+
+  function setMode(m) {
+    mode = m;
+    btnModePaged.classList.toggle("on", m === "paged");
+    btnModeContig.classList.toggle("on", m === "contig");
+    btnModePaged.setAttribute("aria-pressed", m === "paged" ? "true" : "false");
+    btnModeContig.setAttribute("aria-pressed", m === "contig" ? "true" : "false");
+    render();
+  }
+
+  function render() {
+    grid.textContent = "";
+    var cells = [], i;
+    for (i = 0; i < N; i++) {
+      var c = document.createElement("div");
+      c.className = "pw-kv-cell";
+      c.title = "블록 " + i + " — 빈 블록";
+      grid.appendChild(c);
+      cells.push(c);
+    }
+    function paint(cell, colorIdx, state, label) {
+      cell.className = "pw-kv-cell pw-kv-c" + colorIdx + " pw-kv-" + state;
+      cell.title = label;
+    }
+    if (mode === "paged") {
+      seqs.forEach(function (s) {
+        var color = s.id % MAX_SEQ, rem = s.tokens % BLOCK;
+        s.blocks.forEach(function (b, bi) {
+          var half = bi === s.blocks.length - 1 && rem !== 0;
+          paint(cells[b], color, half ? "half" : "full",
+            "블록 " + b + " — 시퀀스 " + s.name + (half ? " (마지막 블록 " + rem + "/16토큰)" : ""));
+        });
+      });
+    } else {
+      contigLayout().placed.forEach(function (p) {
+        var s = p.seq, color = s.id % MAX_SEQ;
+        var usedB = needBlocks(s.tokens), rem = s.tokens % BLOCK;
+        for (var k = 0; k < RESERVE; k++) {
+          var idx = p.start + k, state, label;
+          if (k < usedB) {
+            state = (k === usedB - 1 && rem !== 0) ? "half" : "full";
+            label = "블록 " + idx + " — 시퀀스 " + s.name + (state === "half" ? " (마지막 블록 " + rem + "/16토큰)" : "");
+          } else {
+            state = "resv";
+            label = "블록 " + idx + " — 시퀀스 " + s.name + "의 예약 낭비(아직 안 온 토큰 자리)";
+          }
+          paint(cells[idx], color, state, label);
+        }
+      });
+    }
+
+    // 수치 비교 — 두 방식이 같은 요청들을 어떻게 수용하는가
+    var totTok = 0, usedBlocks = 0;
+    seqs.forEach(function (s) { totTok += s.tokens; usedBlocks += s.blocks.length; });
+    var pu = usedBlocks ? Math.round(100 * totTok / (usedBlocks * BLOCK)) : 0;
+    statPaged.textContent = seqs.length
+      ? "요청 " + seqs.length + "개 전부 수용 · 블록 " + usedBlocks + "/" + N + " 사용 · 실제 채움 " + pu + "%"
+      : "활성 시퀀스 없음";
+    var lay = contigLayout(), accTok = 0;
+    lay.placed.forEach(function (p) { accTok += p.seq.tokens; });
+    var resB = lay.placed.length * RESERVE;
+    var cu = resB ? Math.round(100 * accTok / (resB * BLOCK)) : 0;
+    statContig.textContent = seqs.length
+      ? "같은 " + seqs.length + "개 중 " + lay.placed.length + "개만 수용" +
+        (lay.waiting.length ? "(대기 " + lay.waiting.length + ")" : "") +
+        " · 블록 " + resB + "/" + N + " 예약 · 실제 채움 " + cu + "%"
+      : "활성 시퀀스 없음";
+
+    seqsBox.textContent = "";
+    if (!seqs.length) {
+      var empty = document.createElement("span");
+      empty.className = "pw-kv-chip";
+      empty.textContent = "활성 시퀀스 없음";
+      seqsBox.appendChild(empty);
+    }
+    seqs.forEach(function (s) {
+      var chip = document.createElement("span");
+      chip.className = "pw-kv-chip pw-kv-c" + (s.id % MAX_SEQ);
+      var dot = document.createElement("span");
+      dot.className = "pw-kv-dot";
+      chip.appendChild(dot);
+      chip.appendChild(document.createTextNode(s.name + " " + s.tokens + "tok · " + s.blocks.length + "블록"));
+      seqsBox.appendChild(chip);
+    });
+  }
+
+  btnModePaged.addEventListener("click", function () { setMode("paged"); });
+  btnModeContig.addEventListener("click", function () { setMode("contig"); });
+  $("pw-kv-start").addEventListener("click", startSeq);
+  $("pw-kv-gen").addEventListener("click", genTokens);
+  $("pw-kv-end").addEventListener("click", endSeq);
+  $("pw-kv-reset").addEventListener("click", reset);
+
+  seed();
+  say("요청 4개가 들어와 있습니다. 시퀀스를 넣고 빼고 토큰을 생성하면서, 두 모드를 토글해 수용량 차이를 비교해 보세요.");
+  render();
+})();
+</script>
 </body>
 </html>

@@ -20,6 +20,34 @@
 <link rel="stylesheet" href="../assets/css/project.css">
 <link rel="stylesheet" href="../assets/css/writing.css">
 <link rel="stylesheet" href="../assets/css/article.css">
+<style>
+/* 리더 선거 위젯(.pw) 전용 스타일 — pw-raft- 접두, 디자인 토큰만 사용 */
+.pw-raft-hud{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3)}
+.pw-raft-chip{font-family:var(--mono);font-size:var(--t--1);color:var(--ink-2);border:1px solid var(--line-2);border-radius:100px;padding:0.25em 0.8em;white-space:nowrap;max-width:100%}
+.pw-raft-chip-status{white-space:normal}
+.pw-raft-chip b{color:var(--accent)}
+.pw-raft-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-2) var(--sp-3);font-family:var(--mono);font-size:var(--t--1);color:var(--ink-2);margin-bottom:var(--sp-2)}
+.pw-raft-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:0.4em}
+.pw-raft-lf{background:var(--surface);border:1px solid var(--line-2)}
+.pw-raft-lc{background:var(--accent)}
+.pw-raft-ll{background:var(--teal)}
+.pw-raft-ld{background:var(--bg);border:1px dashed var(--line-2)}
+.pw-raft-stage{display:block;width:100%;max-width:420px;height:auto;margin:0 auto var(--sp-2)}
+.pw-raft-track{fill:none;stroke:var(--line);stroke-width:4}
+.pw-raft-gauge{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round}
+.pw-raft-gauge-lead{stroke:var(--teal)}
+.pw-raft-body{stroke-width:2}
+.pw-raft-nf{fill:var(--surface);stroke:var(--line-2)}
+.pw-raft-nc{fill:var(--accent-tint);stroke:var(--accent)}
+.pw-raft-nl{fill:var(--teal);stroke:var(--teal)}
+.pw-raft-nd{fill:var(--bg);stroke:var(--line-2);stroke-dasharray:3 4}
+.pw-raft-id{font-family:var(--mono);font-size:13px;font-weight:600;fill:var(--ink);text-anchor:middle}
+.pw-raft-id-lead{fill:var(--bg)}
+.pw-raft-tt{font-family:var(--mono);font-size:10px;fill:var(--ink-3);text-anchor:middle}
+.pw-raft-msg-rv{fill:var(--accent)}
+.pw-raft-msg-vg{fill:var(--teal)}
+.pw-raft-msg-hb{fill:var(--ink-3)}
+</style>
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
@@ -54,6 +82,13 @@
   <article class="post-body" id="body">
     <p class="lead">합의(consensus)는 분산 시스템의 심장인데, 오랫동안 그 표준이던 Paxos는 <b>배우는 것 자체가 고통</b>이었습니다. Diego Ongaro와 John Ousterhout의 2014년 논문 <em>In Search of an Understandable Consensus Algorithm</em>은 여기에 정면으로 반기를 듭니다. 성능도, 새로운 보장도 아닌 <b>이해 가능성(understandability)을 1급 설계 목표</b>로 놓은 드문 논문입니다. 핵심 메커니즘인 리더 선출과 로그 복제를 실행 가능한 미니 코드로 재현하며 읽어봤습니다.</p>
 
+<div class="paper-cite">
+  <span class="pc-head">출처</span>
+  <p class="pc-title">In Search of an Understandable Consensus Algorithm</p>
+  <p class="pc-meta">Diego Ongaro, John Ousterhout · USENIX ATC 2014</p>
+  <p class="pc-links"><a href="https://raft.github.io/raft.pdf" target="_blank" rel="noopener">공식 PDF ↗</a> · <a href="https://www.usenix.org/system/files/conference/atc14/atc14-paper-ongaro.pdf" target="_blank" rel="noopener">USENIX ATC ↗</a></p>
+</div>
+
 <div class="concept">
   <span class="c-head">먼저 짚고 가기</span>
   <dl>
@@ -72,10 +107,10 @@
 
 <h2>1. 이해 가능성이라는 설계 목표</h2>
 <p>논문의 문제의식은 명확합니다. Paxos는 정확성이 증명된 알고리즘이지만, 단일 값 합의(single-decree)를 중심으로 서술되어 있어 <b>실제 시스템이 필요로 하는 복제 로그</b>까지 가는 길이 논문에 없습니다. 그래서 실무 구현들은 저마다 "Paxos 비슷한 무언가"를 만들었고, 증명된 것과 배포된 것 사이의 간극이 벌어졌습니다.</p>
-<p>Raft는 이 간극을 두 가지 기법으로 줄입니다. 첫째, <b>문제 분해</b> — 합의를 리더 선출, 로그 복제, 안전성, 멤버십 변경이라는 독립적인 조각으로 나눠 하나씩 설명합니다. 둘째, <b>상태 공간 축소</b> — 로그에 구멍을 허용하지 않고, 로그는 항상 리더에서 팔로워로 한 방향으로만 흐르게 해서(strong leader) 고려해야 할 경우의 수 자체를 줄입니다. 흥미로운 건 저자들이 이 목표를 실증까지 했다는 점입니다. 두 대학 학생 43명에게 Raft와 Paxos를 각각 강의하고 퀴즈를 치르게 했더니 Raft 쪽 점수가 유의미하게 높았습니다. <b>"이해하기 쉽다"를 주장이 아니라 측정으로 보인</b>, 시스템 논문에서 보기 드문 장면입니다.</p>
+<p>Raft는 이 간극을 두 가지 기법으로 줄입니다. 첫째, <b>문제 분해</b> — 합의를 리더 선출, 로그 복제, 안전성, 멤버십 변경이라는 독립적인 조각으로 나눠 하나씩 설명합니다. 둘째, <b>상태 공간 축소</b> — 로그에 구멍을 허용하지 않고, 로그는 항상 리더에서 팔로워로 한 방향으로만 흐르게 해서(strong leader) 고려해야 할 경우의 수 자체를 줄입니다. 흥미로운 건 저자들이 이 목표를 실증까지 했다는 점입니다. 두 대학 학생 43명에게 Raft와 Paxos를 각각 강의하고 퀴즈를 치르게 했더니 Raft 쪽 평균 점수가 더 높았고, 설문에서도 대다수가 구현하기 쉬운 쪽으로 Raft를 꼽았습니다. <b>"이해하기 쉽다"를 주장이 아니라 측정으로 보인</b>, 시스템 논문에서 보기 드문 장면입니다.</p>
 
 <h2>2. 세 가지 역할과 임기 — 상태 머신으로 읽기</h2>
-<p>Raft 노드는 언제나 <b>follower, candidate, leader</b> 세 상태 중 하나입니다. 시간은 <b>임기(term)</b>라는 단조 증가 정수로 구획되고, 한 임기에 리더는 최대 한 명입니다(Election Safety). RPC는 단 두 개 — 표를 요청하는 <code>RequestVote</code>, 로그를 밀어 넣고 <span class="term" title="리더가 '나 살아있다'고 주기적으로 보내는 빈 신호">하트비트</span>를 겸하는 <code>AppendEntries</code>뿐입니다. 이 골격을 코드로 옮기면 이렇습니다.</p>
+<p>Raft 노드는 언제나 <b>follower, candidate, leader</b> 세 상태 중 하나입니다. 시간은 <b>임기(term)</b>라는 단조 증가 정수로 구획되고, 한 임기에 리더는 최대 한 명입니다(Election Safety). 기본 합의에 쓰이는 RPC는 단 두 개 — 표를 요청하는 <code>RequestVote</code>, 로그를 밀어 넣고 <span class="term" title="리더가 '나 살아있다'고 주기적으로 보내는 빈 신호">하트비트</span>를 겸하는 <code>AppendEntries</code>뿐입니다(스냅샷 전송용 <code>InstallSnapshot</code>이 뒤쪽 장에서 하나 더 붙습니다). 이 골격을 코드로 옮기면 이렇습니다.</p>
 <pre class="code"><span class="c">// 노드는 세 상태 중 하나 — 모든 규칙은 두 개의 RPC 위에서 움직인다</span>
 <span class="k">const</span> Role = { FOLLOWER: <span class="s">"follower"</span>, CANDIDATE: <span class="s">"candidate"</span>, LEADER: <span class="s">"leader"</span> };
 
@@ -97,7 +132,7 @@
     }
   }
 }</pre>
-<p>임기가 곧 논리적 시계이기 때문에, "낡은 리더가 돌아와서 명령을 내리면?" 같은 골치 아픈 경우들이 전부 <code>observeTerm</code> 한 규칙으로 정리됩니다. 낡은 term의 요청은 거부되고, 낡은 노드는 더 큰 term을 보는 순간 스스로 물러납니다. 상태 전이 다이어그램 하나가 논문 한 장(Figure 4)에 다 들어가는 이유입니다.</p>
+<p>임기가 곧 논리적 시계이기 때문에, "낡은 리더가 돌아와서 명령을 내리면?" 같은 골치 아픈 경우들이 전부 <code>observeTerm</code> 한 규칙으로 정리됩니다. 낡은 term의 요청은 거부되고, 낡은 노드는 더 큰 term을 보는 순간 스스로 물러납니다. 상태 전이 다이어그램 하나가 그림 한 장(Figure 4)에 다 들어가는 이유입니다.</p>
 
 <h2>3. 리더 선출 — 무작위 타임아웃이 하는 일</h2>
 <p>follower는 리더의 하트비트를 못 받은 채 <b>선출 타임아웃</b>이 지나면 candidate가 되어 term을 올리고 표를 모읍니다. 문제는 여러 노드가 동시에 후보로 나서면 표가 갈려 아무도 과반을 못 얻는 <span class="term" title="표가 여러 후보로 갈려 아무도 과반을 못 넘긴 상태">분할 투표(split vote)</span>입니다. Paxos 계열이라면 노드 순위 같은 메커니즘을 얹었겠지만, Raft의 답은 허무할 만큼 단순합니다. <b>타임아웃을 무작위로 준다</b> — 논문이 예시로 쓰는 구간은 150~300ms입니다. 먼저 깨어난 노드가 먼저 표를 쓸어가고, 충돌해도 다음 라운드의 무작위성이 다시 흩어줍니다.</p>
@@ -128,7 +163,30 @@
   resetTimer(node);  <span class="c">// 과반 실패(분할 투표) → 다음 무작위 타임아웃에 재도전</span>
 }</pre>
 <p>여기서 논문의 설계 철학이 잘 드러납니다. 저자들은 처음에 순위 기반 선출을 검토했다가, 미묘한 코너 케이스가 늘어나자 <b>무작위화가 더 단순하고 이해하기 쉽다</b>는 이유로 버렸다고 씁니다. 무작위성으로 상태 공간의 결정적 분기를 지워버리는 것 — 이해 가능성이라는 목표가 알고리즘의 모양 자체를 바꾼 사례입니다.</p>
-<div class="callout"><span class="mark">*</span><p>논문의 타이밍 조건은 <b>broadcastTime ≪ electionTimeout ≪ MTBF</b>입니다. 실무에서 etcd 같은 Raft 구현을 운영할 때 디스크가 느려지거나 네트워크 RTT가 길어져 하트비트 왕복(broadcast time)이 타임아웃에 가까워지면, 멀쩡한 리더를 두고 <b>불필요한 재선출</b>이 반복됩니다. 리더가 자꾸 바뀐다면 코드보다 먼저 디스크 fsync 지연과 네트워크부터 의심하고, 타임아웃을 왕복 시간의 한 자릿수 이상 크게 잡으세요.</p></div>
+
+<p>말로만 읽으면 "그게 정말 되나?" 싶은 대목이라, 위 코드의 규칙을 그대로 옮긴 시뮬레이터를 만들었습니다. 노드 다섯이 각자 무작위 타임아웃 게이지를 채우다가, 먼저 만료된 노드가 후보로 나서 투표를 요청하고 과반(3표)을 얻으면 리더가 됩니다. 리더가 된 뒤에는 주기적인 하트비트(회색 점)가 다른 노드의 게이지를 계속 0으로 되돌려 재선거를 막습니다. <b>[리더 죽이기]</b>를 누르면 하트비트가 끊긴 노드들의 게이지가 다시 차오르고, term이 올라가며 재선거가 일어나는 것을 볼 수 있습니다. 운이 나쁘면 두 노드가 동시에 후보로 나서 표가 갈리는 분할 투표도 관찰됩니다 — 그때 다음 라운드의 무작위 타임아웃이 어떻게 교착을 풀어주는지 지켜보세요.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">Raft 리더 선거 시뮬레이터</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-raft-hud">
+      <button type="button" id="pw-raft-kill">리더 죽이기</button>
+      <button type="button" id="pw-raft-pause">일시정지</button>
+      <span class="pw-raft-chip">term <b id="pw-raft-term">0</b></span>
+      <span class="pw-raft-chip pw-raft-chip-status" id="pw-raft-status" aria-live="polite">첫 선거를 기다리는 중</span>
+    </div>
+    <div class="pw-raft-legend">
+      <span><i class="pw-raft-lf"></i>follower</span>
+      <span><i class="pw-raft-lc"></i>candidate</span>
+      <span><i class="pw-raft-ll"></i>leader</span>
+      <span><i class="pw-raft-ld"></i>다운</span>
+    </div>
+    <svg id="pw-raft-svg" class="pw-raft-stage" viewBox="98 8 324 324" role="img" aria-label="Raft 리더 선거 시뮬레이션 — 원형으로 배치된 노드 5개의 선거 타임아웃 게이지가 차오르고, 먼저 만료된 노드가 후보가 되어 투표를 요청합니다"></svg>
+    <div class="pw-log" id="pw-raft-log"></div>
+  </div>
+  <p class="pw-cap">노드 둘레의 게이지가 선거 타임아웃입니다 — 먼저 만료된 노드가 후보가 되고, 과반(3표)을 얻으면 리더가 됩니다. 오가는 점은 투표 요청(주황) · 득표(청록) · 하트비트(회색)입니다.</p>
+</div>
+<div class="callout"><span class="mark">*</span><p>논문의 타이밍 조건은 <b>broadcastTime ≪ electionTimeout ≪ MTBF</b>입니다. 실무에서 etcd 같은 Raft 구현을 운영할 때 디스크가 느려지거나 네트워크 RTT가 길어져 하트비트 왕복(broadcast time)이 타임아웃에 가까워지면, 멀쩡한 리더를 두고 <b>불필요한 재선출</b>이 반복됩니다. 리더가 자꾸 바뀐다면 코드보다 먼저 디스크 fsync 지연과 네트워크부터 의심하고, 선출 타임아웃은 하트비트 왕복 시간보다 최소 한 자릿수(약 10배) 크게 잡으세요.</p></div>
 
 <h2>4. 로그 복제와 로그 매칭 프로퍼티</h2>
 <p>리더가 뽑히면 클라이언트 명령은 리더의 로그에 붙고, <code>AppendEntries</code>로 팔로워에 복제되며, <b>과반에 복제되는 순간 커밋</b>되어 상태 머신에 적용됩니다. 이 파트의 핵심 정리가 <b>로그 매칭 프로퍼티(Log Matching Property)</b>입니다.</p>
@@ -197,5 +255,237 @@
 
 <script src="../assets/js/site.js" defer></script>
 <script src="../assets/js/article.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  var svg = document.getElementById("pw-raft-svg");
+  var termEl = document.getElementById("pw-raft-term");
+  var statusEl = document.getElementById("pw-raft-status");
+  var logEl = document.getElementById("pw-raft-log");
+  var killBtn = document.getElementById("pw-raft-kill");
+  var pauseBtn = document.getElementById("pw-raft-pause");
+  if (!svg || !termEl || !statusEl || !logEl || !killBtn || !pauseBtn) return;
+
+  var NS = "http://www.w3.org/2000/svg";
+  var N = 5, CX = 260, CY = 170, RING = 118;
+  var NODE_R = 24, GAUGE_R = 33;
+  var T_MIN = 150, T_MAX = 300;   // 논문 예시 구간의 무작위 선거 타임아웃(ms)
+  var HB_EVERY = 60;              // 리더의 하트비트 주기(ms)
+  var TRAVEL = 45;                // 메시지 편도 전송 시간(ms)
+  var SPEED = 0.09;               // 실제 1ms당 시뮬레이션 ms (눈으로 볼 수 있게 감속)
+  var MAJORITY = Math.floor(N / 2) + 1;
+  var GAUGE_LEN = 2 * Math.PI * GAUGE_R;
+
+  var nodes = [], msgs = [], running = true, deadIdx = -1, lastTs = 0;
+
+  function randTimeout() { return T_MIN + Math.random() * (T_MAX - T_MIN); }
+  function mk(name, cls) {
+    var e = document.createElementNS(NS, name);
+    if (cls) e.setAttribute("class", cls);
+    return e;
+  }
+
+  // 노드 5개를 원형으로 배치
+  for (var i = 0; i < N; i++) {
+    var ang = -Math.PI / 2 + (i * 2 * Math.PI) / N;
+    var x = Math.round(CX + RING * Math.cos(ang));
+    var y = Math.round(CY + RING * Math.sin(ang));
+    var track = mk("circle", "pw-raft-track");
+    track.setAttribute("cx", x); track.setAttribute("cy", y); track.setAttribute("r", GAUGE_R);
+    var gauge = mk("circle", "pw-raft-gauge");
+    gauge.setAttribute("cx", x); gauge.setAttribute("cy", y); gauge.setAttribute("r", GAUGE_R);
+    gauge.setAttribute("transform", "rotate(-90 " + x + " " + y + ")");
+    gauge.setAttribute("stroke-dasharray", "0 " + GAUGE_LEN);
+    var body = mk("circle", "pw-raft-body pw-raft-nf");
+    body.setAttribute("cx", x); body.setAttribute("cy", y); body.setAttribute("r", NODE_R);
+    var idText = mk("text", "pw-raft-id");
+    idText.setAttribute("x", x); idText.setAttribute("y", y + 1);
+    idText.textContent = "S" + (i + 1);
+    var termText = mk("text", "pw-raft-tt");
+    termText.setAttribute("x", x); termText.setAttribute("y", y + 14);
+    termText.textContent = "t0";
+    svg.appendChild(track); svg.appendChild(gauge); svg.appendChild(body);
+    svg.appendChild(idText); svg.appendChild(termText);
+    nodes.push({
+      id: "S" + (i + 1), x: x, y: y,
+      role: "follower", term: 0, votedFor: null, votes: 0,
+      elapsed: 0, timeout: randTimeout(), hb: 0, alive: true,
+      gauge: gauge, body: body, idText: idText, termText: termText
+    });
+  }
+
+  function log(msg) {
+    var line = document.createElement("div");
+    line.textContent = msg;
+    logEl.insertBefore(line, logEl.firstChild);
+    while (logEl.childNodes.length > 14) logEl.removeChild(logEl.lastChild);
+  }
+  function setStatus(t) { statusEl.textContent = t; }
+  function maxTerm() {
+    var t = 0;
+    for (var k = 0; k < N; k++) if (nodes[k].term > t) t = nodes[k].term;
+    return t;
+  }
+
+  function send(fromIdx, toIdx, type, term) {
+    var dot = mk("circle", "pw-raft-msg-" + type);
+    dot.setAttribute("r", 5);
+    dot.setAttribute("cx", nodes[fromIdx].x);
+    dot.setAttribute("cy", nodes[fromIdx].y);
+    svg.appendChild(dot);
+    msgs.push({ from: fromIdx, to: toIdx, type: type, term: term, p: 0, dot: dot });
+  }
+
+  function startElection(n, idx) {
+    var again = n.role === "candidate";   // 과반을 못 채운 채 타임아웃 → 분할 투표
+    n.role = "candidate";
+    n.term += 1;
+    n.votedFor = idx;      // 자기 자신에게 1표
+    n.votes = 1;
+    n.elapsed = 0;
+    n.timeout = randTimeout();
+    log("term " + n.term + " · " + n.id + (again
+      ? " 과반 실패(분할 투표) → 새 무작위 타임아웃으로 재도전"
+      : " 타임아웃 만료 → 후보 출마, 투표 요청"));
+    setStatus(n.id + " 선거 진행 중 · term " + n.term);
+    for (var j = 0; j < N; j++) {
+      if (j !== idx && nodes[j].alive) send(idx, j, "rv", n.term);
+    }
+  }
+
+  function becomeLeader(n) {
+    n.role = "leader";
+    n.hb = HB_EVERY;       // 즉시 첫 하트비트를 보낸다
+    log("term " + n.term + " · " + n.id + " 리더 당선 (" + n.votes + "표/" + N + ")");
+    setStatus("리더: " + n.id + " · term " + n.term);
+  }
+
+  function deliver(m) {
+    var t = nodes[m.to];
+    if (!t.alive) return;
+    if (m.type === "hb") {
+      // 하트비트: 같은/더 큰 term이면 따르고 타이머를 되감는다
+      if (m.term >= t.term) {
+        if (m.term > t.term) t.votedFor = null;
+        t.term = m.term;
+        t.role = "follower";
+        t.elapsed = 0;
+      }
+    } else if (m.type === "rv") {
+      // observeTerm: 더 큰 term을 보면 즉시 follower로 내려간다
+      if (m.term > t.term) { t.term = m.term; t.votedFor = null; t.role = "follower"; }
+      // 임기당 1표, 선착순 — 표를 주면 자기 타이머는 되감는다
+      if (m.term === t.term && t.role === "follower" &&
+          (t.votedFor === null || t.votedFor === m.from)) {
+        t.votedFor = m.from;
+        t.elapsed = 0;
+        t.timeout = randTimeout();
+        send(m.to, m.from, "vg", m.term);
+      }
+    } else if (m.type === "vg") {
+      if (t.role === "candidate" && t.term === m.term) {
+        t.votes += 1;
+        if (t.votes >= MAJORITY) becomeLeader(t);
+      }
+    }
+  }
+
+  function tick(dt) {
+    var k, n, m, j;
+    for (k = 0; k < N; k++) {
+      n = nodes[k];
+      if (!n.alive) continue;
+      if (n.role === "leader") {
+        n.hb += dt;
+        if (n.hb >= HB_EVERY) {
+          n.hb = 0;
+          for (j = 0; j < N; j++) {
+            if (j !== k && nodes[j].alive) send(k, j, "hb", n.term);
+          }
+        }
+      } else {
+        n.elapsed += dt;
+        if (n.elapsed >= n.timeout) startElection(n, k);
+      }
+    }
+    for (k = msgs.length - 1; k >= 0; k--) {
+      m = msgs[k];
+      m.p += dt / TRAVEL;
+      if (m.p >= 1) {
+        deliver(m);
+        svg.removeChild(m.dot);
+        msgs.splice(k, 1);
+      }
+    }
+  }
+
+  function render() {
+    var k, n, m, cls, frac, fx, fy, tx, ty;
+    termEl.textContent = String(maxTerm());
+    for (k = 0; k < N; k++) {
+      n = nodes[k];
+      cls = "pw-raft-body ";
+      if (!n.alive) cls += "pw-raft-nd";
+      else if (n.role === "leader") cls += "pw-raft-nl";
+      else if (n.role === "candidate") cls += "pw-raft-nc";
+      else cls += "pw-raft-nf";
+      n.body.setAttribute("class", cls);
+      n.idText.setAttribute("class",
+        "pw-raft-id" + (n.alive && n.role === "leader" ? " pw-raft-id-lead" : ""));
+      n.termText.textContent = n.alive ? "t" + n.term : "다운";
+      if (!n.alive) frac = 0;
+      else if (n.role === "leader") frac = 1;
+      else frac = Math.min(n.elapsed / n.timeout, 1);
+      n.gauge.setAttribute("class",
+        "pw-raft-gauge" + (n.alive && n.role === "leader" ? " pw-raft-gauge-lead" : ""));
+      n.gauge.setAttribute("stroke-dasharray", (GAUGE_LEN * frac) + " " + GAUGE_LEN);
+    }
+    for (k = 0; k < msgs.length; k++) {
+      m = msgs[k];
+      fx = nodes[m.from].x; fy = nodes[m.from].y;
+      tx = nodes[m.to].x; ty = nodes[m.to].y;
+      m.dot.setAttribute("cx", fx + (tx - fx) * m.p);
+      m.dot.setAttribute("cy", fy + (ty - fy) * m.p);
+    }
+  }
+
+  function frame(ts) {
+    if (!lastTs) lastTs = ts;
+    var dtReal = Math.min(ts - lastTs, 50);
+    lastTs = ts;
+    if (running) tick(dtReal * SPEED);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+
+  killBtn.addEventListener("click", function () {
+    var k, leaderIdx = -1, back, L;
+    for (k = 0; k < N; k++) {
+      if (nodes[k].alive && nodes[k].role === "leader") { leaderIdx = k; break; }
+    }
+    if (leaderIdx < 0) { log("아직 리더가 없습니다 — 당선된 뒤 눌러 보세요"); return; }
+    if (deadIdx >= 0) {
+      back = nodes[deadIdx];
+      back.alive = true; back.role = "follower"; back.votedFor = null;
+      back.elapsed = 0; back.timeout = randTimeout();
+      log(back.id + " 복구 — follower로 복귀, 더 큰 term을 보면 그대로 따릅니다");
+    }
+    L = nodes[leaderIdx];
+    L.alive = false;
+    deadIdx = leaderIdx;
+    log("term " + L.term + " · 리더 " + L.id + " 다운 — 하트비트가 끊기고 게이지가 다시 차오릅니다");
+    setStatus("리더 없음 — 재선거 대기 · term " + maxTerm());
+  });
+
+  pauseBtn.addEventListener("click", function () {
+    running = !running;
+    pauseBtn.textContent = running ? "일시정지" : "재개";
+    pauseBtn.classList.toggle("on", !running);
+  });
+
+  log("노드 5개 기동 — 각자 150~300ms 사이의 무작위 선거 타임아웃을 받았습니다");
+  window.requestAnimationFrame(frame);
+})();
+</script>
 </body>
 </html>

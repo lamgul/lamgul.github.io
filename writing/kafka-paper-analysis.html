@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: Kafka — 로그라는 단순한 진실 — 안성진</title>
+<meta name="description" content="Kafka: a Distributed Messaging System for Log Processing(NetDB 2011)을 읽고, 메시지 큐를 추가 전용 로그와 오프셋으로 환원한 설계를 파티션·pull 모델·순차 IO·zero-copy 관점에서 미니 코드로 재현한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: Kafka — 로그라는 단순한 진실">
+<meta property="og:description" content="Kafka: a Distributed Messaging System for Log Processing(NetDB 2011)을 읽고, 메시지 큐를 추가 전용 로그와 오프셋으로 환원한 설계를 파티션·pull 모델·순차 IO·zero-copy 관점에서 미니 코드로 재현한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: Kafka — 로그라는 단순한 진실","datePublished":"2023-04-11","dateModified":"2023-04-11","inLanguage":"ko","description":"Kafka: a Distributed Messaging System for Log Processing(NetDB 2011)을 읽고, 메시지 큐를 추가 전용 로그와 오프셋으로 환원한 설계를 파티션·pull 모델·순차 IO·zero-copy 관점에서 미니 코드로 재현한다.","keywords":"Kafka · 이벤트 · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/kafka-paper-analysis.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<style>
+/* widget-only styles — pw-kafka- prefix, design tokens only */
+.pw-kafka-wrap { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pw-kafka-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.pw-kafka-part { margin-top: var(--sp-2); }
+.pw-kafka-phead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; font-family: var(--mono); font-size: var(--t--1); color: var(--ink-2); margin-bottom: 0.35rem; }
+.pw-kafka-pname { font-weight: 650; color: var(--ink); }
+.pw-kafka-track { display: flex; gap: 4px; overflow-x: auto; padding: 0.4rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.pw-kafka-cell { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0.32rem 0.1rem; border: 1px solid var(--line-2); border-radius: 6px; background: var(--bg-elev); }
+.pw-kafka-cell.done { opacity: 0.45; }
+.pw-kafka-cell.end { border-style: dashed; background: transparent; }
+.pw-kafka-key { font-family: var(--mono); font-size: 0.64rem; color: var(--ink); }
+.pw-kafka-off { font-family: var(--mono); font-size: 0.6rem; color: var(--ink-3); }
+.pw-kafka-marks { display: flex; gap: 2px; min-height: 14px; }
+.pw-kafka-marks i { font-style: normal; font-family: var(--mono); font-size: 0.56rem; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+.pw-kafka-marks .ma { background: var(--accent); color: var(--on-accent); }
+.pw-kafka-marks .mb { background: var(--teal); color: var(--on-accent); }
+.pw-kafka-legend { font-family: var(--mono); font-size: var(--t--1); color: var(--ink-3); display: flex; gap: 0.4rem 1.1rem; flex-wrap: wrap; align-items: center; }
+.pw-kafka-legend .la, .pw-kafka-legend .lb { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.pw-kafka-legend .la { background: var(--accent); }
+.pw-kafka-legend .lb { background: var(--teal); }
+</style>
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / kafka-paper-analysis</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: Kafka — 로그라는 단순한 진실</h1>
+    <div class="post-meta">
+      <span>2023년 4월</span><span class="dot-sep">•</span>
+      <span>Kafka · 이벤트 · 논문</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">메시지 큐라고 하면 떠오르는 장치들 — 브로커가 소비 여부를 추적하고, 전달을 확인하고, 못 받은 메시지를 재전송하는 복잡한 기계 — 을 이 2011년 논문은 대부분 <b>버립니다</b>. 남긴 것은 디스크에 이어 쓰기만 하는 <b>추가 전용 로그</b>와, 어디까지 읽었는지를 가리키는 <b>정수 하나(오프셋)</b>뿐입니다. LinkedIn의 Jay Kreps 팀이 쓴 Kafka 논문은 기능을 더해서가 아니라 <b>덜어내서</b> 처리량을 얻은 설계의 교과서라서, 십 년이 지난 지금 읽어도 배울 게 많습니다.</p>
+
+<div class="paper-cite">
+  <span class="pc-head">출처</span>
+  <p class="pc-title">Kafka: a Distributed Messaging System for Log Processing</p>
+  <p class="pc-meta">Jay Kreps, Neha Narkhede, Jun Rao · NetDB 2011</p>
+  <p class="pc-links"><a href="https://notes.stephenholiday.com/Kafka.pdf" target="_blank" rel="noopener">PDF ↗</a></p>
+</div>
+
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>추가 전용 로그<span class="en">append-only log</span></dt>
+    <dd>새 데이터를 항상 파일 끝에만 이어 쓰는 자료구조입니다. 수정도 중간 삽입도 없어서 구조가 단순하고, 디스크 입장에서는 늘 순차 쓰기라 빠릅니다. Kafka의 저장소는 이것이 전부입니다.</dd>
+    <dt>파티션<span class="en">partition</span></dt>
+    <dd>하나의 토픽(메시지 분류)을 여러 개의 독립된 로그로 쪼갠 조각입니다. 파티션 하나 안에서는 메시지 순서가 완전히 보장되지만, 파티션끼리는 순서가 없습니다. 병렬 처리의 최소 단위이기도 합니다.</dd>
+    <dt>오프셋<span class="en">offset</span></dt>
+    <dd>로그 안에서 메시지의 위치를 가리키는 번호입니다. "그룹 A는 파티션 0을 37번까지 읽었다"처럼, 소비 진행 상태 전체가 이 정수 하나로 표현됩니다.</dd>
+    <dt>컨슈머 그룹<span class="en">consumer group</span></dt>
+    <dd>메시지를 나눠 처리하는 소비자들의 묶음입니다. 한 파티션은 그룹 안에서 정확히 한 명에게만 배정되고, 서로 다른 그룹은 같은 로그를 각자의 오프셋으로 독립적으로 읽습니다.</dd>
+    <dt>zero-copy</dt>
+    <dd>파일 내용을 애플리케이션 메모리로 복사하지 않고, 운영체제가 디스크 캐시에서 네트워크로 바로 흘려보내는 전송 방식입니다. 리눅스의 sendfile 같은 시스템 콜이 이 일을 합니다.</dd>
+  </dl>
+</div>
+
+<h2>1. 왜 기존 메시징으로는 안 됐나</h2>
+<p>논문 1~2장의 문제의식은 구체적입니다. LinkedIn이 다루려던 건 주문이나 결제 같은 "귀한" 데이터가 아니라 로그인, 페이지 뷰, 클릭 같은 <b>활동 이벤트</b>였습니다. 건당 가치는 낮은데 양은 실데이터보다 몇 배 크고, 오프라인 분석만이 아니라 실시간 소비도 필요했습니다.</p>
+<p>당시의 선택지는 두 진영이었습니다. JMS 계열의 <b>전통 메시징 시스템</b>은 메시지 하나하나에 수신 확인을 붙이는 식의 강한 전달 보장에 초점이 맞춰져 있었습니다. 로그 데이터에는 과한 보장이고, 그 보장을 유지하는 비용 때문에 처리량이 1급 설계 목표가 되지 못했습니다. 반대편의 Scribe·Flume 같은 <b>로그 수집기</b>는 대체로 데이터를 HDFS에 밀어 넣는 오프라인 소비를 전제했고, 브로커가 소비자에게 밀어 주는 push 모델이었습니다. Kafka는 이 사이의 빈자리 — <b>대용량이면서 실시간이고, 소비자가 주도권을 갖는</b> 메시징 — 를 겨냥합니다.</p>
+
+<h2>2. 추가 전용 로그와 오프셋 — 브로커에서 상태를 지우다</h2>
+<p>논문 3.1의 저장 구조는 허무할 만큼 단순합니다. 파티션 하나는 논리적으로 로그 하나이고, 물리적으로는 비슷한 크기(논문 기준 약 1GB)의 세그먼트 파일들입니다. 메시지가 오면 마지막 세그먼트 끝에 이어 쓰고, 끝. 더 놀라운 건 <b>메시지 ID가 별도로 없다</b>는 점입니다. 메시지는 로그 안에서의 논리적 오프셋으로 주소가 정해지고, 다음 메시지의 오프셋은 현재 오프셋에 메시지 길이를 더해 계산합니다. 메시지 ID를 실제 위치로 바꿔 줄 B-tree 같은 색인 구조가 통째로 사라집니다.</p>
+<pre class="code"><span class="c"># 브로커의 본질 (논문 3.1 Simple storage) — 상태는 로그와 위치뿐</span>
+<span class="k">class</span> <span class="f">Partition</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(self):
+        self.log = []              <span class="c"># 추가 전용 — 수정도, 중간 삭제도 없다</span>
+        self.base = 0              <span class="c"># 보존 기간이 지나 잘려 나간 앞부분</span>
+
+    <span class="k">def</span> <span class="f">append</span>(self, message):   <span class="c"># 생산자를 위한 API의 전부</span>
+        self.log.append(message)
+        <span class="k">return</span> self.base + len(self.log) - 1    <span class="c"># 이 메시지의 오프셋</span>
+
+    <span class="k">def</span> <span class="f">read</span>(self, offset, max_n):             <span class="c"># 소비자를 위한 API의 전부</span>
+        start = offset - self.base
+        <span class="k">return</span> self.log[start : start + max_n]
+
+<span class="c"># 여기에 "누가 어디까지 읽었나"는 없다 — 그 상태는 컨슈머의 소유물이다</span></pre>
+<p>이 단순함의 정점이 <b>무상태 브로커(stateless broker)</b>입니다. 전통적인 브로커는 소비자마다 "받았는지"를 기록하고, 받았으면 지우고, 못 받았으면 재전송합니다. Kafka 브로커는 이 장부를 아예 쓰지 않습니다. 어디까지 읽었는지는 컨슈머가 스스로 기억하고, 브로커는 소비 여부와 무관하게 <b>시간 기준</b>으로만 데이터를 지웁니다 — 논문 3.1 기준으로 보통 7일입니다. 소비 추적, 수신 확인, 재전송 큐, 이 세 가지 복잡성이 "컨슈머가 오프셋을 소유한다"는 결정 하나로 브로커에서 통째로 증발하는 것입니다.</p>
+
+<h2>3. 컨슈머가 오프셋을 소유한다 — pull 모델의 진짜 의미</h2>
+<p>브로커가 밀어주는(push) 대신 컨슈머가 당겨 가는(pull) 방식은 단순한 취향 문제가 아닙니다. push 모델에서는 소비자가 느려지면 브로커가 선택을 강요받습니다 — 버퍼에 쌓아 두다 터지거나, 버리거나. pull 모델에서는 소비자가 <b>자기 속도로</b> 가져가면 그만이고, 밀린 만큼은 로그에 그대로 남아 있습니다. 처리 속도의 주도권이 데이터를 받는 쪽에 있는 것이죠.</p>
+<p>그리고 오프셋을 컨슈머가 소유하기 때문에 생기는 능력이 하나 더 있습니다. 논문 3.1이 "중요한 부수 효과"로 짚는 <b>되감기(rewind)</b>입니다. 소비란 오프셋을 앞으로 밀어가는 일일 뿐이므로, 오프셋을 뒤로 돌리면 같은 데이터를 다시 읽을 수 있습니다. 소비가 곧 삭제인 전통 큐에서는 불가능한 일입니다. 처리 로직에 버그가 있었음을 뒤늦게 알았을 때, 데이터는 로그에 그대로 있으니 오프셋만 되돌려 재처리하면 됩니다.</p>
+<div class="callout"><span class="mark">*</span><p>공짜는 아닙니다. 논문 3.3(Delivery Guarantees)이 밝히듯 Kafka의 보장은 <b>at-least-once</b> — 컨슈머가 오프셋을 저장하기 전에 죽으면 재시작 후 일부 메시지를 <b>중복</b>으로 받습니다. 그래서 소비 쪽 처리는 멱등(idempotent)하게 — 같은 메시지를 두 번 처리해도 결과가 같게 — 만들어야 합니다. 이 원칙은 Kafka를 안 쓰는 파이프라인에서도 유효합니다.</p></div>
+
+<h2>4. 파티션 — 순서 보장의 정확한 범위</h2>
+<p>로그가 하나뿐이면 쓰기가 한 지점에 몰려 확장이 안 됩니다. Kafka의 답은 토픽을 여러 파티션으로 쪼개는 것인데, 여기서 논문 3.3의 문장을 정확히 읽어야 합니다. Kafka가 보장하는 순서는 <b>"한 파티션에서 나온 메시지가 컨슈머에게 전달되는 순서"</b>까지입니다. 파티션끼리는 순서가 없습니다. 대신 같은 키(예: 같은 사용자 ID)를 가진 메시지를 해시로 같은 파티션에 보내면, <b>그 키에 대해서는 전체 순서</b>가 생깁니다. 순서가 필요한 범위를 키로 선언하는 셈이고, 그래서 <b>키 설계가 곧 순서 설계</b>입니다.</p>
+<p>파티션은 병렬성의 최소 단위이기도 합니다(논문 3.2). 한 파티션은 컨슈머 그룹 안에서 정확히 한 컨슈머에게 배정되므로, 파티션 안에서 락이나 순서 조정이 필요 없습니다. 그럼 "누가 어느 파티션을 맡나"는 누가 정할까요? 중앙 마스터가 없습니다. 각 컨슈머가 ZooKeeper에서 같은 멤버 목록을 읽고, <b>같은 결정적 알고리즘</b>을 돌려 각자 자기 몫을 계산합니다. 모두가 같은 입력에 같은 계산을 하니 조율 없이도 결론이 같습니다.</p>
+<pre class="code"><span class="c"># 논문 3.2의 재할당(rebalance) — 마스터 없이 모두가 같은 결론에 도달한다</span>
+<span class="k">def</span> <span class="f">my_partitions</span>(partitions, consumers, me):
+    parts   = sorted(partitions)      <span class="c"># 모두가 같은 순서로 정렬하고</span>
+    members = sorted(consumers)       <span class="c"># 자기 순번의 몫만 가져가면</span>
+    chunk   = len(parts) // len(members)
+    i       = members.index(me)       <span class="c"># 조율자 없이도 배정이 겹치지 않는다</span>
+    <span class="k">return</span> parts[i * chunk : (i + 1) * chunk]
+
+<span class="c"># 컨슈머가 죽거나 새로 오면? 멤버 목록이 바뀐 걸 모두가 감지하고</span>
+<span class="c"># 같은 계산을 다시 돌린다 — 이것이 리밸런스의 전부다</span></pre>
+<p>말로는 여기까지입니다. 아래 위젯에서 직접 굴려 보세요. 메시지를 생산하면 키의 해시가 파티션을 정하고, 두 컨슈머 그룹 A(컨슈머 2명)와 B(컨슈머 1명)가 <b>같은 로그를 각자의 오프셋으로</b> 읽어 나갑니다. 리밸런스 버튼은 그룹 A의 컨슈머 한 명이 이탈했다 복귀하는 상황을 재연합니다.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">파티션 로그와 컨슈머 그룹 오프셋</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-kafka-wrap">
+      <div class="pw-kafka-controls">
+        <button type="button" class="primary" id="pw-kafka-produce">메시지 생산</button>
+        <button type="button" id="pw-kafka-consume-a">소비 A</button>
+        <button type="button" id="pw-kafka-consume-b">소비 B</button>
+        <button type="button" id="pw-kafka-rebalance">리밸런스</button>
+      </div>
+      <div class="pw-kafka-legend">
+        <span><i class="la"></i> 그룹 A의 다음 읽기 위치</span>
+        <span><i class="lb"></i> 그룹 B의 다음 읽기 위치</span>
+        <span>흐린 칸 = 두 그룹 모두 읽음</span>
+      </div>
+      <div class="pw-kafka-legend" id="pw-kafka-groups">그룹 A: A1, A2 (파티션 분담) · 그룹 B: B1 (전 파티션)</div>
+      <div class="pw-kafka-part">
+        <div class="pw-kafka-phead"><span class="pw-kafka-pname">P0</span><span id="pw-kafka-assign-0">A: A1 · B: B1</span></div>
+        <div class="pw-kafka-track" id="pw-kafka-track-0"></div>
+      </div>
+      <div class="pw-kafka-part">
+        <div class="pw-kafka-phead"><span class="pw-kafka-pname">P1</span><span id="pw-kafka-assign-1">A: A2 · B: B1</span></div>
+        <div class="pw-kafka-track" id="pw-kafka-track-1"></div>
+      </div>
+      <div class="pw-log" id="pw-kafka-log" aria-live="polite"></div>
+    </div>
+  </div>
+  <p class="pw-cap">키 해시가 파티션을 정하고, 그룹별 오프셋이 각자 속도로 전진합니다. 파티션이 가득 차면 가장 오래된 칸이 지워집니다(보존 기간).</p>
+</div>
+
+<p>몇 번 눌러 보면 논문의 문장들이 손에 잡힙니다. 소비 A만 연타해도 B의 마커는 제자리입니다 — 두 그룹의 오프셋이 독립이라는 뜻입니다. 리밸런스로 A2를 이탈시켜도 오프셋은 그대로입니다 — <b>오프셋은 컨슈머가 아니라 그룹의 소유</b>라서, 파티션을 넘겨받은 A1이 A2가 읽던 자리에서 그대로 이어 읽습니다. 그리고 생산을 계속 누르다 보면 가장 오래된 칸이 지워지는데, 이것이 소비 여부와 무관한 시간 기준 보존입니다.</p>
+
+<h2>5. 순차 IO와 zero-copy — OS를 이기려 하지 않는다</h2>
+<p>논문 3.1의 나머지 절반은 효율 이야기인데, 관통하는 태도는 "운영체제가 이미 잘하는 일을 다시 하지 않는다"입니다. Kafka는 메시지를 애플리케이션 메모리에 캐시하지 않습니다. 쓰면 파일 시스템에 쓰고, 읽으면 파일 시스템에서 읽습니다. 그러면 느릴 것 같지만, 접근이 전부 순차라서 OS의 <b>페이지 캐시</b>와 미리 읽기(read-ahead)·모아 쓰기(write-behind)가 최고 효율로 동작합니다. 덤으로 캐시를 프로세스 밖(커널)에 두니 이중 버퍼링이 없고, JVM 힙이 가벼워 GC 부담이 줄고, 브로커를 재시작해도 캐시가 따뜻한 채로 남습니다.</p>
+<p>소비 경로에는 한 가지 최적화가 더 붙습니다. 보통 파일을 소켓으로 보내려면 데이터가 네 번 복사되고 시스템 콜이 두 번 필요합니다. 브로커는 메시지 내용을 볼 필요가 없는데도 말이죠. 그래서 Kafka는 리눅스의 sendfile을 씁니다.</p>
+<pre class="code"><span class="c"># 일반적인 파일 → 소켓 전송 (논문 3.1: 복사 4번 + 시스템 콜 2번)</span>
+<span class="f">read</span>(file, app_buf)     <span class="c"># ① 디스크 → 페이지 캐시  ② 페이지 캐시 → 앱 버퍼</span>
+<span class="f">write</span>(socket, app_buf)  <span class="c"># ③ 앱 버퍼 → 커널 버퍼    ④ 커널 버퍼 → NIC</span>
+
+<span class="c"># zero-copy 전송 — 앱은 데이터를 만지지 않는다</span>
+<span class="f">sendfile</span>(socket, file)  <span class="c"># 페이지 캐시에서 소켓으로 바로 — 복사 2번 절약</span></pre>
+<p>이 효율 설계들이 합쳐진 결과가 논문 5장의 실험입니다. 생산자 처리량은 배치 크기 1에서 초당 약 5만 건, 배치 50에서 약 40만 건으로, 비교 대상인 ActiveMQ보다 한 자릿수 이상, RabbitMQ보다 2배 이상 높았습니다. 특별한 자료구조나 새 알고리즘 없이, <b>순차 IO + 페이지 캐시 + zero-copy + 무상태 브로커</b>라는 덜어내기의 합만으로 나온 숫자입니다.</p>
+
+<h2>6. 크롤링 파이프라인에서 다시 만난 로그</h2>
+<p>제가 이 논문을 실감한 곳은 크롤링 파이프라인이었습니다. 수집기가 페이지를 가져오고, 파서가 해석하고, 저장 단계가 적재하는 흐름에서 단계 사이를 잇는 것이 결국 이벤트의 열(列)인데, 이 글의 개념들이 그대로 대응됩니다. 파싱이 수집보다 느려지는 시간대에도 pull 모델이라면 수집기는 제 속도로 쌓기만 하면 되고, 밀린 양은 <b>lag(로그 끝과 오프셋의 거리)</b>라는 숫자 하나로 보입니다. 저는 파이프라인 상태를 물을 때 이 질문이 제일 정직하다고 생각합니다 — "지금 어느 단계의 lag이 자라고 있는가."</p>
+<p>순서 문제도 같습니다. 같은 사이트에 대한 수집 이벤트는 순서가 섞이면 곤란하지만, 사이트끼리는 순서가 필요 없습니다. 도메인을 키로 잡으면 정확히 필요한 범위만 순서가 보장되고 나머지는 병렬로 풀립니다. 그리고 파서를 고친 뒤 "지난 데이터를 다시 돌리고 싶다"는 요구는, 소비가 곧 삭제인 구조에서는 재수집이지만 로그 구조에서는 오프셋 되감기입니다. 파이프라인을 로그 중심으로 볼수록 재처리가 무서운 일에서 사소한 일로 바뀝니다.</p>
+
+<h2>7. 정리 — 단순함은 기능이다</h2>
+<p>이 논문에서 가져갈 것을 세 줄로 줄이면 이렇습니다. 첫째, <b>상태의 소유자를 옮기면 복잡성이 사라진다</b> — 소비 상태를 컨슈머에게 넘기자 브로커의 추적·확인·재전송이 통째로 없어졌습니다. 둘째, <b>보장의 범위를 정직하게 좁히면 성능이 나온다</b> — 순서는 파티션 안까지, 전달은 at-least-once까지만 약속하고, 그 이상은 키 설계와 멱등성으로 사용자에게 돌려줬습니다. 셋째, <b>플랫폼이 잘하는 일은 플랫폼에 맡긴다</b> — 캐시는 OS의 페이지 캐시가, 전송은 sendfile이 합니다.</p>
+<p>"로그라는 단순한 진실"이라고 제목을 붙인 이유가 여기 있습니다. 시스템의 상태를 "추가 전용 로그의 어느 위치"로 환원하고 나면, 소비는 전진이고 재처리는 되감기이며 지연은 거리입니다. 설계를 검토할 때마다 저는 이 논문의 질문을 다시 씁니다 — 이 상태는 누가 소유해야 하는가, 그리고 이 보장은 정말 여기서 해야 하는가.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Kafka</a>
+      <a class="tag" href="index.html">이벤트</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">파이프라인의 lag을 지켜보는 눈 → <b>관측 가능성 기초 글</b></span><a class="chip primary" href="observability-basics.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-prev" href="review-poeaa.html"><span class="pn-label">이전 글</span><span class="pn-title">서평: 엔터프라이즈 애플리케이션 아키텍처 패턴 — 이름이 생기면 보인다</span><span class="pn-date">2023 · 03</span></a>
+    <a class="pn-next" href="pattern-pipe-filter.html"><span class="pn-label">다음 글</span><span class="pn-title">아키텍처 패턴 · Pipe &amp; Filter — 무수정 확장의 구조</span><span class="pn-date">2023 · 06</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  var KEYS = ["news", "blog", "shop", "docs", "wiki", "mail"];
+  var CAP = 10;                                    // 파티션당 보존 칸 수
+  var parts = [
+    { base: 0, msgs: [{ key: "blog" }, { key: "shop" }] },   // P0
+    { base: 0, msgs: [{ key: "news" }, { key: "docs" }] }    // P1
+  ];
+  var offsets = { A: [0, 0], B: [0, 0] };          // 그룹별 · 파티션별 오프셋
+  var hasA2 = true;                                // 그룹 A에 A2가 있는가
+  var keyIdx = 4;                                  // 다음 생산 키(순환)
+
+  function $(id) { return document.getElementById(id); }
+  function hash(key) {
+    var h = 0;
+    for (var i = 0; i < key.length; i++) h += key.charCodeAt(i);
+    return h % 2;
+  }
+  function endOffset(p) { return parts[p].base + parts[p].msgs.length; }
+  function ownerA(p) { return hasA2 ? (p === 0 ? "A1" : "A2") : "A1"; }
+
+  function log(msg) {
+    var el = $("pw-kafka-log");
+    var line = document.createElement("div");
+    line.textContent = msg;
+    el.insertBefore(line, el.firstChild);
+    while (el.childNodes.length > 8) el.removeChild(el.lastChild);
+  }
+
+  function mark(cls, text) {
+    var i = document.createElement("i");
+    i.className = cls;
+    i.textContent = text;
+    return i;
+  }
+
+  function buildCell(key, off, p, isEnd) {
+    var cell = document.createElement("div");
+    var done = !isEnd && off < Math.min(offsets.A[p], offsets.B[p]);
+    cell.className = "pw-kafka-cell" + (isEnd ? " end" : "") + (done ? " done" : "");
+    var k = document.createElement("span");
+    k.className = "pw-kafka-key";
+    k.textContent = key;
+    var o = document.createElement("span");
+    o.className = "pw-kafka-off";
+    o.textContent = off;
+    var marks = document.createElement("span");
+    marks.className = "pw-kafka-marks";
+    if (offsets.A[p] === off) marks.appendChild(mark("ma", "A"));
+    if (offsets.B[p] === off) marks.appendChild(mark("mb", "B"));
+    cell.appendChild(k); cell.appendChild(o); cell.appendChild(marks);
+    return cell;
+  }
+
+  function render() {
+    for (var p = 0; p < 2; p++) {
+      var track = $("pw-kafka-track-" + p);
+      track.innerHTML = "";
+      for (var i = 0; i < parts[p].msgs.length; i++) {
+        var off = parts[p].base + i;
+        track.appendChild(buildCell(parts[p].msgs[i].key, off, p, false));
+      }
+      track.appendChild(buildCell("…", endOffset(p), p, true));   // 다음 쓰기 위치
+      $("pw-kafka-assign-" + p).textContent = "A: " + ownerA(p) + " · B: B1";
+      track.scrollLeft = track.scrollWidth;
+    }
+    $("pw-kafka-groups").textContent = hasA2
+      ? "그룹 A: A1, A2 (파티션 분담) · 그룹 B: B1 (전 파티션)"
+      : "그룹 A: A1 (혼자 전 파티션) · 그룹 B: B1 (전 파티션)";
+  }
+
+  function produce() {
+    var key = KEYS[keyIdx % KEYS.length];
+    keyIdx++;
+    var p = hash(key);
+    parts[p].msgs.push({ key: key });
+    var off = endOffset(p) - 1;
+    var dropped = false;
+    if (parts[p].msgs.length > CAP) {              // 시간 기준 보존의 축소판
+      parts[p].msgs.shift();
+      parts[p].base++;
+      dropped = true;
+      ["A", "B"].forEach(function (g) {
+        if (offsets[g][p] < parts[p].base) {
+          offsets[g][p] = parts[p].base;
+          log("그룹 " + g + ": P" + p + " 오프셋이 보존 구간 밖 → " + parts[p].base + "로 이동");
+        }
+      });
+    }
+    log("생산: key=" + key + " → 해시%2=" + p + " → P" + p + " 오프셋 " + off + "에 append" +
+        (dropped ? " (가장 오래된 칸 삭제)" : ""));
+    render();
+  }
+
+  function consume(g) {
+    var lag0 = endOffset(0) - offsets[g][0];
+    var lag1 = endOffset(1) - offsets[g][1];
+    if (lag0 <= 0 && lag1 <= 0) {
+      log("그룹 " + g + ": 새 메시지 없음 (lag 0)");
+      return;
+    }
+    var p = (lag0 >= lag1 && lag0 > 0) ? 0 : 1;    // lag 큰 파티션부터
+    var off = offsets[g][p];
+    var msg = parts[p].msgs[off - parts[p].base];
+    var who = g === "A" ? ownerA(p) : "B1";
+    offsets[g][p] = off + 1;
+    log("소비: 그룹 " + g + "의 " + who + " — P" + p + "의 " + msg.key + "#" + off +
+        " 처리 → 오프셋 " + (off + 1));
+    render();
+  }
+
+  function rebalance() {
+    hasA2 = !hasA2;
+    log(hasA2
+      ? "리밸런스: A2 복귀 → A1은 P0, A2는 P1 담당 (그룹 오프셋 그대로 승계)"
+      : "리밸런스: A2 이탈 → A1이 P0·P1 모두 담당 (그룹 오프셋 그대로 승계)");
+    render();
+  }
+
+  $("pw-kafka-produce").addEventListener("click", produce);
+  $("pw-kafka-consume-a").addEventListener("click", function () { consume("A"); });
+  $("pw-kafka-consume-b").addEventListener("click", function () { consume("B"); });
+  $("pw-kafka-rebalance").addEventListener("click", rebalance);
+
+  log("시작 상태: P0=[blog, shop] · P1=[news, docs] · 모든 그룹 오프셋 0");
+  render();
+})();
+</script>
+</body>
+</html>

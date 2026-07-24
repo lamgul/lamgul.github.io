@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: MapReduce — 큰 데이터를 작게 쪼개는 법 — 안성진</title>
+<meta name="description" content="구글의 MapReduce 논문(OSDI 2004)을 크롤링 데이터 집계가 커질 때의 고민에서 출발해 읽는다. map·shuffle·reduce 3단계, 데이터 지역성, 스트래글러와 백업 태스크, 결정적 재실행까지.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: MapReduce — 큰 데이터를 작게 쪼개는 법">
+<meta property="og:description" content="구글의 MapReduce 논문(OSDI 2004)을 크롤링 데이터 집계가 커질 때의 고민에서 출발해 읽는다. map·shuffle·reduce 3단계, 데이터 지역성, 스트래글러와 백업 태스크, 결정적 재실행까지.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: MapReduce — 큰 데이터를 작게 쪼개는 법","datePublished":"2021-12-08","dateModified":"2021-12-08","inLanguage":"ko","description":"구글의 MapReduce 논문(OSDI 2004)을 크롤링 데이터 집계가 커질 때의 고민에서 출발해 읽는다. map·shuffle·reduce 3단계, 데이터 지역성, 스트래글러와 백업 태스크, 결정적 재실행까지.","keywords":"MapReduce · 분산처리 · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/mapreduce-paper-analysis.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<style>
+/* 워드카운트 MapReduce 위젯(.pw) 전용 스타일 — pw-mr- 접두, 디자인 토큰만 사용 */
+.pw-mr-controls{display:grid;gap:var(--sp-2);margin-bottom:var(--sp-3)}
+.pw-mr-lab{font-family:var(--mono);font-size:var(--t--1);color:var(--ink-3)}
+.pw-mr-lab b{color:var(--accent);font-weight:650}
+.pw-mr-text{width:100%;font-family:var(--mono);font-size:var(--t--1);line-height:1.6;color:var(--ink);background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:var(--sp-2) var(--sp-3);resize:vertical}
+.pw-mr-text:focus{outline:1.5px solid var(--accent);outline-offset:1px}
+.pw-mr-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.pw-mr-row input[type="range"]{flex:1;min-width:7rem}
+.pw-mr-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-2)}
+.pw-mr-col{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--sp-2);min-height:9rem;min-width:0}
+.pw-mr-head{display:flex;justify-content:space-between;align-items:baseline;gap:0.5em;font-family:var(--mono);font-size:var(--t--1);font-weight:600;color:var(--ink-2);border-bottom:1px solid var(--line-2);padding-bottom:0.4em;margin-bottom:var(--sp-2)}
+.pw-mr-head span{color:var(--ink-3);font-weight:400;white-space:nowrap}
+.pw-mr-list{display:grid;gap:0.3rem;align-content:start}
+.pw-mr-item{font-family:var(--mono);font-size:var(--t--1);color:var(--ink-2);background:var(--bg-elev);border:1px solid var(--line);border-left:3px solid var(--line-2);border-radius:var(--radius);padding:0.25em 0.55em;overflow-wrap:anywhere;opacity:0;transform:translateY(5px);transition:opacity .35s var(--ease),transform .35s var(--ease)}
+.pw-mr-item.pw-mr-show{opacity:1;transform:none}
+.pw-mr-item b{color:var(--ink);font-weight:650}
+.pw-mr-w0{border-left-color:var(--accent)}
+.pw-mr-w1{border-left-color:var(--teal)}
+.pw-mr-w2{border-left-color:var(--ink-3)}
+.pw-mr-w3{border-left-color:var(--accent-press)}
+.pw-mr-wtag{font-family:var(--mono);font-size:0.68rem;color:var(--ink-3);margin-top:0.2rem}
+.pw-mr-empty{font-family:var(--mono);font-size:var(--t--1);color:var(--ink-3)}
+.pw-mr-sum{color:var(--accent);font-weight:650}
+@media (max-width:640px){.pw-mr-cols{grid-template-columns:1fr}.pw-mr-col{min-height:0}}
+@media (prefers-reduced-motion:reduce){.pw-mr-item{transition:none}}
+</style>
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / mapreduce-paper-analysis</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: MapReduce — 큰 데이터를 작게 쪼개는 법</h1>
+    <div class="post-meta">
+      <span>2021년 12월</span><span class="dot-sep">•</span>
+      <span>MapReduce · 분산처리 · 논문</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">크롤링으로 데이터를 <b>모으는</b> 일은 나누기 쉽습니다. 사이트별로, 페이지별로 쪼개서 여러 워커에 맡기면 되니까요. 그런데 모아 온 데이터를 <b>집계하는</b> 일은 이상하게 한 프로세스로 몰립니다. 데이터가 커질수록 이 하나의 집계 스크립트가 병목이 되는데, 2004년의 구글은 이미 이 문제를 겪을 만큼 겪고 답을 논문으로 정리해 뒀습니다. 크롤러를 만드는 사람의 눈으로 MapReduce 논문을 다시 읽었습니다.</p>
+
+<div class="paper-cite">
+  <span class="pc-head">출처</span>
+  <p class="pc-title">MapReduce: Simplified Data Processing on Large Clusters</p>
+  <p class="pc-meta">Jeffrey Dean, Sanjay Ghemawat · OSDI 2004</p>
+  <p class="pc-links"><a href="https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf" target="_blank" rel="noopener">공식 PDF ↗</a> · <a href="https://research.google/pubs/mapreduce-simplified-data-processing-on-large-clusters/" target="_blank" rel="noopener">Google Research ↗</a></p>
+</div>
+
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>Map</dt>
+    <dd>입력 데이터 한 조각을 받아 (키, 값) 쌍들을 뱉는 함수입니다. 단어 세기라면 문서를 받아 (단어, 1)을 단어 수만큼 내놓는 일이죠. 조각끼리 서로를 모르기 때문에 몇천 대에서 동시에 돌릴 수 있습니다.</dd>
+    <dt>Reduce</dt>
+    <dd>같은 키로 모인 값들을 받아 하나로 접는 함수입니다. (단어, [1, 1, 1])을 받아 (단어, 3)을 만드는 게 전형입니다. "모으는 일"의 최종 단계가 이 함수 하나로 수렴합니다.</dd>
+    <dt>셔플<span class="en">Shuffle</span></dt>
+    <dd>map이 뱉은 (키, 값)들을 <b>키가 같은 것끼리</b> 묶어 담당 reduce 워커에게 배달하는 중간 단계입니다. 사용자가 코드를 쓰지 않는데도 전체 비용의 큰 몫을 차지하는, 이 논문의 숨은 주인공입니다.</dd>
+    <dt>데이터 지역성<span class="en">Data Locality</span></dt>
+    <dd>데이터를 계산이 있는 곳으로 옮기는 대신, 계산을 데이터가 이미 저장된 기계로 보내는 원칙입니다. 디스크는 많고 네트워크는 귀하다는 2004년의 제약이 낳은, 지금도 유효한 발상입니다.</dd>
+    <dt>스트래글러<span class="en">Straggler</span></dt>
+    <dd>다른 워커들은 다 끝났는데 혼자 유난히 느린 기계입니다. 전체 작업은 마지막 한 대가 끝나야 끝나므로, 이 한 대가 수천 대짜리 클러스터의 완료 시간을 정해 버립니다.</dd>
+  </dl>
+</div>
+
+<h2>1. 하루치는 되는데 한 달치는 안 됩니다</h2>
+<p>집계 스크립트는 처음엔 다 단순합니다. 파일을 열고, 한 줄씩 읽고, 딕셔너리에 세고, 마지막에 정렬해서 출력합니다. 크롤링한 데이터가 하루치일 때는 이걸로 충분합니다. 문제는 데이터가 조용히 늘어난다는 것입니다. 수집은 워커를 늘려 따라가는데, 집계는 여전히 한 프로세스가 전부 떠안습니다. 메모리가 먼저 무너지거나, 시간이 먼저 무너지거나 둘 중 하나입니다.</p>
+<p>그럼 "여러 대에서 나눠 돌리면 되지 않나"라고 생각하게 되는데, 막상 쪼개려고 하면 원래 로직과 무관한 질문들이 쏟아집니다.</p>
+<ul>
+  <li>데이터를 어떤 기준으로 몇 조각으로 나눌 것인가</li>
+  <li>나눠 돌리다 한 대가 죽으면 어디서부터 다시 할 것인가</li>
+  <li>각자 센 부분 결과를 어떻게 안전하게 합칠 것인가</li>
+</ul>
+<p>논문 1장의 문제의식이 정확히 이것입니다. 저자들은 구글 안에서 크롤링한 문서 처리, 역색인 만들기, 웹 그래프 집계 같은 수백 개의 특수 목적 계산이 저마다 병렬화·분산·장애 처리 코드를 반복해서 짊어지는 걸 보고, <b>계산은 단순한데 그걸 감싸는 분산 코드가 원래 로직을 뒤덮는다</b>고 진단합니다. MapReduce는 그 감싸는 부분을 통째로 라이브러리로 빼낸 결과물입니다.</p>
+
+<h2>2. 함수 두 개만 남기고 전부 숨긴다</h2>
+<p>논문의 추상화는 과감합니다. 사용자에게 남기는 것은 <b>map과 reduce, 함수 두 개뿐</b>입니다. 논문 2.1절의 워드카운트 예제가 사용자가 작성하는 코드의 전부입니다.</p>
+<pre class="code"><span class="c">// 논문 2.1절의 워드카운트 — 사용자가 쓰는 코드의 전부</span>
+<span class="k">map</span>(String key, String value):
+    <span class="c">// key: 문서 이름, value: 문서 내용</span>
+    <span class="k">for each</span> word w <span class="k">in</span> value:
+        <span class="f">EmitIntermediate</span>(w, <span class="s">"1"</span>);
+
+<span class="k">reduce</span>(String key, Iterator values):
+    <span class="c">// key: 단어 하나, values: 그 단어에 대해 모인 "1"들</span>
+    int result = 0;
+    <span class="k">for each</span> v <span class="k">in</span> values:
+        result += <span class="f">ParseInt</span>(v);
+    <span class="f">Emit</span>(<span class="f">AsString</span>(result));</pre>
+<p>왜 하필 이 두 함수일까요. map은 입력 조각 하나만 보고 결과를 내므로 <b>조각 수만큼 병렬</b>이 되고, reduce는 키 하나에 모인 값만 보므로 <b>키를 나눈 조각(R) 수만큼 병렬</b>이 됩니다. 즉 두 함수 모두 "내 몫 바깥"을 전혀 모르게 설계되어 있어서, 분배·재시도·취합을 라이브러리가 마음대로 해도 사용자의 계산 결과가 달라지지 않습니다. 1장에서 쏟아졌던 질문들 — 어떻게 나누나, 죽으면 어쩌나, 어떻게 합치나 — 이 전부 <b>라이브러리의 문제로 이관</b>되는 것입니다. 좋은 추상화는 기능을 더하는 게 아니라 사용자의 걱정 목록에서 항목을 지우는 것이라는 걸 이 논문만큼 깔끔하게 보여주는 예가 드뭅니다.</p>
+
+<h2>3. 숨은 세 번째 단계, shuffle</h2>
+<p>이름은 MapReduce지만 실제 실행은 <b>map → shuffle → reduce</b> 세 단계입니다. map이 뱉은 (단어, 1)들은 여러 워커의 로컬 디스크에 흩어져 있습니다. "big"이라는 단어 하나를 합산하려면 워커 1이 만든 (big, 1)도, 워커 3이 만든 (big, 1)도 <b>같은 reduce 워커</b>에 도착해야 합니다. 이 재배치가 셔플이고, 배달 주소를 정하는 규칙은 수식 하나입니다.</p>
+<pre class="code"><span class="c"># 어느 map 워커가 만든 (키, 값)이든 같은 키는 같은 reduce 조각으로 (논문 4.1절)</span>
+partition(key) = hash(key) <span class="k">mod</span> R      <span class="c"># R = reduce 조각 수</span>
+
+<span class="c"># 입력은 M개 조각으로 쪼갠다 — 조각 하나가 보통 16~64MB (논문 3.1절)</span>
+M = ceil(전체 입력 크기 / 조각 크기)</pre>
+<p>해시가 결정적이므로 조율 없이도 모든 map 워커가 같은 결론에 도달합니다 — "big은 3번 reduce로". 대신 셔플은 중간 데이터 전체를 네트워크에 태우는 단계라 결코 공짜가 아닙니다. 논문이 M과 R을 워커 수보다 훨씬 크게 잡으라고 권하는 것은(논문 3.5절) 태스크가 잘게 쪼개져야 부하 분산이 매끄럽고 워커가 죽었을 때 복구도 빨라지기 때문이고, 아래에서 볼 데이터 지역성과 백업 태스크는 이 단계가 만들어 내는 네트워크 비용과 꼬리 지연을 겨냥한 장치들입니다.</p>
+<div class="callout"><span class="mark">*</span><p>워드카운트라면 "the" 같은 단어가 한 워커 안에서만 수천 번 나옵니다. 이걸 전부 (the, 1)로 네트워크에 태우는 대신, 논문 4.3절의 <b>combiner</b>는 map이 끝난 그 자리에서 부분합을 미리 만들어 셔플로 나가는 양을 줄입니다. "네트워크에 태우기 전에 로컬에서 줄일 수 있는 만큼 줄인다" — 지금도 어디에나 통하는 원칙입니다.</p></div>
+<p>글로는 여기까지입니다. 세 단계가 실제로 어떻게 이어지는지는 직접 돌려 보는 쪽이 빠릅니다. 문장을 바꾸고, 워커 수를 조절해 보세요. 워커를 늘리면 map 입력이 몇 조각으로 나뉘는지, 그런데도 셔플과 reduce의 결과는 왜 똑같은지가 한눈에 보입니다.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">워드카운트로 보는 map → shuffle → reduce</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-mr-controls">
+      <label class="pw-mr-lab" for="pw-mr-text">입력 텍스트 (공백·문장부호 기준으로 단어를 자릅니다)</label>
+      <textarea id="pw-mr-text" class="pw-mr-text" rows="2" spellcheck="false">big data is big and map reduce makes big data small</textarea>
+      <div class="pw-mr-row">
+        <label class="pw-mr-lab" for="pw-mr-workers">map 워커 <b id="pw-mr-wnum">2</b>대</label>
+        <input type="range" id="pw-mr-workers" min="1" max="4" step="1" value="2" aria-label="map 워커 수">
+        <button type="button" id="pw-mr-run" class="primary">실행</button>
+      </div>
+    </div>
+    <div class="pw-mr-cols">
+      <div class="pw-mr-col"><div class="pw-mr-head">1 · map<span>(단어, 1)</span></div><div class="pw-mr-list" id="pw-mr-map" aria-live="polite"></div></div>
+      <div class="pw-mr-col"><div class="pw-mr-head">2 · shuffle<span>키별 그룹</span></div><div class="pw-mr-list" id="pw-mr-shuffle" aria-live="polite"></div></div>
+      <div class="pw-mr-col"><div class="pw-mr-head">3 · reduce<span>합계</span></div><div class="pw-mr-list" id="pw-mr-reduce" aria-live="polite"></div></div>
+    </div>
+  </div>
+  <p class="pw-cap">워커 수를 바꾸면 map 입력이 다시 쪼개지지만, shuffle과 reduce의 결과는 변하지 않습니다</p>
+</div>
+
+<h2>4. 데이터를 옮기지 말고 계산을 옮긴다</h2>
+<p>집계 스크립트를 짜던 습관대로라면, 데이터는 저장소에서 계산하는 프로세스 쪽으로 <b>끌어오는</b> 것입니다. DB에서 애플리케이션으로 전부 당겨 와서 메모리에서 세는 식이죠. 논문 3.4절은 이 방향을 뒤집습니다. 입력 파일은 GFS가 64MB 블록 단위로 여러 기계에 복제해 두는데(복제본 보통 3개), 마스터는 map 태스크를 배정할 때 <b>그 입력 블록의 복제본을 이미 들고 있는 기계</b>에 우선 배정합니다. 실패하면 같은 네트워크 스위치에 물린 가까운 기계라도 찾습니다. 대규모 작업에서는 대부분의 입력을 로컬 디스크에서 읽게 되어 네트워크를 거의 쓰지 않는다고 논문은 보고합니다.</p>
+<p>당시 구글 클러스터는 평범한 IDE 디스크를 단 저가 장비 수천 대와 상대적으로 귀한 네트워크 대역폭으로 이루어져 있었습니다(논문 3장). 디스크는 기계마다 있으니 흔하고, 기계 사이를 잇는 네트워크는 모두가 나눠 쓰니 귀합니다. 그렇다면 큰 데이터를 귀한 길로 옮길 게 아니라, 작은 코드를 데이터 곁으로 보내는 게 맞다는 계산이죠. 제약이 설계를 만든 사례인데, 저는 이 절을 읽고 나서야 제 집계 스크립트의 진짜 비용이 "세는 시간"이 아니라 <b>"데이터를 프로세스까지 옮기는 시간"</b>이었다는 걸 눈치챘습니다. 집계 쿼리를 DB 쪽에서 끝내고 요약만 받아 오는 것도, 따지고 보면 같은 원칙의 아주 작은 실천입니다.</p>
+
+<h2>5. 제일 느린 한 대가 전체 속도를 정한다</h2>
+<p>수천 대를 동원해도 작업은 <b>마지막 태스크가 끝나야</b> 끝납니다. 그런데 현실의 클러스터에는 꼭 유난히 느린 기계가 있습니다. 논문 3.6절이 드는 예는 디스크 오류 보정 때문에 읽기 속도가 30MB/s에서 1MB/s까지 떨어진 기계입니다. 고장은 아니라서 죽지도 않고, 느리게나마 일을 하니 교체 대상도 아닌 — 이런 스트래글러 한 대가 전체 완료 시간을 붙잡습니다.</p>
+<p>해법이 재미있습니다. 원인을 진단해서 고치는 게 아니라, 작업이 거의 끝나갈 무렵 아직 진행 중인 태스크들의 <b>복제본(백업 태스크)을 다른 기계에서 하나 더 돌립니다</b>. 원본이든 백업이든 먼저 끝나는 쪽을 채택하고 나머지는 버립니다. 계산을 이중으로 하는 낭비를 몇 퍼센트 감수하는 대신, 꼬리에서 시간을 크게 버는 거래입니다. 논문 5장의 실험이 이 거래의 값어치를 보여줍니다. 약 1,800대 클러스터에서 100바이트 레코드 100억 개(약 1TB)를 정렬하는 데 891초가 걸렸는데(논문 5.3절), 백업 태스크를 꺼 보니 같은 작업이 1,283초 — <b>44% 더 오래</b> — 걸렸습니다(논문 5.4절). 소수의 스트래글러를 위해 전체를 기다리는 비용이 그만큼 컸다는 뜻입니다.</p>
+<p>수천 대 클러스터가 없어도 이 관점은 쓸 데가 많습니다. 여러 워커에 나눠 도는 크롤링 잡의 완료 시간도 결국 가장 느린 워커 — 유난히 응답이 느린 사이트를 배정받은 워커 — 가 정합니다. "평균이 아니라 꼬리가 전체를 정한다"는 감각, 그리고 "진단보다 중복 실행이 쌀 때가 있다"는 발상이 이 절에서 가져갈 것들입니다.</p>
+
+<h2>6. 장애 복구가 "다시 실행" 한 줄이 되는 이유</h2>
+<p>수천 대 규모에서 기계 고장은 예외 상황이 아니라 일상입니다. 논문 3.3절의 복구 전략은 그래서 오히려 단순합니다. 마스터는 워커들에게 주기적으로 핑을 보내고, 응답이 끊긴 워커의 태스크를 <b>다른 기계에서 처음부터 다시 실행</b>합니다. 상태를 백업했다가 복원하는 게 아니라, 그냥 다시 계산합니다.</p>
+<pre class="code"><span class="c"># 논문 3.3절의 워커 장애 복구 규칙 — 옮겨 보면 이게 전부입니다</span>
+<span class="k">def</span> <span class="f">on_worker_failure</span>(worker):
+    <span class="k">for</span> task <span class="k">in</span> worker.map_tasks:       <span class="c"># 완료된 map 태스크까지 포함</span>
+        task.state = IDLE                <span class="c"># 결과가 죽은 기계의 로컬 디스크에 있으므로</span>
+        <span class="f">reschedule</span>(task)                 <span class="c"># 다른 워커에서 처음부터 다시</span>
+    <span class="k">for</span> task <span class="k">in</span> worker.reduce_tasks:
+        <span class="k">if</span> task.state != DONE:           <span class="c"># 완료된 reduce 출력은 전역 파일시스템에 있음</span>
+            <span class="f">reschedule</span>(task)</pre>
+<p>디테일 두 가지가 눈에 띕니다. 첫째, <b>완료된 map 태스크도 다시 돌립니다.</b> map의 출력은 그 기계의 로컬 디스크에만 있어서 기계가 죽으면 접근할 수 없기 때문입니다. 반면 reduce의 출력은 전역 파일시스템에 이미 올라갔으니 다시 돌릴 필요가 없습니다. 결과를 어디에 두느냐가 복구 규칙을 정하는 셈입니다. 둘째, reduce는 결과를 임시 파일에 쓴 뒤 원자적인 이름 변경(rename)으로 최종 파일을 만듭니다. 같은 태스크가 두 번 실행되어도 최종 파일은 한 벌만 남습니다.</p>
+<div class="callout"><span class="mark">*</span><p>"다시 실행"이 복구가 되려면 전제가 하나 필요합니다 — map과 reduce가 <b>결정적</b>이어야 한다는 것. 같은 입력에 늘 같은 출력을 내는 함수라면, 재실행한 결과와 원래 결과가 구분되지 않으므로 복구 로직이 통째로 사라집니다. 논문 3.3절이 "결정적 연산이라면 분산 실행 결과가 순차 실행 결과와 같다"고 보장하는 것도 이 전제 위에서입니다. 반대로 함수 안에 난수나 현재 시각, 외부 상태가 끼어드는 순간 이 보장은 무너집니다.</p></div>
+<p>이 절은 크롤러를 만드는 사람에게 특히 와닿습니다. 수집 작업이 중간에 죽었을 때 "어디까지 했는지"를 복원하려 들면 복구 코드가 본 코드보다 복잡해집니다. 작업을 <b>다시 실행해도 안전한 단위</b>로 잘라 두고, 실패하면 그 단위를 통째로 다시 돌리는 쪽이 코드도 짧고 검증도 쉽습니다. 재시도를 안전하게 만드는 건 재시도 코드가 아니라, 재시도해도 되는 <b>작업의 모양</b>이라는 걸 이 논문은 3.3절 한 절로 보여줍니다.</p>
+
+<h2>7. 정리 — 쪼개기, 묶기, 다시 하기</h2>
+<p>논문을 덮고 남는 건 세 동사입니다. 서로를 모르는 조각으로 <b>쪼개고</b>(map), 같은 키끼리 <b>묶고</b>(shuffle), 실패하면 <b>다시 합니다</b>(결정적 재실행). 데이터 지역성과 백업 태스크는 이 골격 위에 얹힌, "네트워크는 귀하고 꼬리는 길다"는 현실에 대한 보정입니다.</p>
+<p>이 논문의 유산은 규모만이 아닙니다. 오픈소스 구현인 하둡(Hadoop)이 이 모델을 업계 표준으로 만들었고, 이후의 Spark 같은 시스템들도 "결정적 계산의 재실행으로 장애를 복구한다"는 이 논문의 뼈대 위에서 출발했습니다. 그리고 규모와 무관하게, 집계 스크립트가 무거워지기 시작한 사람에게 이 논문은 좋은 질문 목록이 됩니다. 내 계산은 서로를 모르는 조각으로 쪼개지는가. 조각들을 묶는 기준(키)은 무엇인가. 실패한 조각을 처음부터 다시 돌려도 안전한가 — 이 세 질문에 답할 수 있는 작업은 데이터가 커져도 무너지지 않습니다. 크롤링 파이프라인의 수집·정제 작업을 설계할 때 제가 계속 꺼내 쓰는 질문들이기도 합니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">MapReduce</a>
+      <a class="tag" href="index.html">분산처리</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">이 고민의 실전편 → <b>DDD 크롤링 파이프라인 사례</b></span><a class="chip primary" href="../cases/crawling-pipeline.html">사례 보기 ↗</a></div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-prev" href="pattern-template-strategy.html"><span class="pn-label">이전 글</span><span class="pn-title">아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합</span><span class="pn-date">2021 · 10</span></a>
+    <a class="pn-next" href="spring-transaction-propagation.html"><span class="pn-label">다음 글</span><span class="pn-title">Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가</span><span class="pn-date">2022 · 02</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  function $(id) { return document.getElementById(id); }
+  var elText = $("pw-mr-text");
+  var elRun = $("pw-mr-run");
+  var elWorkers = $("pw-mr-workers");
+  var elWnum = $("pw-mr-wnum");
+  var colMap = $("pw-mr-map");
+  var colShuffle = $("pw-mr-shuffle");
+  var colReduce = $("pw-mr-reduce");
+  if (!elText || !elRun || !elWorkers || !elWnum || !colMap || !colShuffle || !colReduce) return;
+
+  var timers = [];
+  function later(fn, ms) { timers.push(window.setTimeout(fn, ms)); }
+  function clearTimers() {
+    for (var i = 0; i < timers.length; i++) window.clearTimeout(timers[i]);
+    timers = [];
+  }
+
+  var MAX_WORDS = 40;
+  function tokenize(text) {
+    var raw = text.toLowerCase().split(/[^0-9a-z가-힣]+/);
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      if (raw[i]) out.push(raw[i]);
+    }
+    return out;
+  }
+
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function make(cls, html) {
+    var d = document.createElement("div");
+    d.className = cls;
+    d.innerHTML = html;
+    return d;
+  }
+  function reveal(node, delay) {
+    later(function () { node.classList.add("pw-mr-show"); }, delay);
+  }
+
+  function run() {
+    clearTimers();
+    colMap.innerHTML = "";
+    colShuffle.innerHTML = "";
+    colReduce.innerHTML = "";
+
+    var all = tokenize(elText.value);
+    if (!all.length) {
+      colMap.appendChild(make("pw-mr-empty", "단어가 없습니다 — 문장을 입력해 보세요"));
+      return;
+    }
+    var words = all.slice(0, MAX_WORDS);
+    if (all.length > words.length) {
+      colMap.appendChild(make("pw-mr-empty", "입력이 길어 앞 " + MAX_WORDS + "단어만 시연합니다"));
+    }
+
+    var W = parseInt(elWorkers.value, 10) || 1;
+    if (W > words.length) W = words.length;
+
+    // 입력을 정확히 W개의 연속 조각으로 분할 (논문 3.1절의 input split 축소판)
+    var chunks = [];
+    var base = Math.floor(words.length / W);
+    var rest = words.length % W;
+    for (var c = 0, pos = 0; c < W; c++) {
+      var len = base + (c < rest ? 1 : 0);
+      chunks.push(words.slice(pos, pos + len));
+      pos += len;
+    }
+
+    var STEP = 70;
+    var t = 60;
+
+    // 1 · map — 워커별로 (단어, 1) 방출
+    for (var i = 0; i < chunks.length; i++) {
+      var tag = make("pw-mr-item pw-mr-wtag pw-mr-w" + (i % 4),
+        "워커 " + (i + 1) + " — 입력 조각 " + chunks[i].length + "단어");
+      colMap.appendChild(tag);
+      reveal(tag, t);
+      t += STEP;
+      for (var j = 0; j < chunks[i].length; j++) {
+        var mapItem = make("pw-mr-item pw-mr-w" + (i % 4),
+          "(<b>" + esc(chunks[i][j]) + "</b>, 1)");
+        colMap.appendChild(mapItem);
+        reveal(mapItem, t);
+        t += STEP;
+      }
+    }
+
+    // 2 · shuffle — 키별 그룹핑 (결정적: 키를 정렬해 같은 입력이면 같은 화면)
+    var counts = {};
+    var keys = [];
+    for (var w = 0; w < words.length; w++) {
+      if (!Object.prototype.hasOwnProperty.call(counts, words[w])) {
+        counts[words[w]] = 0;
+        keys.push(words[w]);
+      }
+      counts[words[w]] += 1;
+    }
+    keys.sort();
+
+    t += 260;
+    for (var s = 0; s < keys.length; s++) {
+      var ones = [];
+      for (var n = 0; n < counts[keys[s]]; n++) ones.push("1");
+      var shItem = make("pw-mr-item",
+        "<b>" + esc(keys[s]) + "</b> → [" + ones.join(", ") + "]");
+      colShuffle.appendChild(shItem);
+      reveal(shItem, t);
+      t += STEP;
+    }
+
+    // 3 · reduce — 그룹별 합계
+    t += 260;
+    for (var r = 0; r < keys.length; r++) {
+      var rdItem = make("pw-mr-item",
+        "(<b>" + esc(keys[r]) + "</b>, <span class=\"pw-mr-sum\">" + counts[keys[r]] + "</span>)");
+      colReduce.appendChild(rdItem);
+      reveal(rdItem, t);
+      t += STEP;
+    }
+  }
+
+  elRun.addEventListener("click", run);
+  elWorkers.addEventListener("input", function () {
+    elWnum.textContent = elWorkers.value;
+    run();
+  });
+  run();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: ResNet — 깊이의 역설을 지름길로 풀다 — 안성진</title>
+<meta name="description" content="층을 쌓을수록 오히려 나빠지던 degradation의 역설과, 그것을 덧셈 한 줄 H(x)=F(x)+x로 푼 residual learning을 원 논문과 토이 계산으로 확인한다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: ResNet — 깊이의 역설을 지름길로 풀다">
+<meta property="og:description" content="층을 쌓을수록 오히려 나빠지던 degradation의 역설과, 그것을 덧셈 한 줄 H(x)=F(x)+x로 푼 residual learning을 원 논문과 토이 계산으로 확인한다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: ResNet — 깊이의 역설을 지름길로 풀다","datePublished":"2021-06-14","dateModified":"2021-06-14","inLanguage":"ko","description":"층을 쌓을수록 오히려 나빠지던 degradation의 역설과, 그것을 덧셈 한 줄 H(x)=F(x)+x로 푼 residual learning을 원 논문과 토이 계산으로 확인한다.","keywords":"ResNet · CNN · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/resnet-paper-analysis.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<style>
+  /* resnet-paper-analysis 위젯 전용 */
+  .pw-resnet-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .pw-resnet-lab { font-size: var(--t--1); color: var(--ink-2); white-space: nowrap; }
+  .pw-resnet-lab b { font-family: var(--mono); color: var(--accent); }
+  #pw-resnet-depth { flex: 1 1 150px; min-width: 130px; }
+  .pw-resnet-modes { display: flex; gap: var(--sp-1); margin-left: auto; }
+  #pw-resnet-chart { display: block; width: 100%; max-width: 100%; height: auto; }
+  .pw-resnet-bar-plain { fill: var(--accent); }
+  .pw-resnet-bar-res { fill: var(--teal); }
+  .pw-resnet-refline { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 4 4; }
+  .pw-resnet-axis { fill: var(--ink-3); font-family: var(--mono); font-size: 10px; }
+  .pw-resnet-axis-r { text-anchor: end; }
+  .pw-resnet-read { font-family: var(--mono); font-size: var(--t--1); color: var(--ink-2); margin: var(--sp-2) 0 0; }
+  .pw-resnet-read b { color: var(--ink); font-weight: 600; }
+</style>
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / resnet-paper-analysis</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: ResNet — 깊이의 역설을 지름길로 풀다</h1>
+    <div class="post-meta">
+      <span>2021년 6월</span><span class="dot-sep">•</span>
+      <span>ResNet · CNN · 논문</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">ETRI에서 객체탐지를 처음 배울 때, 모델 설정 파일의 backbone 칸에는 늘 <code>resnet</code>이 적혀 있었습니다. 왜 다들 ResNet인가 — 그 답은 2015년의 역설 하나로 거슬러 올라갑니다. 층을 더 쌓았더니 성능이 <b>훈련 오차부터</b> 나빠지는 현상, 그리고 그것을 덧셈 한 줄로 풀어낸 논문. He 등의 원 논문을 다시 읽고, 핵심 주장을 토이 계산으로 하나씩 확인한 기록입니다.</p>
+
+<div class="paper-cite">
+  <span class="pc-head">출처</span>
+  <p class="pc-title">Deep Residual Learning for Image Recognition</p>
+  <p class="pc-meta">Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun · CVPR 2016 · arXiv:1512.03385</p>
+  <p class="pc-links"><a href="https://arxiv.org/pdf/1512.03385" target="_blank" rel="noopener">PDF ↗</a> · <a href="https://arxiv.org/abs/1512.03385" target="_blank" rel="noopener">arXiv ↗</a></p>
+</div>
+
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>퇴화 문제<span class="en">Degradation</span></dt>
+    <dd>층을 더 쌓았는데 시험 성적은 물론 <b>훈련 성적부터</b> 나빠지는 현상입니다. 훈련 데이터를 더 못 외우게 되는 것이라, 너무 잘 외워서 탈이 나는 과적합과는 다른 병입니다. 이 글 전체가 이 병의 진단과 처방입니다.</dd>
+    <dt>항등 사상<span class="en">Identity Mapping</span></dt>
+    <dd>입력을 아무것도 바꾸지 않고 그대로 내보내는 함수 y = x입니다. "아무것도 하지 않기"인 셈인데, 신경망에게는 이것이 의외로 어려운 목표라는 것이 이 이야기의 반전입니다.</dd>
+    <dt>잔차<span class="en">Residual</span></dt>
+    <dd>목표값에서 이미 가진 값을 뺀 나머지, 곧 <b>"더 고쳐야 할 양"</b>입니다. ResNet은 층에게 완성본을 통째로 만들게 하는 대신 이 수정량만 배우게 합니다. 이름의 R이 여기서 옵니다.</dd>
+    <dt>지름길 연결<span class="en">Shortcut Connection</span></dt>
+    <dd>층 몇 개를 건너뛰어 입력을 출력에 그대로 더해 주는 연결선입니다. 학습할 파라미터가 하나도 없어서, 드는 비용이 덧셈뿐입니다.</dd>
+    <dt>역전파<span class="en">Backpropagation</span></dt>
+    <dd>출력에서 생긴 오차를 입력 방향으로 거꾸로 흘려보내며 층마다 수정량(기울기)을 계산하는 절차입니다. 층을 지날 때마다 국소 기울기가 <b>곱해지는</b> 구조라, 이 곱셈이 글 후반의 주인공입니다.</dd>
+  </dl>
+</div>
+
+<h2>1. 56층이 20층에게 진다</h2>
+<p>2012년 AlexNet(8층)이 판을 뒤집은 뒤, 2014년의 VGG는 19층, GoogLeNet은 22층으로 깊이를 늘리며 정확도를 끌어올렸습니다. "깊이가 곧 표현력"이라는 통념이 자리 잡던 때죠. 그렇다면 층을 계속 쌓으면 계속 좋아질까요? 논문 1장은 정확히 이 질문으로 시작하고, 곧바로 찬물을 끼얹는 실험을 보여줍니다. CIFAR-10에서 지름길 없이 평범하게 쌓은(plain) 20층과 56층을 비교하면 — <b>56층이 훈련 오차와 테스트 오차 모두에서 더 나쁩니다</b>(1장 그림 1).</p>
+<p>테스트만 나빠졌다면 익숙한 과적합이었을 겁니다. 하지만 <b>훈련 오차부터</b> 높다는 건, 더 큰 모델이 훈련 데이터조차 더 못 외운다는 뜻입니다. 용량은 남아도는데도요. 논문은 이 현상에 <b>퇴화(degradation)</b>라는 이름을 붙입니다. 그리고 흔한 용의자인 기울기 소실 탓으로 돌리기도 어렵다고 짚습니다 — 정규화된 초기화와 배치 정규화 덕분에 이 정도 깊이는 <b>수렴 자체는 되는</b> 상태에서 벌어지는 일이기 때문입니다(1장). 수렴은 하는데, 나쁜 곳으로 수렴한다. 이것이 2015년의 미스터리였습니다.</p>
+
+<h2>2. 반증은 논리 안에 있다 — 항등 사상 사고실험</h2>
+<p>제게 이 논문에서 가장 아름다운 대목은 실험이 아니라 1장의 <b>사고실험</b>입니다. 잘 학습된 20층 모델이 있다고 합시다. 56층 모델을 만들 때 앞 20층에 그 모델을 그대로 복사해 넣고, 나머지 36층을 <b>항등 사상</b> — 입력을 그대로 통과시키는 층 — 으로 채우면 어떻게 될까요? 이 깊은 모델은 최소한 얕은 모델과 <b>같은</b> 훈련 오차를 냅니다. 즉 깊은 모델이 더 나쁠 이유는 논리적으로 존재하지 않습니다. 더 나은(적어도 같은) 해가 구성적으로 존재하는데, 현재의 최적화기가 <b>그 해를 찾아내지 못할</b> 뿐입니다.</p>
+<p>이로써 범인의 윤곽이 잡힙니다. 표현력의 문제가 아니라 <b>최적화의 문제</b>이고, 그 한가운데에 "비선형 층 여러 개로 항등 사상을 흉내 내기"의 어려움이 있습니다. ReLU(Wx) 꼴의 층에게 항등은 저절로 되는 일이 아니라, 특별한 가중치 조합을 정확히 맞혀야 하는 과녁입니다. "아무것도 하지 않기"가 신경망에게는 가장 어려운 주문 중 하나인 셈입니다.</p>
+
+<h2>3. H(x) 대신 F(x) = H(x) − x를 배운다</h2>
+<p>ResNet의 답은 모델을 키우는 게 아니라 <b>목표를 바꾸는 것</b>입니다. 층 더미가 배우길 바라는 이상적인 사상을 H(x)라 합시다. 논문 3.1절은 층에게 H를 직접 맞히게 하는 대신 <b>잔차 F(x) = H(x) − x</b>를 맞히게 하자고 제안합니다. 원래 목표는 지름길로 건너온 입력을 더해서 복원합니다 — <b>y = F(x) + x</b>(3.2절 식 1). 항등이 최적인 자리라면 이제 할 일은 F를 <b>0으로 미는 것</b>뿐입니다. 가중치를 0 쪽으로 누르는 건 학습에게 가장 자연스러운 방향이죠. "아무것도 하지 않기"가 어려운 목표에서 <b>기본값</b>으로 바뀝니다. 입력과 출력의 차원이 달라지는 자리에서만 지름길에 투영 행렬을 끼우고(식 2), 그 외의 지름길에는 <b>추가 파라미터도 추가 연산도 없습니다</b>(3.2절) — 덧셈 하나뿐.</p>
+<p>이 차이가 실제로 무엇을 만드는지, 학습 초기 상태(작은 가중치)의 블록 30개를 쌓아 신호를 통과시켜 봅니다.</p>
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> <span class="f">relu</span>(v): <span class="k">return</span> np.maximum(<span class="s">0.0</span>, v)
+
+<span class="k">def</span> <span class="f">plain_block</span>(x, W1, W2):             <span class="c"># H(x)를 통째로 배워야 한다</span>
+    <span class="k">return</span> relu(W2 @ relu(W1 @ x))
+
+<span class="k">def</span> <span class="f">residual_block</span>(x, W1, W2):          <span class="c"># H(x) = F(x) + x — 논문 식 (1)</span>
+    <span class="k">return</span> W2 @ relu(W1 @ x) + x         <span class="c"># 덧셈 뒤 ReLU는 크기 비교를 위해 생략</span>
+
+rng = np.random.default_rng(<span class="s">42</span>)
+x = rng.normal(size=<span class="s">64</span>)                   <span class="c"># ‖x‖ ≈ 6.32</span>
+h = r = x
+<span class="k">for</span> _ <span class="k">in</span> range(<span class="s">30</span>):                       <span class="c"># 블록 30개를 쌓는다</span>
+    W1 = rng.normal(scale=<span class="s">0.01</span>, size=(<span class="s">64</span>, <span class="s">64</span>))   <span class="c"># 학습 초기의 작은 가중치</span>
+    W2 = rng.normal(scale=<span class="s">0.01</span>, size=(<span class="s">64</span>, <span class="s">64</span>))
+    h = plain_block(h, W1, W2)
+    r = residual_block(r, W1, W2)
+
+print(np.linalg.norm(h))                  <span class="c"># 4.6e-75 — 신호가 흔적도 없다</span>
+print(np.linalg.norm(r))                  <span class="c"># 6.33 — 입력이 거의 그대로 살아 있다</span></pre>
+<p>plain 더미에서는 서른 블록 만에 신호가 10<sup>−75</sup> 수준으로 증발합니다. 1보다 훨씬 작은 변환이 서른 번 <b>곱해졌기</b> 때문입니다. residual 더미에서는 각 블록의 F가 거의 0이니 <b>x가 그대로 살아서</b> 끝까지 갑니다. "항등이 기본값"이라는 말의 물리적 의미가 이 두 줄의 norm 차이입니다. 참고로 50층 이상의 ResNet은 3×3 두 장 대신 1×1–3×3–1×1의 <b>병목 블록</b>으로 같은 아이디어를 더 싼 연산으로 굴립니다(4.1절).</p>
+<div class="callout"><span class="mark">*</span><p>지름길의 파라미터가 <b>0개</b>라는 사실은 수사가 아니라 전략입니다. 파라미터 수와 연산량이 같으니 plain망과의 비교가 공정해졌고(3.2절), 어떤 기존 구조에든 비용 없이 끼워 넣을 수 있었습니다. 좋은 설계 장치는 성능을 말하기 전에 <b>도입 장벽</b>부터 없앱니다.</p></div>
+
+<h2>4. 기울기에게 난 지름길 — 곱셈의 세계에 덧셈 하나</h2>
+<p>순전파에서 신호를 살리는 덧셈은, 역전파에서는 <b>기울기의 지름길</b>이 됩니다. y = F(x) + x를 x로 미분하면 <span class="term" title="여러 입력·여러 출력 함수의 미분을 모아 놓은 행렬. 여기서는 층 하나가 통과하는 신호를 얼마나 늘리고 줄이는지의 표">자코비안</span>은 ∂F/∂x + <b>I</b> — 학습된 가지가 무슨 값을 갖든 항등 행렬 I가 항상 더해져 있습니다. 깊은 망의 역전파는 층별 국소 기울기의 <b>곱</b>이라서, plain망에서는 크기가 1보다 작은 인자가 56번 곱해지면 기울기가 지수적으로 쪼그라듭니다. residual망에서는 곱의 인자가 (1 + 작은 것)이라 1 근처에 머뭅니다. 숫자로 보면 이렇습니다.</p>
+<pre class="code">L = <span class="s">56</span>                                   <span class="c"># 층 수</span>
+a = <span class="s">0.90</span>                                 <span class="c"># plain 층 하나의 국소 기울기 크기 (|a| &lt; 1)</span>
+print(a ** L)                            <span class="c"># 0.0027 — 출력 기울기의 0.3%만 1층에 도달</span>
+
+<span class="c"># residual: 층의 자코비안이 (1 + 가지의 기울기 f). f는 작고 부호가 섞인다</span>
+f = <span class="s">0.10</span> * np.where(np.arange(L) % <span class="s">2</span> == <span class="s">0</span>, <span class="s">1.0</span>, -<span class="s">1.0</span>)
+print(np.prod(<span class="s">1</span> + f))                    <span class="c"># 0.75 — 1 근처에 머문다</span>
+
+<span class="c"># 곱을 전개하면: (1+f₁)(1+f₂)··· = 1 + Σfᵢ + ···</span>
+<span class="c"># 맨 앞의 "1"이 어떤 곱셈도 거치지 않고 직행하는 항등 경로다</span></pre>
+<p>전개식의 맨 앞에 있는 <b>1</b>이 지름길의 정체입니다. 출력의 기울기가 어떤 층의 가중치와도 곱해지지 않은 채 1층까지 직행하는 경로가 항상 하나 확보되어 있는 것이죠. 아래 위젯에서 깊이를 직접 올려 보세요. plain의 막대는 깊이 56에서 눈으로 볼 수 없을 만큼 사라지지만, residual로 전환하면 같은 깊이에서도 막대가 유지됩니다.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">역전파 기울기 시뮬레이터 — plain vs residual</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-resnet-controls">
+      <label class="pw-resnet-lab" for="pw-resnet-depth">깊이 <b id="pw-resnet-depth-val">20</b>층</label>
+      <input type="range" id="pw-resnet-depth" min="8" max="56" step="1" value="20" aria-label="네트워크 깊이, 8층에서 56층까지">
+      <div class="pw-resnet-modes" role="group" aria-label="네트워크 종류 선택">
+        <button type="button" id="pw-resnet-mode-plain" class="on" aria-pressed="true">plain</button>
+        <button type="button" id="pw-resnet-mode-res" aria-pressed="false">residual</button>
+      </div>
+    </div>
+    <svg id="pw-resnet-chart" viewBox="0 0 640 240" role="img" aria-label="각 층에 도달하는 역전파 기울기 크기를 나타내는 막대그래프">
+      <line class="pw-resnet-refline" x1="10" y1="80.7" x2="630" y2="80.7"></line>
+      <text class="pw-resnet-axis" x="10" y="56">×1.0 — 감쇠 없음</text>
+      <g id="pw-resnet-bars"></g>
+      <text class="pw-resnet-axis" x="10" y="234">1층 (입력 쪽)</text>
+      <text class="pw-resnet-axis pw-resnet-axis-r" x="630" y="234">출력 쪽</text>
+    </svg>
+    <p class="pw-resnet-read">1층(입력 쪽)에 도달하는 기울기: <b id="pw-resnet-g1">—</b><span id="pw-resnet-note"></span></p>
+  </div>
+  <p class="pw-cap">막대 = 그 층에 도달하는 역전파 기울기 크기(출력 = 1). 결정적 토이 계산 — plain은 |국소 기울기| &lt; 1의 곱셈 감쇠, residual은 (1 + 작은 가지 기울기)의 곱입니다.</p>
+</div>
+
+<div class="callout"><span class="mark">*</span><p>정직하게 덧붙이면 — 논문 4.1절은 배치 정규화를 쓴 plain망의 역전파 신호가 건강한 크기임을 확인하고, 퇴화의 원인이 기울기 소실일 가능성은 낮다고 <b>스스로 선을 긋습니다</b>. 저자들의 공식 진단은 "깊은 plain망은 지수적으로 낮은 수렴 속도를 가질지 모른다"는 추측에서 멈춥니다. 위 토이 계산과 위젯은 소실의 재연이라기보다, <b>곱셈만 있는 구조와 덧셈 경로가 있는 구조의 차이</b>가 최적화 난이도를 어떻게 가르는지에 대한 직관으로 읽어 주세요.</p></div>
+
+<h2>5. 숫자는 어떻게 답했나 — 표 2와 3.57%</h2>
+<p>설계가 아무리 우아해도 답은 숫자가 합니다. ImageNet에서 plain망 18층과 34층을 비교하면 34층의 top-1 오차가 오히려 높습니다 — 27.94% 대 28.54%(4.1절 표 2, 10-crop 검증). 퇴화가 대규모 데이터에서도 재현된 것이죠. 같은 구조에 지름길만 더한 ResNet은 이 순서를 뒤집습니다. 18층 27.88%, 34층 <b>25.03%</b> — 깊이가 다시 자산이 됐고, plain-34 대비 top-1 오차가 3.5%p 낮아졌습니다(4.1절).</p>
+<p>깊이의 천장도 함께 뚫립니다. ResNet-152는 VGG망보다 <b>8배 깊지만 연산 복잡도는 오히려 낮고</b>(초록), 앙상블은 ImageNet 테스트에서 top-5 오차 <b>3.57%</b>로 ILSVRC 2015 분류 부문 1위를 가져갑니다(초록). 그런데 제 눈에 가장 인상적인 숫자는 따로 있습니다. 검출기 구조는 그대로 두고 <b>backbone만 ResNet으로 바꿨더니</b> COCO 객체탐지에서 28% 상대 개선(초록). ETRI에서 만졌던 설정 파일의 <code>backbone: resnet50</code> 한 줄이 하는 일이 정확히 이것입니다. 탐지라는 머리가 아무리 좋아도 특징이라는 몸통이 얕으면 소용없다는 것 — 데이터 가공을 하며 어렴풋이 느끼던 감각에, 논문이 숫자를 붙여 줬습니다.</p>
+<p>CIFAR-10 실험(4.2절)에는 흥미로운 각주가 하나 있습니다. 110층 ResNet은 6.43% 오차로 잘 학습되지만, 1202층은 <b>수렴은 하는데</b> 110층보다 나쁜 7.93%에 그칩니다. 저자들은 이번엔 과적합을 지목합니다. 최적화라는 병목이 풀리자 그다음 병목이 모습을 드러낸 것입니다. 문제는 사라지지 않고 자리를 옮깁니다.</p>
+
+<h2>6. 정리 — 덧셈 하나가 바꾼 것</h2>
+<ul>
+  <li><b>진단이 해법보다 먼저다.</b> 퇴화가 과적합도, (정규화 이후의) 기울기 소실도 아니라 최적화의 문제임을 사고실험으로 좁혔기에, 해법이 "항등을 기본값으로"라는 한 점을 정확히 겨냥할 수 있었다.</li>
+  <li><b>배움의 대상을 바꾸는 것이 설계다.</b> H(x)를 통째로 배우게 하는 대신 "x에서 얼마나 고칠까"(잔차)만 배우게 했다. 모델을 키우는 대신 문제를 쉽게 만드는 것 — 좋은 구조의 정의라고 생각합니다.</li>
+  <li><b>비용 없는 장치는 어디에나 스며든다.</b> 파라미터 0개짜리 덧셈이라 모든 아키텍처가 부담 없이 가져다 썼다. 이후 Transformer 블록마다 들어 있는 Add에도 같은 지름길이 있다.</li>
+</ul>
+<p>ETRI에서 backbone은 제게 그냥 고유명사였습니다. 이 논문을 읽고 나서야 그 이름이 왜 모든 설정 파일에 적혀 있는지 — 깊이가 왜 2015년 이전에는 부채였고 이후에는 자산이 됐는지 — 설명할 수 있게 됐습니다. 덧셈 하나가 바꾼 세계입니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">ResNet</a>
+      <a class="tag" href="index.html">CNN</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">이 백본 위에서 달리는 검출기 → <b>YOLO 논문 분석</b></span><a class="chip primary" href="yolo-paper-analysis.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-prev" href="pattern-layered-hexagonal.html"><span class="pn-label">이전 글</span><span class="pn-title">아키텍처 패턴 · 레이어드에서 헥사고날로</span><span class="pn-date">2021 · 05</span></a>
+    <a class="pn-next" href="review-clean-code.html"><span class="pn-label">다음 글</span><span class="pn-title">서평: Clean Code — 규칙보다 태도</span><span class="pn-date">2021 · 08</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  var slider = document.getElementById("pw-resnet-depth");
+  var valEl = document.getElementById("pw-resnet-depth-val");
+  var btnPlain = document.getElementById("pw-resnet-mode-plain");
+  var btnRes = document.getElementById("pw-resnet-mode-res");
+  var barsEl = document.getElementById("pw-resnet-bars");
+  var g1El = document.getElementById("pw-resnet-g1");
+  var noteEl = document.getElementById("pw-resnet-note");
+  if (!slider || !valEl || !btnPlain || !btnRes || !barsEl || !g1El || !noteEl) return;
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var GOLD = 2.399963;                    // 층별 결정적 변주용 각도(황금각)
+  var X0 = 10, X1 = 630, Y0 = 214, PLOT_H = 200, Y_MAX = 1.5;
+  var mode = "plain";
+
+  function localFactor(i, m) {
+    // i번째 층의 국소 기울기 크기 — 난수 없이 결정적으로 만든다
+    var s = Math.sin(i * GOLD);
+    if (m === "plain") return 0.82 + 0.08 * s;   // 0.74~0.90 — 항상 1보다 작다
+    return 1 + 0.12 * s;                          // 0.88~1.12 — +1 지름길 덕에 1 근처
+  }
+
+  function gradients(L, m) {
+    // g[k-1] = 출력(L층)에서 k층까지 내려온 역전파 기울기 크기
+    var g = new Array(L);
+    g[L - 1] = 1;
+    var acc = 1;
+    for (var k = L - 1; k >= 1; k--) {
+      acc *= localFactor(k + 1, m);
+      g[k - 1] = acc;
+    }
+    return g;
+  }
+
+  function fmt(v) {
+    if (v >= 0.01) return v.toFixed(2);
+    if (v >= 0.0001) return v.toFixed(5);
+    return v.toExponential(1);
+  }
+
+  function fmtPct(v) {
+    var p = v * 100;
+    if (p >= 0.1) return p.toFixed(1) + "%";
+    if (p >= 0.001) return p.toFixed(4) + "%";
+    return p.toExponential(1) + "%";
+  }
+
+  function render() {
+    var L = parseInt(slider.value, 10);
+    valEl.textContent = String(L);
+    var g = gradients(L, mode);
+    while (barsEl.firstChild) barsEl.removeChild(barsEl.firstChild);
+    var span = (X1 - X0) / L;
+    var barCls = mode === "plain" ? "pw-resnet-bar-plain" : "pw-resnet-bar-res";
+    for (var k = 0; k < L; k++) {
+      var h = Math.min(g[k], Y_MAX) / Y_MAX * PLOT_H;
+      var rect = document.createElementNS(SVGNS, "rect");
+      rect.setAttribute("x", (X0 + span * k + span * 0.14).toFixed(2));
+      rect.setAttribute("y", (Y0 - h).toFixed(2));
+      rect.setAttribute("width", Math.max(span * 0.72, 0.5).toFixed(2));
+      rect.setAttribute("height", h.toFixed(2));
+      rect.setAttribute("class", barCls);
+      barsEl.appendChild(rect);
+    }
+    g1El.textContent = fmt(g[0]) + " (출력의 " + fmtPct(g[0]) + ")";
+    noteEl.textContent = mode === "plain"
+      ? " — 층마다 1보다 작은 수가 곱해져 지수적으로 줄어듭니다"
+      : " — +1 지름길 덕에 곱의 인자가 1 근처라 깊어져도 유지됩니다";
+  }
+
+  function setMode(m) {
+    mode = m;
+    btnPlain.classList.toggle("on", m === "plain");
+    btnRes.classList.toggle("on", m === "residual");
+    btnPlain.setAttribute("aria-pressed", m === "plain" ? "true" : "false");
+    btnRes.setAttribute("aria-pressed", m === "residual" ? "true" : "false");
+    render();
+  }
+
+  slider.addEventListener("input", render);
+  btnPlain.addEventListener("click", function () { setMode("plain"); });
+  btnRes.addEventListener("click", function () { setMode("residual"); });
+  render();
+})();
+</script>
+</body>
+</html>

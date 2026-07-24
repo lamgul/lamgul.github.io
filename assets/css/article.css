@@ -261,3 +261,75 @@ article .prose .term {
   border-bottom: 1.5px dotted var(--line-2);
   cursor: help;
 }
+
+/* ---- paper citation box (논문 서지정보) ----
+   markup:
+   <div class="paper-cite">
+     <span class="pc-head">출처</span>
+     <p class="pc-title">논문 제목 원문</p>
+     <p class="pc-meta">저자 · 학회/저널 연도</p>
+     <p class="pc-links"><a href="...">PDF ↗</a> · <a href="...">arXiv ↗</a></p>
+   </div> */
+.paper-cite {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  padding: var(--sp-3) var(--sp-4);
+  margin: var(--sp-4) 0;
+}
+.paper-cite .pc-head {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 0.2em 0.55em;
+  margin-bottom: 0.6em;
+}
+.paper-cite .pc-title { font-weight: 650; color: var(--ink); margin: 0 0 0.2em; font-style: italic; }
+.paper-cite .pc-meta { color: var(--ink-2); margin: 0 0 0.35em; font-size: var(--t--1); }
+.paper-cite .pc-links { margin: 0; font-family: var(--mono); font-size: var(--t--1); }
+.paper-cite .pc-links a { color: var(--accent); }
+.paper-cite .pc-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- interactive post widget (게시글 내 상호작용 요소) ----
+   shared chrome; widget internals use pw- prefixed classes per post.
+   markup: <div class="pw"><div class="pw-bar"><span class="dot"></span>
+   <span class="ttl">…</span></div><div class="pw-body">…</div>
+   <p class="pw-cap">…</p></div> */
+.pw {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  overflow: hidden;
+  margin: var(--sp-5) 0;
+  box-shadow: var(--shadow-1);
+}
+.pw-bar {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.pw-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); flex: none; }
+.pw-bar .ttl { font-weight: 600; font-size: var(--t--1); }
+.pw-bar .badge { margin-left: auto; font-family: var(--mono); font-size: 0.66rem; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 100px; padding: 0.22em 0.65em; white-space: nowrap; }
+.pw-body { padding: clamp(0.9rem, 0.7rem + 1vw, 1.4rem); }
+.pw-cap { font-family: var(--mono); font-size: var(--t--1); color: var(--ink-3); text-align: center; padding: 0 1rem 0.8rem; margin: 0; }
+.pw button {
+  font-size: 0.8rem; padding: 0.45em 0.9em; border-radius: 100px;
+  border: 1px solid var(--line-2); background: var(--bg); color: var(--ink-2);
+  transition: all .18s;
+}
+.pw button:hover { border-color: var(--accent); color: var(--accent); }
+.pw button.on, .pw button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.pw input[type="range"] { accent-color: var(--accent); }
+.pw .pw-log {
+  font-family: var(--mono); font-size: 0.76rem; line-height: 1.7;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 0.7rem 0.9rem;
+  max-height: 180px; overflow-y: auto;
+}

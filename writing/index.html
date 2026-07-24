@@ -41,7 +41,7 @@
 
 <main id="main">
   <section class="writing-hero wrap">
-    <p class="eyebrow">Tech Blog · 총 47편</p>
+    <p class="eyebrow">Tech Blog · 총 56편</p>
     <h1>실무에서 배운 것을<br>구체적으로 남깁니다</h1>
     <p>코드를 짜다 "왜 이렇게 했지"를 스스로 설명해야 하는 순간, 그 설명을 글로 붙잡아 둡니다. LLM 서빙부터 JVM 힙덤프, 쿼리 튜닝, 보안까지 — 대부분 <a class="u-link" href="../cases/">실무 사례</a>의 뒷이야기이자 how-to입니다. <a class="u-link mono" href="/feed.xml" style="font-size:var(--t--1)">RSS ↗</a></p>
   </section>
@@ -88,6 +88,12 @@
 
       <div class="w-group">
         <div class="w-yr">2025</div>
+        <a class="w-item" data-cat="논문" href="borg-paper-analysis.html">
+          <span class="w-date">2025 · 12</span>
+          <div class="w-body"><h2>논문 분석: Borg — 쿠버네티스의 아버지</h2>
+            <p>Large-scale cluster management at Google with Borg를 읽고 Pod의 원형 alloc, 우선순위·선점, best-fit 빈패킹,…</p></div>
+          <span class="w-tag">Borg · 스케줄링</span>
+        </a>
         <a class="w-item" data-cat="백엔드" href="postgres-slow-list.html">
           <span class="w-date">2025 · 11</span>
           <div class="w-body"><h2>PostgreSQL 느린 목록 화면 — 인덱스와 keyset 페이지네이션</h2>
@@ -100,17 +106,17 @@
             <p>빌드 도구까지 담긴 무거운 이미지를 멀티스테이지 빌드로 런타임만 남기고, 레이어 캐시 순서로 빌드 시간을 줄인 실무 노트.</p></div>
           <span class="w-tag">Docker · 멀티스테이지</span>
         </a>
-        <a class="w-item" data-cat="트러블슈팅" href="reading-heap-dumps.html">
-          <span class="w-date">2025 · 09</span>
-          <div class="w-body"><h2>힙덤프 읽는 법 — MAT의 Dominator Tree로 범인 찾기</h2>
-            <p>메모리 누수를 추적할 때 힙덤프를 어떻게 뜨고, Eclipse MAT의 Dominator Tree·Leak Suspects·GC Roots로 어떻게 범인을 좁히는지 실무 순…</p></div>
-          <span class="w-tag">Heap Dump · MAT</span>
-        </a>
         <a class="w-item" data-cat="회고" href="study-spring-vs-fastapi.html">
           <span class="w-date">2025 · 09</span>
           <div class="w-body"><h2>학습 노트: Spring과 FastAPI를 오가며 배운 것</h2>
             <p>두 프레임워크를 실무에서 오가며 느낀 DI·검증·비동기·타입 시스템의 설계 철학 차이를 예제로 비교한다.</p></div>
           <span class="w-tag">Spring · FastAPI</span>
+        </a>
+        <a class="w-item" data-cat="트러블슈팅" href="reading-heap-dumps.html">
+          <span class="w-date">2025 · 09</span>
+          <div class="w-body"><h2>힙덤프 읽는 법 — MAT의 Dominator Tree로 범인 찾기</h2>
+            <p>메모리 누수를 추적할 때 힙덤프를 어떻게 뜨고, Eclipse MAT의 Dominator Tree·Leak Suspects·GC Roots로 어떻게 범인을 좁히는지 실무 순…</p></div>
+          <span class="w-tag">Heap Dump · MAT</span>
         </a>
         <a class="w-item" data-cat="아키텍처" href="adapter-and-backoff.html">
           <span class="w-date">2025 · 08</span>
@@ -142,17 +148,23 @@
             <p>매주 손으로 만들던 Excel 보고서를 pandas·openpyxl로 자동화해 처리시간을 절반으로 줄인 이야기. 자동화가 만든 시간을 어디에 재투자했나.</p></div>
           <span class="w-tag">pandas · openpyxl</span>
         </a>
+        <a class="w-item" data-cat="서평" href="review-k8s-in-action.html">
+          <span class="w-date">2025 · 04</span>
+          <div class="w-body"><h2>서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식</h2>
+            <p>Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.</p></div>
+          <span class="w-tag">서평 · Kubernetes</span>
+        </a>
         <a class="w-item" data-cat="프론트" href="parsing-regex-by-hand.html">
           <span class="w-date">2025 · 04</span>
           <div class="w-body"><h2>정규식을 손으로 파싱하기</h2>
             <p>라이브러리 없이 재귀 하강 파서를 짜며 배운 것. 문법의 우선순위가 어떻게 그대로 함수가 되는가.</p></div>
           <span class="w-tag">TypeScript · 재귀 하강</span>
         </a>
-        <a class="w-item" data-cat="서평" href="review-k8s-in-action.html">
-          <span class="w-date">2025 · 04</span>
-          <div class="w-body"><h2>서평: 쿠버네티스 인 액션 — 선언형이라는 사고방식</h2>
-            <p>Marko Lukša의 쿠버네티스 인 액션을 읽고, 명령형에서 선언형으로 사고를 바꾸는 과정과 Pod·Deployment·Service의 실제 감각을 정리한다.</p></div>
-          <span class="w-tag">서평 · Kubernetes</span>
+        <a class="w-item" data-cat="논문" href="tail-at-scale-analysis.html">
+          <span class="w-date">2025 · 03</span>
+          <div class="w-body"><h2>논문 분석: The Tail at Scale — p99가 서비스를 결정한다</h2>
+            <p>한 요청이 서버 100대를 부채꼴로 호출하면 개별 p99는 전체의 p37이 된다. The Tail at Scale의 산수와 헤지 요청·마이크로 파티션 같은 꼬리 감내 기법을…</p></div>
+          <span class="w-tag">지연시간 · p99</span>
         </a>
         <a class="w-item" data-cat="백엔드" href="fastapi-dependency-injection.html">
           <span class="w-date">2025 · 02</span>
@@ -182,23 +194,23 @@
             <p>EC2 단일 인스턴스 → ALB+ASG → 관리형 서비스로 넓혀가는 단계별 선택 기준을 비용과 함께 정리한다.</p></div>
           <span class="w-tag">AWS · 아키텍처</span>
         </a>
-        <a class="w-item" data-cat="백엔드" href="redis-cache-invalidation.html">
-          <span class="w-date">2024 · 09</span>
-          <div class="w-body"><h2>Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</h2>
-            <p>cache-aside로 읽기를 빠르게 만드는 건 쉽다. 어려운 건 언제 어떻게 캐시를 버리느냐 — TTL, 스탬피드, 이벤트 기반 무효화까지.</p></div>
-          <span class="w-tag">Redis · 캐시</span>
-        </a>
         <a class="w-item" data-cat="보안" href="security-tls-reverse-proxy.html">
           <span class="w-date">2024 · 09</span>
           <div class="w-body"><h2>보안: TLS와 리버스 프록시 — NGINX 앞단에서 끝내기</h2>
             <p>TLS 핸드셰이크의 큰 그림과, NGINX 리버스 프록시에서 종단·헤더 보안·업스트림 보호를 설정하는 실전 구성을 정리한다.</p></div>
           <span class="w-tag">TLS · NGINX</span>
         </a>
-        <a class="w-item" data-cat="데이터·ML" href="feature-engineering-in-practice.html">
-          <span class="w-date">2024 · 06</span>
-          <div class="w-body"><h2>Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</h2>
-            <p>전력 예측 대회에서 원시 기상 데이터 대신 도메인 지식으로 파생 변수를 만들고 다중공선성을 정리한 과정. 모델보다 데이터가 순위를 만든 이야기.</p></div>
-          <span class="w-tag">EDA · 다중공선성</span>
+        <a class="w-item" data-cat="백엔드" href="redis-cache-invalidation.html">
+          <span class="w-date">2024 · 09</span>
+          <div class="w-body"><h2>Redis로 목록을 캐싱할 때 진짜 어려운 건 무효화</h2>
+            <p>cache-aside로 읽기를 빠르게 만드는 건 쉽다. 어려운 건 언제 어떻게 캐시를 버리느냐 — TTL, 스탬피드, 이벤트 기반 무효화까지.</p></div>
+          <span class="w-tag">Redis · 캐시</span>
+        </a>
+        <a class="w-item" data-cat="논문" href="spanner-paper-analysis.html">
+          <span class="w-date">2024 · 08</span>
+          <div class="w-body"><h2>논문 분석: Spanner — 시계로 트랜잭션을 줄 세우다</h2>
+            <p>TrueTime의 불확실성 구간 [earliest, latest]와 commit-wait로 외부 일관성을 보장하는 Spanner의 역발상을,…</p></div>
+          <span class="w-tag">Spanner · TrueTime</span>
         </a>
         <a class="w-item" data-cat="보안" href="security-rate-limiting.html">
           <span class="w-date">2024 · 06</span>
@@ -206,17 +218,23 @@
             <p>토큰 버킷과 슬라이딩 윈도우 알고리즘을 비교하고, Redis INCR·Lua로 원자성을 지킨 분산 레이트 리미터를 NestJS 미들웨어로 구현한 실무 노트.</p></div>
           <span class="w-tag">Rate Limiting · Redis</span>
         </a>
-        <a class="w-item" data-cat="인프라" href="observability-basics.html">
-          <span class="w-date">2024 · 03</span>
-          <div class="w-body"><h2>관측 가능성 — 새벽에 안 깨려면 무엇을 남겨야 하나</h2>
-            <p>장애는 반드시 난다. 중요한 건 빨리 아는 것. 로그·메트릭·트레이스 세 기둥과 구조화 로깅·상관 ID로 디버깅 시간을 줄인 실무 노트.</p></div>
-          <span class="w-tag">로그 · 메트릭</span>
+        <a class="w-item" data-cat="데이터·ML" href="feature-engineering-in-practice.html">
+          <span class="w-date">2024 · 06</span>
+          <div class="w-body"><h2>Feature Engineering 실전 — 불쾌지수가 강수량을 이긴 이유</h2>
+            <p>전력 예측 대회에서 원시 기상 데이터 대신 도메인 지식으로 파생 변수를 만들고 다중공선성을 정리한 과정. 모델보다 데이터가 순위를 만든 이야기.</p></div>
+          <span class="w-tag">EDA · 다중공선성</span>
         </a>
         <a class="w-item" data-cat="보안" href="security-owasp-top10.html">
           <span class="w-date">2024 · 03</span>
           <div class="w-body"><h2>보안: OWASP Top 10 — 백엔드에서 실제로 막는 법</h2>
             <p>OWASP Top 10 중 백엔드가 직접 책임지는 항목(인젝션·인증 실패·접근 통제)을 골라, ORM·검증·권한 체크로 막는 실전 코드를 정리한다.</p></div>
           <span class="w-tag">OWASP · 인젝션</span>
+        </a>
+        <a class="w-item" data-cat="인프라" href="observability-basics.html">
+          <span class="w-date">2024 · 03</span>
+          <div class="w-body"><h2>관측 가능성 — 새벽에 안 깨려면 무엇을 남겨야 하나</h2>
+            <p>장애는 반드시 난다. 중요한 건 빨리 아는 것. 로그·메트릭·트레이스 세 기둥과 구조화 로깅·상관 ID로 디버깅 시간을 줄인 실무 노트.</p></div>
+          <span class="w-tag">로그 · 메트릭</span>
         </a>
         <a class="w-item" data-cat="서평" href="review-clean-architecture.html">
           <span class="w-date">2024 · 01</span>
@@ -228,6 +246,12 @@
 
       <div class="w-group">
         <div class="w-yr">2023</div>
+        <a class="w-item" data-cat="논문" href="memcache-paper-analysis.html">
+          <span class="w-date">2023 · 12</span>
+          <div class="w-body"><h2>논문 분석: Scaling Memcache — 캐시 한 층의 전쟁</h2>
+            <p>Scaling Memcache at Facebook을 읽고 cache-aside의 실제 운영 문제들을 따라간다 — thundering herd를 잡는 lease,…</p></div>
+          <span class="w-tag">Memcache · 캐시</span>
+        </a>
         <a class="w-item" data-cat="서평" href="review-ddd-evans.html">
           <span class="w-date">2023 · 10</span>
           <div class="w-body"><h2>서평: 도메인 주도 설계 — 유비쿼터스 언어의 힘</h2>
@@ -242,9 +266,15 @@
         </a>
         <a class="w-item" data-cat="아키텍처" href="pattern-pipe-filter.html">
           <span class="w-date">2023 · 06</span>
-          <div class="w-body"><h2>아키텍처 패턴 · Pipe &amp;amp; Filter — 무수정 확장의 구조</h2>
+          <div class="w-body"><h2>아키텍처 패턴 · Pipe &amp; Filter — 무수정 확장의 구조</h2>
             <p>크롤러에 신규 소스를 코드 수정 없이 붙일 수 있었던 이유 — 파이프라인 인터페이스, 필터 합성, 어댑터 등록의 실제 구현.</p></div>
-          <span class="w-tag">아키텍처 · Pipe&amp;amp;Filter</span>
+          <span class="w-tag">아키텍처 · Pipe&amp;Filter</span>
+        </a>
+        <a class="w-item" data-cat="논문" href="kafka-paper-analysis.html">
+          <span class="w-date">2023 · 04</span>
+          <div class="w-body"><h2>논문 분석: Kafka — 로그라는 단순한 진실</h2>
+            <p>Kafka: a Distributed Messaging System for Log Processing(NetDB 2011)을 읽고,…</p></div>
+          <span class="w-tag">Kafka · 이벤트</span>
         </a>
         <a class="w-item" data-cat="서평" href="review-poeaa.html">
           <span class="w-date">2023 · 03</span>
@@ -274,6 +304,12 @@
             <p>튜플 버전과 VACUUM의 동작을 pageinspect로 직접 들여다보며, 느려지는 테이블의 원인을 구조에서 찾는다.</p></div>
           <span class="w-tag">PostgreSQL · MVCC</span>
         </a>
+        <a class="w-item" data-cat="논문" href="dynamo-paper-analysis.html">
+          <span class="w-date">2022 · 08</span>
+          <div class="w-body"><h2>논문 분석: Dynamo — 항상 쓸 수 있는 저장소의 대가</h2>
+            <p>장바구니는 절대 멈추면 안 된다는 요구가 컨시스턴트 해싱·벡터 클록·쿼럼·슬로피 쿼럼이라는 설계로 이어지는 과정을 Dynamo 논문(SOSP 2007)을 따라 읽는다.</p></div>
+          <span class="w-tag">Dynamo · 일관성</span>
+        </a>
         <a class="w-item" data-cat="보안" href="security-cors-csrf.html">
           <span class="w-date">2022 · 07</span>
           <div class="w-body"><h2>보안: CORS와 CSRF — 헷갈리는 둘을 정확히</h2>
@@ -286,6 +322,12 @@
             <p>JWT의 구조와 서명 검증을 뜯어보고, NestJS Guard·Strategy로 인증 경계를 한 곳에 모으는 실전 패턴을 예제로 만든다.</p></div>
           <span class="w-tag">JWT · 서명 검증</span>
         </a>
+        <a class="w-item" data-cat="논문" href="gfs-paper-analysis.html">
+          <span class="w-date">2022 · 03</span>
+          <div class="w-body"><h2>논문 분석: GFS — 실패를 전제로 설계하기</h2>
+            <p>구글 파일 시스템 논문(SOSP 2003)을 &#x27;디스크는 반드시 죽는다&#x27;는 설계 전제에서 읽는다. 64MB 청크가 단일 마스터를 살리는 계산, 3중 복제와 재복제,…</p></div>
+          <span class="w-tag">GFS · 분산 스토리지</span>
+        </a>
         <a class="w-item" data-cat="백엔드" href="spring-transaction-propagation.html">
           <span class="w-date">2022 · 02</span>
           <div class="w-body"><h2>Spring 트랜잭션 전파 — REQUIRES_NEW는 언제 롤백되는가</h2>
@@ -296,6 +338,12 @@
 
       <div class="w-group">
         <div class="w-yr">2021</div>
+        <a class="w-item" data-cat="논문" href="mapreduce-paper-analysis.html">
+          <span class="w-date">2021 · 12</span>
+          <div class="w-body"><h2>논문 분석: MapReduce — 큰 데이터를 작게 쪼개는 법</h2>
+            <p>구글의 MapReduce 논문(OSDI 2004)을 크롤링 데이터 집계가 커질 때의 고민에서 출발해 읽는다. map·shuffle·reduce 3단계, 데이터 지역성,…</p></div>
+          <span class="w-tag">MapReduce · 분산처리</span>
+        </a>
         <a class="w-item" data-cat="아키텍처" href="pattern-template-strategy.html">
           <span class="w-date">2021 · 10</span>
           <div class="w-body"><h2>아키텍처 패턴 · Template Method와 Strategy — 코드 40%를 지운 조합</h2>
@@ -307,6 +355,12 @@
           <div class="w-body"><h2>서평: Clean Code — 규칙보다 태도</h2>
             <p>Robert C. Martin의 Clean Code를 다시 읽으며, 규칙 목록이 아니라 &#x27;고치며 떠나기&#x27;라는 태도로서의 클린코드를 정리한다.</p></div>
           <span class="w-tag">서평 · 클린코드</span>
+        </a>
+        <a class="w-item" data-cat="논문" href="resnet-paper-analysis.html">
+          <span class="w-date">2021 · 06</span>
+          <div class="w-body"><h2>논문 분석: ResNet — 깊이의 역설을 지름길로 풀다</h2>
+            <p>층을 쌓을수록 오히려 나빠지던 degradation의 역설과, 그것을 덧셈 한 줄 H(x)=F(x)+x로 푼 residual learning을 원 논문과 토이 계산으로 확인…</p></div>
+          <span class="w-tag">ResNet · CNN</span>
         </a>
         <a class="w-item" data-cat="아키텍처" href="pattern-layered-hexagonal.html">
           <span class="w-date">2021 · 05</span>

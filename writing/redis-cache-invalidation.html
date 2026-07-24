@@ -23,6 +23,38 @@
 <script>
   (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
 </script>
+<style>
+/* 캐시 스탬피드 시뮬레이터 위젯 전용 (pw-st- 접두) */
+.pw-st-modes{display:flex;gap:var(--sp-2) var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-3)}
+.pw-st-mode{display:inline-flex;align-items:center;gap:var(--sp-1);font-size:var(--t--1);color:var(--ink-2);cursor:pointer}
+.pw-st-mode input{accent-color:var(--accent);margin:0}
+.pw-st-controls{display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--sp-4)}
+.pw-st-ctl{display:flex;flex-direction:column;gap:var(--sp-1);flex:1 1 12rem;min-width:0;font-size:var(--t--1);color:var(--ink-2)}
+.pw-st-ctl b{color:var(--ink);font-variant-numeric:tabular-nums}
+.pw-st-ctl input[type="range"]{width:100%}
+.pw-st-controls button{flex:none}
+.pw-st-dots{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--sp-2);min-height:10px}
+.pw-st-dot{width:10px;height:10px;border-radius:50%;background:var(--line-2);flex:none}
+.pw-st-dot.db{background:var(--accent)}
+.pw-st-dot.wait{background:var(--ink-3)}
+.pw-st-dot.hit{background:var(--teal)}
+.pw-st-legend{display:flex;gap:var(--sp-2) var(--sp-3);flex-wrap:wrap;font-family:var(--mono);font-size:0.66rem;color:var(--ink-3);margin-bottom:var(--sp-4)}
+.pw-st-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:0.35em;background:var(--line-2)}
+.pw-st-legend i.db{background:var(--accent)}
+.pw-st-legend i.wait{background:var(--ink-3)}
+.pw-st-legend i.hit{background:var(--teal)}
+.pw-st-bars{display:grid;gap:var(--sp-3)}
+.pw-st-row{display:grid;gap:var(--sp-1);font-size:var(--t--1);color:var(--ink-2)}
+.pw-st-row .lab{display:flex;justify-content:space-between;gap:var(--sp-2)}
+.pw-st-row b{color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pw-st-track{height:0.85rem;background:var(--surface);border:1px solid var(--line-2);border-radius:100px;overflow:hidden}
+.pw-st-fill{height:100%;width:0;background:var(--accent);border-radius:100px;transition:width .25s var(--ease)}
+.pw-st-fill.pw-st-teal{background:var(--teal)}
+.pw-st-note{margin-top:var(--sp-3);margin-bottom:0;font-size:var(--t--1);color:var(--ink-2);line-height:1.6}
+.pw-st-assump{margin-top:var(--sp-2);margin-bottom:0;font-family:var(--mono);font-size:0.66rem;color:var(--ink-3)}
+@keyframes pw-st-pop{from{opacity:.2}to{opacity:1}}
+.pw-st-flash{animation:pw-st-pop .35s var(--ease)}
+</style>
 </head>
 <body>
 <a class="skip" href="#body">본문으로 건너뛰기</a>
@@ -83,6 +115,43 @@
 <h2>스탬피드 — 캐시가 동시에 만료될 때</h2>
 <p>인기 키의 TTL이 만료되는 순간, 수백 요청이 <b>동시에 DB로 몰립니다</b>(cache stampede). 방어는 두 가지 — 재계산을 <b>단일 요청만</b> 하도록 짧은 락을 걸거나, 만료 직전에 <b>미리 갱신</b>(probabilistic early recomputation)하는 것. 저는 핫 키에 락 방식을, 나머지에 TTL+<span class="term" title="만료 시간에 임의의 편차를 섞어, 여러 키가 같은 순간에 몰려 만료되지 않도록 흩뜨리는 기법">지터</span>를 씁니다.</p>
 
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">캐시 스탬피드 시뮬레이터</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-st-modes" role="radiogroup" aria-label="방어 전략 선택">
+      <label class="pw-st-mode"><input type="radio" name="pw-st-mode" id="pw-st-mode-none" value="none" checked>보호 없음</label>
+      <label class="pw-st-mode"><input type="radio" name="pw-st-mode" id="pw-st-mode-lock" value="lock">잠금(단일 재계산)</label>
+      <label class="pw-st-mode"><input type="radio" name="pw-st-mode" id="pw-st-mode-soft" value="soft">조기 갱신(soft TTL)</label>
+    </div>
+    <div class="pw-st-controls">
+      <label class="pw-st-ctl">
+        <span>동시 요청 <b id="pw-st-n-val">20</b>개</span>
+        <input type="range" id="pw-st-n" min="1" max="50" step="1" value="20" aria-label="동시 요청 수">
+      </label>
+      <button type="button" class="primary" id="pw-st-expire">TTL 만료</button>
+    </div>
+    <div class="pw-st-dots" id="pw-st-dots" aria-hidden="true"></div>
+    <div class="pw-st-legend">
+      <span><i class="db"></i>DB 직행</span>
+      <span><i class="wait"></i>락 대기 후 캐시</span>
+      <span><i class="hit"></i>캐시 즉시 응답</span>
+    </div>
+    <div class="pw-st-bars">
+      <div class="pw-st-row">
+        <span class="lab"><span>DB로 간 쿼리</span><b id="pw-st-q-val">–</b></span>
+        <div class="pw-st-track"><div class="pw-st-fill" id="pw-st-qbar"></div></div>
+      </div>
+      <div class="pw-st-row">
+        <span class="lab"><span>평균 대기시간</span><b id="pw-st-w-val">–</b></span>
+        <div class="pw-st-track"><div class="pw-st-fill pw-st-teal" id="pw-st-wbar"></div></div>
+      </div>
+    </div>
+    <p class="pw-st-note" id="pw-st-note" aria-live="polite">[TTL 만료]를 눌러 인기 키가 사라지는 순간을 재현해 보세요. 모드와 동시 요청 수를 바꾸면 결과가 어떻게 달라지는지 비교할 수 있습니다.</p>
+    <p class="pw-st-assump">가정: DB 단건 조회 100ms · DB 동시 처리 5개 · 락 재시도 간격 20ms · 캐시 읽기 2ms</p>
+  </div>
+  <p class="pw-cap">같은 50개의 요청도 전략에 따라 DB에는 50번 갈 수도, 딱 1번만 갈 수도 있습니다 — 모드를 바꿔가며 [TTL 만료]를 눌러 보세요</p>
+</div>
+
 <h2>이벤트 기반 무효화</h2>
 <p>TTL로 못 버티는 <span class="term" title="캐시의 값과 원본 데이터가 서로 어긋나지 않고 일치하는 상태">정합성</span>이 필요하면, 데이터가 바뀌는 <b>바로 그 순간</b> 캐시를 지웁니다. 쓰기 경로에서 관련 키를 <code>DEL</code>하거나, 도메인 이벤트를 구독해 무효화 워커가 처리하게 합니다. 핵심은 <b>무효화 지점을 한곳에 모으는 것</b> — 쓰기 로직 여기저기 <code>redis.del</code>이 흩어지면, 그게 바로 다음 버그의 씨앗입니다.</p>
 <div class="callout"><span class="mark">*</span><p>캐시는 성능을 위해 <b>정합성을 조금 파는</b> 거래입니다. 얼마나 낡아도 되는지를 도메인에 먼저 물어야, 무효화 전략이 정해집니다. 기술이 아니라 요구사항의 문제입니다.</p></div>
@@ -96,7 +165,7 @@
   </article>
 
   <nav class="post-nav" aria-label="글 이동">
-    <a class="pn-prev" href="security-rate-limiting.html"><span class="pn-label">이전 글</span><span class="pn-title">보안: 레이트 리미팅 — 미들웨어로 그은 방어선</span><span class="pn-date">2024 · 06</span></a>
+    <a class="pn-prev" href="spanner-paper-analysis.html"><span class="pn-label">이전 글</span><span class="pn-title">논문 분석: Spanner — 시계로 트랜잭션을 줄 세우다</span><span class="pn-date">2024 · 08</span></a>
     <a class="pn-next" href="security-tls-reverse-proxy.html"><span class="pn-label">다음 글</span><span class="pn-title">보안: TLS와 리버스 프록시 — NGINX 앞단에서 끝내기</span><span class="pn-date">2024 · 09</span></a>
   </nav>
 </main>
@@ -107,5 +176,93 @@
 
 <script src="../assets/js/site.js" defer></script>
 <script src="../assets/js/article.js" defer></script>
+<script>
+(function(){
+"use strict";
+function $(id){return document.getElementById(id);}
+var nEl=$("pw-st-n"),nVal=$("pw-st-n-val"),dotsEl=$("pw-st-dots"),
+    qBar=$("pw-st-qbar"),qVal=$("pw-st-q-val"),wBar=$("pw-st-wbar"),wVal=$("pw-st-w-val"),
+    noteEl=$("pw-st-note"),btn=$("pw-st-expire"),
+    modeEls=[$("pw-st-mode-none"),$("pw-st-mode-lock"),$("pw-st-mode-soft")];
+if(!nEl||!nVal||!dotsEl||!qBar||!qVal||!wBar||!wVal||!noteEl||!btn||!modeEls[0]||!modeEls[1]||!modeEls[2])return;
+
+// 결정적 모형의 상수 (위젯 하단 '가정'과 동일)
+var D=100;      // DB 단건 조회 시간 (ms)
+var PAR=5;      // DB가 동시에 처리할 수 있는 쿼리 수
+var RETRY=20;   // 락 대기 중 재시도 간격 (ms)
+var CACHE=2;    // 캐시 읽기 시간 (ms)
+var QMAX=50;    // 쿼리 막대 스케일 (슬라이더 최댓값)
+var WMAX=600;   // 대기시간 막대 스케일 (ms) — 최악 케이스 550ms를 덮는 값
+var ran=false;
+
+function mode(){
+  for(var i=0;i<modeEls.length;i++){if(modeEls[i].checked)return modeEls[i].value;}
+  return "none";
+}
+
+// 모드별 결정적 계산: DB 쿼리 수 q, 평균 대기시간 avg(ms), 점 색 cls, 설명 note
+function calc(n,m){
+  if(m==="none"){
+    // n개 전부 DB로. DB는 PAR개씩 '파도'로 처리 → k번째 파도는 k*D ms에 끝난다.
+    var waves=Math.ceil(n/PAR),sum=0,left=n,k,sz;
+    for(k=1;k<=waves;k++){sz=Math.min(PAR,left);sum+=sz*k*D;left-=sz;}
+    return {q:n,avg:sum/n,cls:"db",first:false,
+      note:(n===1?"요청 1개가 그대로 DB로 갑니다. ":"요청 "+n+"개가 하나도 걸러지지 않고 DB로 직행합니다. ")
+        +(waves>1
+          ?"DB는 한 번에 "+PAR+"개까지만 처리하니 "+waves+"번의 파도로 나뉘고, 뒤쪽 파도일수록 앞 파도가 끝나길 기다려야 해서 평균이 가파르게 늘어납니다."
+          :"아직 DB가 한 번에 감당하는 "+PAR+"개 이내라 서로 기다릴 일이 없지만, "+PAR+"개를 넘어서는 순간부터 평균이 가파르게 늘어납니다.")};
+  }
+  if(m==="lock"){
+    // 1개만 락을 잡고 DB에 다녀온다. 나머지는 D ms 뒤 재시도 한 번에 캐시를 읽는다.
+    var avg=(D+(n-1)*(D+RETRY+CACHE))/n;
+    return {q:1,avg:avg,cls:"wait",first:true,
+      note:(n===1
+        ?"요청이 하나뿐이라 그 요청이 직접 락을 잡고 DB에 다녀옵니다. 동시 요청을 늘려 보면, 늘어난 몫이 DB가 아니라 캐시로 흡수되는 걸 볼 수 있습니다."
+        :"락을 잡은 1개만 DB에 다녀오고, 나머지 "+(n-1)+"개는 잠깐 기다렸다 채워진 캐시를 읽습니다. DB 입장에선 쿼리 1번 — 다만 만료 순간의 요청들은 재계산이 끝날 때까지 함께 기다립니다.")};
+  }
+  // soft TTL: 만료 전에 백그라운드로 미리 1번 갱신 → 만료 순간에도 캐시가 항상 차 있다.
+  return {q:1,avg:CACHE,cls:"hit",first:false,
+    note:"만료가 오기 전에 백그라운드로 1번 미리 갱신해 뒀으므로, 만료 순간에도 "+(n===1?"이 요청은":"요청 "+n+"개가 전부")+" 캐시에서 즉시 응답합니다. 재계산 비용을 사용자 요청 경로 밖으로 치운 셈입니다."};
+}
+
+function drawDots(n,cls,firstDb){
+  var frag=document.createDocumentFragment(),i,d;
+  for(i=0;i<n;i++){
+    d=document.createElement("span");
+    d.className="pw-st-dot"+(cls?" "+((firstDb&&i===0)?"db":cls):"");
+    frag.appendChild(d);
+  }
+  dotsEl.textContent="";
+  dotsEl.appendChild(frag);
+}
+
+function fmtMs(v){return (v>=100?Math.round(v):Math.round(v*10)/10)+"ms";}
+
+function run(){
+  ran=true;
+  var n=parseInt(nEl.value,10),r=calc(n,mode());
+  drawDots(n,r.cls,r.first);
+  qBar.style.width=(r.q/QMAX*100)+"%";
+  wBar.style.width=(Math.min(r.avg,WMAX)/WMAX*100)+"%";
+  qVal.textContent=r.q+"번";
+  wVal.textContent=fmtMs(r.avg);
+  noteEl.textContent=r.note;
+  dotsEl.classList.remove("pw-st-flash");
+  void dotsEl.offsetWidth; // reflow로 애니메이션 재시작
+  dotsEl.classList.add("pw-st-flash");
+}
+
+nEl.addEventListener("input",function(){
+  nVal.textContent=nEl.value;
+  if(ran){run();}else{drawDots(parseInt(nEl.value,10),"",false);}
+});
+for(var i=0;i<modeEls.length;i++){
+  modeEls[i].addEventListener("change",function(){if(ran)run();});
+}
+btn.addEventListener("click",run);
+
+drawDots(parseInt(nEl.value,10),"",false); // 초기: 중립색 점 미리보기
+})();
+</script>
 </body>
 </html>

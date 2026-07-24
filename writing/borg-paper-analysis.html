@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 분석: Borg — 쿠버네티스의 아버지 — 안성진</title>
+<meta name="description" content="Large-scale cluster management at Google with Borg를 읽고 Pod의 원형 alloc, 우선순위·선점, best-fit 빈패킹, requests/limits로 이어진 자원 회수를 미니 코드와 시뮬레이터로 풀어본다.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="논문 분석: Borg — 쿠버네티스의 아버지">
+<meta property="og:description" content="Large-scale cluster management at Google with Borg를 읽고 Pod의 원형 alloc, 우선순위·선점, best-fit 빈패킹, requests/limits로 이어진 자원 회수를 미니 코드와 시뮬레이터로 풀어본다.">
+<meta property="og:image" content="https://lamgul.github.io/assets/img/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"논문 분석: Borg — 쿠버네티스의 아버지","datePublished":"2025-12-09","dateModified":"2025-12-09","inLanguage":"ko","description":"Large-scale cluster management at Google with Borg를 읽고 Pod의 원형 alloc, 우선순위·선점, best-fit 빈패킹, requests/limits로 이어진 자원 회수를 미니 코드와 시뮬레이터로 풀어본다.","keywords":"Borg · 스케줄링 · 논문","image":"https://lamgul.github.io/assets/img/og.png","mainEntityOfPage":"https://lamgul.github.io/writing/borg-paper-analysis.html","author":{"@type":"Person","name":"안성진","url":"https://lamgul.github.io/about.html"}}
+</script>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/project.css">
+<link rel="stylesheet" href="../assets/css/writing.css">
+<link rel="stylesheet" href="../assets/css/article.css">
+<style>
+/* Borg 빈패킹 위젯 전용 (pw-borg-) — 토큰만 사용 */
+.pw-borg-controls{display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;margin-bottom:var(--sp-3)}
+.pw-borg-sep{width:1px;height:1.35em;background:var(--line-2);flex:none}
+.pw-borg-legend{display:flex;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:0.68rem;color:var(--ink-3);margin-bottom:var(--sp-2)}
+.pw-borg-legend i{display:inline-block;width:0.9em;height:0.9em;border-radius:2px;margin-right:0.35em;vertical-align:-0.1em}
+.pw-borg-li-prod i{background:var(--accent)}
+.pw-borg-li-batch i{background:var(--bg-elev);border:1px dashed var(--teal)}
+.pw-borg-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.5rem;margin-bottom:var(--sp-3)}
+.pw-borg-machine{min-width:0}
+.pw-borg-mhead{display:flex;justify-content:space-between;align-items:baseline;gap:0.3em;flex-wrap:wrap;font-family:var(--mono);font-size:0.66rem;color:var(--ink-3);margin-bottom:0.3rem}
+.pw-borg-mname{color:var(--ink);font-weight:600}
+.pw-borg-col{height:166px;border:1px solid var(--line-2);border-radius:var(--radius);background:var(--surface);display:flex;flex-direction:column-reverse;padding:2px;gap:2px;overflow:hidden}
+.pw-borg-task{flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.64rem;border-radius:3px;min-width:0;overflow:hidden;white-space:nowrap;transition:opacity .4s var(--ease),transform .4s var(--ease)}
+.pw-borg-s2{height:30px}
+.pw-borg-s3{height:45px}
+.pw-borg-s4{height:60px}
+.pw-borg-s5{height:75px}
+.pw-borg-task-prod{background:var(--accent);color:var(--on-accent)}
+.pw-borg-task-batch{background:var(--bg-elev);border:1px dashed var(--teal);color:var(--teal)}
+.pw-borg-task-new{animation:pw-borg-pop .35s var(--ease-out)}
+.pw-borg-evict{opacity:0;transform:translateX(14px)}
+@keyframes pw-borg-pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.pw-borg-queuewrap{display:flex;align-items:flex-start;gap:0.6rem;margin-bottom:var(--sp-3);font-family:var(--mono);font-size:0.72rem}
+.pw-borg-qhead{flex:none;color:var(--ink-3);letter-spacing:0.08em;padding-top:0.25em}
+.pw-borg-queue{display:flex;flex-wrap:wrap;gap:0.35rem;min-height:1.9em}
+.pw-borg-qcard{border:1px dashed var(--line-2);border-radius:100px;padding:0.15em 0.6em;color:var(--ink-2);background:var(--bg)}
+.pw-borg-q-prod{border-style:solid;border-color:var(--accent);color:var(--accent)}
+.pw-borg-qempty{color:var(--ink-3)}
+.pw-borg-l-place{color:var(--teal)}
+.pw-borg-l-evict{color:var(--accent);font-weight:600}
+.pw-borg-l-wait{color:var(--ink-3)}
+.pw-borg-l-requeue{color:var(--ink-2)}
+@media (max-width:420px){.pw-borg-col{height:146px}.pw-borg-s2{height:26px}.pw-borg-s3{height:39px}.pw-borg-s4{height:52px}.pw-borg-s5{height:65px}.pw-borg-task{font-size:0.56rem}}
+</style>
+<script>
+  (function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else document.documentElement.removeAttribute("data-theme");}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#body">본문으로 건너뛰기</a>
+
+<header class="proj-header" data-header>
+  <div class="wrap header-inner">
+    <a class="back-link" href="index.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="brand-mini">글 목록</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="crumb">writing / borg-paper-analysis</span>
+    <button class="icon-btn theme-toggle" data-theme-toggle aria-label="테마 전환" style="margin-left:var(--sp-3)">
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="post-hero">
+    <p class="eyebrow">분석 · 논문</p>
+    <h1>논문 분석: Borg — 쿠버네티스의 아버지</h1>
+    <div class="post-meta">
+      <span>2025년 12월</span><span class="dot-sep">•</span>
+      <span>Borg · 스케줄링 · 논문</span>
+    </div>
+  </section>
+  <article class="post-body" id="body">
+    <p class="lead">쿠버네티스를 쓰다 보면 이상하게 구체적인 질문들이 남습니다. Pod는 왜 컨테이너 하나가 아니라 "묶음"인가, requests와 limits는 왜 굳이 둘로 나뉘어 있나, 내 batch 잡은 왜 어느 날 갑자기 쫓겨나는가. 이 질문들의 답은 쿠버네티스 문서가 아니라 <b>2015년 EuroSys에 실린 논문 한 편</b>에 있습니다. 구글이 십 년 넘게 사내에서만 굴리던 클러스터 매니저 <b>Borg</b>를 처음으로 상세히 공개한 논문 — 쿠버네티스의 아버지를 읽어봤습니다.</p>
+
+<div class="paper-cite">
+  <span class="pc-head">출처</span>
+  <p class="pc-title">Large-scale cluster management at Google with Borg</p>
+  <p class="pc-meta">Abhishek Verma, Luis Pedrosa, Madhukar Korupolu, David Oppenheimer, Eric Tune, John Wilkes · EuroSys 2015</p>
+  <p class="pc-links"><a href="https://research.google/pubs/large-scale-cluster-management-at-google-with-borg/" target="_blank" rel="noopener">공식 페이지 ↗</a> · <a href="https://storage.googleapis.com/gweb-research2023-media/pubtools/pdf/43438.pdf" target="_blank" rel="noopener">공식 PDF ↗</a></p>
+</div>
+
+<div class="concept">
+  <span class="c-head">먼저 짚고 가기</span>
+  <dl>
+    <dt>셀<span class="en">cell</span></dt>
+    <dd>Borg가 하나의 단위로 관리하는 머신 묶음입니다. 수천~수만 대의 머신이 셀 하나에 속하고, 사용자는 머신이 아니라 셀에 작업을 제출합니다. 쿠버네티스의 "클러스터"에 해당합니다.</dd>
+    <dt>잡과 태스크<span class="en">job / task</span></dt>
+    <dd>사용자가 제출하는 작업 단위가 잡이고, 잡을 이루는 실행 단위 하나하나가 태스크입니다. "웹서버 100개 띄워줘"가 잡이라면, 그 100개 각각이 태스크입니다.</dd>
+    <dt>alloc</dt>
+    <dd>머신 위에 미리 잡아 두는 자원 울타리입니다. 이 울타리 안에 여러 태스크를 함께 넣어 같은 운명으로 묶을 수 있습니다. 쿠버네티스 Pod의 직계 조상입니다.</dd>
+    <dt>선점<span class="en">preemption</span></dt>
+    <dd>우선순위 높은 작업이 들어갈 자리가 없을 때, 낮은 작업을 강제로 내리고 그 자리를 차지하는 것입니다. 쫓겨난 작업은 큐로 돌아가 다른 자리를 기다립니다.</dd>
+    <dt>자원 회수<span class="en">resource reclamation</span></dt>
+    <dd>작업이 "청구"만 해 놓고 실제로 안 쓰는 자원을 스케줄러가 걷어서, 죽어도 되는 낮은 우선순위 작업에게 빌려주는 것입니다. 이 글의 후반부 주인공입니다.</dd>
+  </dl>
+</div>
+
+<h2>1. 만 대짜리 셀 하나, 그 위의 두 부류</h2>
+<p>Borg의 스케일부터 감을 잡고 시작하겠습니다. 논문 2.2절에 따르면 테스트용 셀을 제외한 셀 하나의 중앙값 크기가 <b>약 1만 대</b>이고, 그보다 훨씬 큰 셀도 있습니다. 셀은 두뇌인 <b>Borgmaster</b>와 머신마다 붙어 있는 에이전트 <b>Borglet</b>으로 관리됩니다. Borgmaster는 논리적으로는 프로세스 하나지만 실제로는 5중으로 복제되어 있고(논문 3.1절), 그중 선출된 리더가 셀 전체의 상태를 쥐고 결정을 내립니다. 쿠버네티스의 컨트롤 플레인과 kubelet 구도가 그대로 겹쳐 보이실 겁니다.</p>
+<p>이 셀 위에서 도는 워크로드는 크게 두 부류입니다. 하나는 <b>prod</b> — Gmail, Google Docs, 웹 검색처럼 사용자를 직접 마주보는, 지연에 민감하고 오래 사는 서비스들입니다(논문 2.1절). 다른 하나는 <b>non-prod</b>, 즉 몇 초에서 며칠까지 도는 batch 작업들입니다. 논문의 거의 모든 설계 결정은 이 질문 하나로 수렴합니다. <b>성격이 정반대인 두 부류를 같은 머신에 태우면서, 어떻게 prod의 응답 속도를 지키고 batch로 남는 자원을 긁어 쓸 것인가.</b> 따로 태우면 안전하지만 낭비가 크고, 같이 태우면 알뜰하지만 간섭이 생깁니다. Borg는 같이 태우는 쪽을 골랐고, 그 대가를 치르는 장치들이 이 논문의 알맹이입니다.</p>
+
+<h2>2. alloc — Pod라는 이름이 붙기 전</h2>
+<p>쿠버네티스를 처음 배울 때 가장 어색한 개념이 Pod였습니다. 컨테이너를 바로 띄우면 될 텐데 왜 "컨테이너 묶음"이라는 한 겹이 더 있을까. 답이 논문 2.4절에 있습니다. Borg의 <b>alloc</b>은 머신 위에 예약해 두는 자원 울타리로, 그 안에 여러 태스크를 함께 넣을 수 있습니다. 논문이 드는 예시가 바로 웹서버 태스크 옆에 로그를 수거해 저장소로 보내는 <b>logsaver</b> 태스크를 붙이는 것입니다. 오늘날 사이드카 패턴이라 부르는 그 구도가 2015년 논문에 이미 관용구로 등장합니다.</p>
+<p>울타리를 한 겹 두면 얻는 것이 분명합니다. 함께 있어야 의미 있는 태스크들이 <b>반드시 같은 머신에, 같은 자원 안에</b> 배치되고, 안의 태스크가 재시작되는 동안에도 자원은 울타리째 예약되어 있으니 자리를 잃지 않습니다. 그리고 논문 8.2절에서 저자들이 직접 밝힙니다 — 쿠버네티스에서 alloc에 해당하는 것이 <b>Pod</b>이고, 늘 같은 머신에 함께 스케줄되어 자원을 나눠 쓰는 컨테이너들의 자원 봉투라는 점에서 "발상은 같다"고요. Pod가 "왜 묶음인가"에 대한 가장 정확한 답은 쿠버네티스 문서가 아니라 이 논문의 2.4절과 8.2절인 셈입니다.</p>
+
+<h2>3. 우선순위 밴드와 선점 — prod는 밀리지 않는다</h2>
+<p>자리가 모자랄 때 누가 양보하는가. Borg의 답은 우선순위입니다. 논문 2.5절은 우선순위를 겹치지 않는 <b>밴드(band)</b>로 끊어 씁니다 — monitoring, production, batch, 그리고 best effort. 높은 우선순위 태스크는 낮은 태스크를 <b>선점(preempt)</b>할 수 있습니다. 쫓겨난 태스크는 죽고, 대기열로 돌아가 셀 어딘가의 다른 자리를 기다립니다.</p>
+<p>여기서 논문이 공들여 설명하는 디테일이 하나 있습니다. 선점이 선점을 부르는 <b>연쇄(preemption cascade)</b>입니다. prod끼리 서로를 쫓아내기 시작하면 쫓겨난 prod가 또 다른 prod를 쫓아내며 셀 전체가 출렁입니다. 그래서 Borg는 <b>production 밴드 안에서는 서로 선점을 금지</b>합니다(논문 2.5절). 선점은 언제나 계급을 가로질러 아래로만 흐릅니다.</p>
+<pre class="code"><span class="c"># 논문 2.5절 — 우선순위 밴드와 선점 규칙</span>
+BANDS = [<span class="s">"monitoring"</span>, <span class="s">"production"</span>, <span class="s">"batch"</span>, <span class="s">"best-effort"</span>]
+
+<span class="k">def</span> <span class="f">can_preempt</span>(attacker, victim):
+    <span class="c"># prod 밴드끼리는 서로 선점 금지 — 선점이 선점을 부르는 연쇄를 끊는다</span>
+    <span class="k">if</span> band(attacker) == <span class="s">"production"</span> <span class="k">and</span> band(victim) == <span class="s">"production"</span>:
+        <span class="k">return</span> <span class="k">False</span>
+    <span class="k">return</span> priority(attacker) &gt; priority(victim)</pre>
+<div class="callout"><span class="mark">*</span><p>쿠버네티스의 <b>PriorityClass</b>와 선점 로직이 이 밴드의 직계입니다. batch성 워크로드에는 낮은 priorityClassName을 주되, <b>언제 쫓겨나도 다시 시작하면 그만이도록 멱등하게</b> 설계하세요. Borg의 batch가 그랬듯, "죽어도 되는 작업"이라고 선언하는 대가로 남는 자원을 쓰는 것이 이 계약의 본질입니다.</p></div>
+
+<h2>4. 스케줄러 — 가능성 검사, 점수, 그리고 빈패킹</h2>
+<p>이제 배치 그 자체입니다. 논문 3.2절이 설명하는 Borg 스케줄러는 두 단계로 움직입니다. 먼저 <b>가능성 검사(feasibility checking)</b> — 태스크가 요구하는 자원이 남아 있고 제약 조건(커널 버전, 아키텍처, 외부 IP 필요 여부 같은 것)을 만족하는 머신만 추립니다. 그다음 <b>점수 매기기(scoring)</b>로 후보 중 한 대를 고릅니다.</p>
+<p>점수를 어떻게 매길 것인가가 곧 <span class="term" title="크기가 제각각인 물건들을 최소한의 상자에 눌러 담는 고전 최적화 문제">빈패킹</span> 전략입니다. 논문은 두 극단을 비교합니다. <b>best fit</b>은 남는 공간이 가장 작은 머신에 눌러 담아 빈 머신을 최대한 확보하지만, 꽉 채운 머신에서는 부하가 조금만 튀어도 갈 곳이 없고, 남는 틈에 얹혀살아야 하는 batch에게도 불리합니다. 반대편의 <b>E-PVM 계열(사실상 worst fit)</b>은 부하를 골고루 흩어 스파이크에는 강하지만 조각난 자투리 공간이 늘어납니다. Borg가 실제로 쓰는 것은 둘의 절충 — 어느 한 자원만 바닥나서 나머지가 <b>발이 묶이는(stranded)</b> 상황을 줄이는 하이브리드 점수이고, 논문은 이것이 best fit보다 3~5% 나은 패킹 효율을 냈다고 보고합니다(논문 3.2절).</p>
+<pre class="code"><span class="c">// 논문 3.2절 — 스케줄링 = 가능성 검사(feasibility) 후 점수 매기기(scoring)</span>
+<span class="k">function</span> <span class="f">schedule</span>(task, machines) {
+  <span class="c">// 1단계: 자원이 남고 제약(커널·아키텍처·IP 등)을 만족하는 머신만 추린다</span>
+  <span class="k">const</span> feasible = machines.filter(m =&gt;
+    m.free.cpu &gt;= task.req.cpu &amp;&amp; m.free.mem &gt;= task.req.mem &amp;&amp; m.meets(task.constraints));
+  <span class="k">if</span> (feasible.length === 0) <span class="k">return</span> preemptOrWait(task);  <span class="c">// 자리가 없으면 선점 검토</span>
+  <span class="c">// 2단계: 점수. best fit은 빽빽하게, E-PVM(worst fit)은 골고루.</span>
+  <span class="c">// Borg는 '발이 묶이는(stranded)' 자원을 줄이는 하이브리드 점수를 쓴다</span>
+  <span class="k">return</span> feasible.reduce((best, m) =&gt; score(m, task) &gt; score(best, task) ? m : best);
+}</pre>
+<p>같은 절의 현실적인 디테일 하나가 재미있습니다. 태스크 시작 지연의 중앙값은 <b>약 25초</b>인데, 그중 <b>약 80%가 패키지 설치</b>에 든다는 것(논문 3.2절). 그래서 점수 함수는 필요한 패키지가 이미 깔린 머신을 선호합니다 — 컨테이너 이미지 레이어 캐시가 있는 노드를 선호하는 오늘날의 감각과 정확히 같은 이유입니다. 만 대 셀에서 이 계산을 버티기 위한 점수 캐싱, 동종 태스크 묶음(equivalence class), 후보 무작위 추림 같은 장치는 논문 3.4절에 있습니다.</p>
+<p>글로는 여기까지입니다. 이제 직접 스케줄러가 되어 보시죠. 아래 보드는 용량 10u짜리 머신 4대입니다. 작업 카드의 종류(prod/batch)와 크기를 골라 제출하면 best-fit으로 배치되고, 자리가 없을 때 prod를 제출하면 <b>batch가 선점되어 대기열로 밀려나는</b> 과정이 로그로 남습니다. "혼잡 프리셋"을 누른 뒤 prod 3u를 제출해 보세요.</p>
+
+<div class="pw">
+  <div class="pw-bar"><span class="dot"></span><span class="ttl">Borg 미니 스케줄러 — 머신 4대 빈패킹 보드</span><span class="badge">직접 조작해 보세요</span></div>
+  <div class="pw-body">
+    <div class="pw-borg-controls">
+      <button type="button" id="pw-borg-type-prod" class="on">prod</button>
+      <button type="button" id="pw-borg-type-batch">batch</button>
+      <span class="pw-borg-sep"></span>
+      <button type="button" id="pw-borg-size-2" class="on">2u</button>
+      <button type="button" id="pw-borg-size-3">3u</button>
+      <button type="button" id="pw-borg-size-5">5u</button>
+      <span class="pw-borg-sep"></span>
+      <button type="button" id="pw-borg-submit" class="primary">제출</button>
+      <button type="button" id="pw-borg-preset">혼잡 프리셋</button>
+      <button type="button" id="pw-borg-reset">초기화</button>
+    </div>
+    <div class="pw-borg-legend">
+      <span class="pw-borg-li-prod"><i></i>prod — 선점하는 쪽</span>
+      <span class="pw-borg-li-batch"><i></i>batch — 선점당하면 재큐잉</span>
+    </div>
+    <div class="pw-borg-board" id="pw-borg-board" aria-label="머신 4대 배치 현황"></div>
+    <div class="pw-borg-queuewrap">
+      <span class="pw-borg-qhead">대기열</span>
+      <div class="pw-borg-queue" id="pw-borg-queue"></div>
+    </div>
+    <div class="pw-log" id="pw-borg-log" aria-live="polite"></div>
+  </div>
+  <p class="pw-cap">머신 4대 × 10u. 자리가 없을 때 prod를 제출하면 batch가 선점되어 대기열로 밀려납니다.</p>
+</div>
+
+<p>몇 번 눌러 보면 논문의 문장들이 손에 잡힙니다. best-fit이라 빈 머신은 끝까지 아껴지고, 선점은 "쫓아낼 batch가 가장 적은 머신"을 골라 피해를 최소화하며, 쫓겨난 batch는 죽는 게 아니라 <b>대기열로 돌아가 자리가 나기를 기다립니다</b>. prod끼리는 서로 쫓아내지 못하므로, prod로만 꽉 채운 뒤 prod를 또 제출하면 선점 없이 대기열로 갑니다 — 3장의 연쇄 방지 규칙 그대로입니다.</p>
+
+<h2>5. 자원 회수 — 청구량과 실사용은 다르다</h2>
+<p>제 기준으로 이 논문에서 가장 값진 대목은 5.5절입니다. 사용자는 태스크마다 자원 <b>한도(limit)</b>를 청구합니다. 그런데 사람은 자기 작업이 죽는 게 싫어서 <b>넉넉하게 청구합니다</b>. 피크 트래픽 기준으로, 거기에 안전 마진까지 얹어서요. 청구량 기준으로 셀이 "꽉 찼다"고 해도 실제 사용률은 한참 낮은 이유입니다.</p>
+<p>Borg는 이 간극을 그냥 두지 않습니다. 태스크의 실사용량을 관찰해서 실제로 필요한 양의 추정치인 <b>예약(reservation)</b>을 계산하고, 한도와 예약의 차액을 <b>회수(reclaim)</b>해 batch 같은 낮은 우선순위 작업에게 빌려줍니다. prod의 스케줄링은 보수적으로 한도 기준으로 하되, 그 빈 공간을 batch가 얹혀 쓰는 구조입니다. 논문에 따르면 중앙값 셀에서 <b>전체 워크로드의 약 20%가 이 회수된 자원 위에서</b> 돕니다(논문 5.5절).</p>
+<pre class="code"><span class="c"># 논문 5.5절 — 한도(limit)와 예약(reservation)의 분리</span>
+<span class="k">def</span> <span class="f">reclaimable</span>(machine):
+    reserved = 0
+    <span class="k">for</span> task <span class="k">in</span> machine.tasks:
+        <span class="c"># 예약 = 최근 실사용 + 안전 여유. 청구한 limit보다 작으면 차액은 회수 대상</span>
+        reservation = min(task.usage_recent() + safety_margin, task.limit)
+        reserved += reservation
+    <span class="k">return</span> machine.capacity - reserved   <span class="c"># 이만큼을 batch에게 빌려준다</span>
+
+<span class="c"># 단, 메모리는 압축 불가 자원(논문 6.2절) — 실사용이 치솟아 여유가 사라지면</span>
+<span class="c"># Borglet은 우선순위 낮은 태스크부터 그 자리에서 죽인다</span></pre>
+<p>물론 빌려준 자원은 주인이 돌아오면 돌려줘야 합니다. 논문 6.2절은 자원을 두 부류로 나눕니다. CPU나 디스크 I/O 같은 <b>압축 가능(compressible)</b> 자원은 부족해지면 스로틀링으로 뺏으면 그만이라 태스크를 죽일 필요가 없습니다. 반면 메모리나 디스크 공간 같은 <b>압축 불가(non-compressible)</b> 자원은 뺏는 방법이 회수가 아니라 <b>처형</b>뿐입니다 — 머신에서 압축 불가 자원이 바닥나면 Borglet은 우선순위가 낮은 태스크부터 즉시 죽입니다. CPU가 모자라면 느려지기만 하는데 메모리가 모자라면 죽는, 우리가 매일 겪는 그 비대칭이 이 논문에서는 설계 원칙으로 명문화되어 있습니다.</p>
+<div class="callout"><span class="mark">*</span><p>쿠버네티스의 <b>requests/limits</b> 이중 구조, QoS 클래스, 그리고 메모리 초과 시의 <b>OOMKilled</b>가 전부 이 두 절의 유산입니다. requests(예약)보다 limits(한도)를 크게 잡는 순간 여러분은 Borg식 회수 게임에 참가한 것이고, 그 규칙을 모르면 한밤중에 OOMKilled 알림으로 배우게 됩니다. 이 실무 쪽 이야기는 별도의 글에서 자세히 다뤘습니다 — 글 끝의 링크를 참고하세요.</p></div>
+
+<h2>6. 혼합 배치의 경제학 — 20~30%의 근거</h2>
+<p>"prod와 batch를 섞어 태운다"는 결정이 실제로 얼마나 버는지, 논문 5장은 감이 아니라 실측으로 답합니다. 방법이 우아합니다. 실제 셀의 워크로드 트레이스를 가져다가, 배치 정책을 바꿔 가며 <b>"이 워크로드를 다 태우려면 머신 몇 대짜리 셀이면 충분한가"</b>를 재는 셀 압축(cell compaction) 실험입니다. 정책의 우열이 "머신 몇 대를 아끼는가"라는 돈 단위로 환산됩니다.</p>
+<p>결과가 5.2절의 그 유명한 수치입니다. prod와 non-prod를 별도 셀로 갈라 태우면, 중앙값 셀 기준으로 <b>머신이 20~30% 더 필요합니다</b>. 이유는 5장의 다른 실험들이 채워 줍니다. prod가 청구하고 안 쓰는 자원이 그만큼 크고, 섞어 태우면 그 틈을 batch가 메꾸기 때문입니다. 물론 공짜는 아닙니다. 같은 5.2절은 섞어 태울 때 생기는 간섭을 <b>CPI(명령당 사이클)</b>로 재 봅니다. 저자들도 "결과가 딱 떨어지지는 않았다"고 적는데, 그중 비교적 분명한 수치가 공유 셀의 평균 CPI 1.58 대 전용 셀 1.53 — CPU 성능이 <b>약 3% 나빠지는</b> 정도입니다. 그 정도 대가를 물고도 앞의 20~30%를 아끼는 쪽이 남는 장사라는 것이 논문의 계산입니다. 격리의 완성도가 아니라 <b>격리의 가성비</b>를 따지는 것 — 대규모 시스템 논문다운 계산법입니다.</p>
+
+<h2>7. 정리 — 쿠버네티스로 이어진 유산</h2>
+<p>논문 8장은 보기 드물게 솔직한 반성문입니다. 저자들은 Borg에서 잘못 만든 것(8.1절 — 잡이 유일한 묶음 단위라 유연성이 없던 것, 머신 하나의 IP를 포트로 쪼개 쓰던 것)과 잘 만든 것(8.2절 — alloc, 태스크 관리를 넘어선 클러스터 서비스, 내부를 다 열어 보여 주는 인트로스펙션, 커널처럼 얇아진 마스터)을 나눠 적고, 그 교훈이 어떻게 쿠버네티스에 반영됐는지 밝힙니다. 잡 대신 <b>레이블</b>로 묶고, Pod마다 <b>IP를 하나씩</b> 주고, alloc은 <b>Pod</b>가 됐습니다. 쿠버네티스가 처음부터 완성형처럼 보였던 이유는 간단합니다 — 십 년 치 운영의 반성문 위에서 시작했기 때문입니다.</p>
+<p>읽고 나서 남은 것을 세 줄로 정리합니다. 첫째, <b>Pod, PriorityClass, requests/limits, 선점은 발명이 아니라 이식입니다.</b> 쿠버네티스의 어떤 개념이 어색하다면 그 원형이 Borg에서 어떤 문제를 풀었는지 찾아보는 게 가장 빠른 이해법이었습니다. 둘째, <b>청구량과 실사용의 분리는 태도의 문제이기도 합니다.</b> 온프레미스에서 vLLM 서빙을 준비하며 체감한 것인데, GPU 메모리처럼 압축 불가능한 자원 앞에서는 "넉넉하게 잡자"가 곧 "다른 작업을 못 태운다"와 같은 말이 됩니다. 한정된 머신에서 서빙과 부속 작업을 같이 굴리려면 결국 Borg가 했던 고민 — 누가 양보하고, 무엇을 회수할 것인가 — 을 축소판으로 반복하게 됩니다. 셋째, <b>죽어도 되는 작업을 죽어도 되게 만들어 두는 것</b>이 자원 효율의 전제 조건입니다. 크롤링 파이프라인처럼 batch성 작업을 설계할 때 재시작 멱등성을 먼저 챙기는 습관은, 알고 보면 Borg의 batch 밴드가 강제한 규율과 같은 것이었습니다. 이 논문에서 가장 실무적인 절인 requests/limits와 OOMKilled 이야기는 아래 링크의 글에서 이어집니다.</p>
+    <div class="post-tags">
+      <span class="pt-head">태그</span>
+      <a class="tag" href="index.html">Borg</a>
+      <a class="tag" href="index.html">스케줄링</a>
+      <a class="tag" href="index.html">논문</a>
+    </div>
+    <div class="post-cta"><span class="t">이 논문의 유산이 실무에서 터지는 지점 → <b>쿠버네티스 OOMKilled 글</b></span><a class="chip primary" href="kubernetes-oomkilled.html">글 보기 ↗</a></div>
+  </article>
+
+  <nav class="post-nav" aria-label="글 이동">
+    <a class="pn-prev" href="postgres-slow-list.html"><span class="pn-label">이전 글</span><span class="pn-title">PostgreSQL 느린 목록 화면 — 인덱스와 keyset 페이지네이션</span><span class="pn-date">2025 · 11</span></a>
+    <a class="pn-next" href="prisma-transactions-n1.html"><span class="pn-label">다음 글</span><span class="pn-title">Prisma 트랜잭션과 N+1 — ORM이 숨기는 쿼리</span><span class="pn-date">2026 · 02</span></a>
+  </nav>
+</main>
+
+<footer class="site-footer wrap">
+  <div class="colophon"><span>© <span data-year>2025</span> 안성진</span><span><a href="../index.html">홈으로</a></span></div>
+</footer>
+
+<script src="../assets/js/site.js" defer></script>
+<script src="../assets/js/article.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  var CAP = 10;
+  function $(id) { return document.getElementById(id); }
+  var board = $("pw-borg-board"), logEl = $("pw-borg-log"), queueEl = $("pw-borg-queue");
+  var btnSubmit = $("pw-borg-submit"), btnReset = $("pw-borg-reset"), btnPreset = $("pw-borg-preset");
+  var typeBtns = { prod: $("pw-borg-type-prod"), batch: $("pw-borg-type-batch") };
+  var sizeBtns = { 2: $("pw-borg-size-2"), 3: $("pw-borg-size-3"), 5: $("pw-borg-size-5") };
+  if (!board || !logEl || !queueEl || !btnSubmit || !btnReset || !btnPreset ||
+      !typeBtns.prod || !typeBtns.batch || !sizeBtns[2] || !sizeBtns[3] || !sizeBtns[5]) return;
+
+  var curType = "prod", curSize = 2, busy = false;
+  var machines, queue, seq;
+
+  function mkTask(type, size) {
+    seq[type] += 1;
+    return { id: (type === "prod" ? "P" : "B") + seq[type], type: type, size: size };
+  }
+  function used(m) { return m.reduce(function (s, t) { return s + t.size; }, 0); }
+  function free(m) { return CAP - used(m); }
+
+  function initState(preset) {
+    seq = { prod: 0, batch: 0 };
+    queue = [];
+    machines = [[], [], [], []];
+    var layout = preset
+      ? [[["prod", 4], ["batch", 3], ["batch", 2]], [["prod", 5], ["prod", 3]], [["batch", 5], ["batch", 3]], [["prod", 3], ["batch", 4], ["batch", 2]]]
+      : [[["prod", 4]], [["batch", 3]], [["prod", 2], ["batch", 2]], []];
+    layout.forEach(function (col, i) {
+      col.forEach(function (spec) { machines[i].push(mkTask(spec[0], spec[1])); });
+    });
+  }
+
+  function log(kind, msg) {
+    var line = document.createElement("div");
+    line.className = "pw-borg-l-" + kind;
+    line.textContent = msg;
+    logEl.insertBefore(line, logEl.firstChild);
+    while (logEl.childNodes.length > 40) logEl.removeChild(logEl.lastChild);
+  }
+
+  function renderQueue() {
+    queueEl.textContent = "";
+    if (!queue.length) {
+      var e = document.createElement("span");
+      e.className = "pw-borg-qempty";
+      e.textContent = "비어 있음";
+      queueEl.appendChild(e);
+      return;
+    }
+    queue.forEach(function (j) {
+      var c = document.createElement("span");
+      c.className = "pw-borg-qcard" + (j.type === "prod" ? " pw-borg-q-prod" : "");
+      c.textContent = j.id + " · " + j.size + "u";
+      queueEl.appendChild(c);
+    });
+  }
+
+  function render(newIds) {
+    board.textContent = "";
+    machines.forEach(function (m, i) {
+      var box = document.createElement("div");
+      box.className = "pw-borg-machine";
+      var head = document.createElement("div");
+      head.className = "pw-borg-mhead";
+      var name = document.createElement("span");
+      name.className = "pw-borg-mname";
+      name.textContent = "M" + (i + 1);
+      var fr = document.createElement("span");
+      fr.textContent = "여유 " + free(m) + "u";
+      head.appendChild(name);
+      head.appendChild(fr);
+      var col = document.createElement("div");
+      col.className = "pw-borg-col";
+      m.forEach(function (t) {
+        var el = document.createElement("div");
+        el.className = "pw-borg-task pw-borg-task-" + t.type + " pw-borg-s" + t.size +
+          (newIds && newIds.indexOf(t.id) >= 0 ? " pw-borg-task-new" : "");
+        el.setAttribute("data-task", t.id);
+        el.textContent = t.id + " · " + t.size + "u";
+        col.appendChild(el);
+      });
+      box.appendChild(head);
+      box.appendChild(col);
+      board.appendChild(box);
+    });
+    renderQueue();
+  }
+
+  // best fit: 들어갈 수 있는 머신 중 남는 공간이 가장 작은 곳 (논문 3.2절의 한 극단)
+  function bestFit(size) {
+    var best = -1, bestFree = Infinity;
+    machines.forEach(function (m, i) {
+      var f = free(m);
+      if (f >= size && f < bestFree) { best = i; bestFree = f; }
+    });
+    return best;
+  }
+
+  // 선점 계획: 쫓아낼 batch 개수 → 낭비 공간 → 머신 번호 순으로 최소를 고른다
+  function evictionPlan(size) {
+    var best = null;
+    machines.forEach(function (m, i) {
+      var gain = free(m);
+      var batch = m.filter(function (t) { return t.type === "batch"; })
+                   .sort(function (a, b) { return b.size - a.size; });
+      var take = [];
+      for (var k = 0; k < batch.length && gain < size; k++) {
+        take.push(batch[k]);
+        gain += batch[k].size;
+      }
+      if (gain < size) return; // 이 머신은 batch를 다 비워도 부족
+      var waste = gain - size;
+      if (!best || take.length < best.take.length ||
+          (take.length === best.take.length && waste < best.waste)) {
+        best = { machine: i, take: take, waste: waste };
+      }
+    });
+    return best;
+  }
+
+  function requeuePass() {
+    var moved = [], rest = [];
+    queue.forEach(function (j) {
+      var mi = bestFit(j.size);
+      if (mi >= 0) {
+        machines[mi].push(j);
+        moved.push(j.id);
+        log("requeue", "[재큐] " + j.id + "(" + j.size + "u) → M" + (mi + 1) + " · 자리가 나서 재배치");
+      } else {
+        rest.push(j);
+      }
+    });
+    queue = rest;
+    if (moved.length) render(moved); else renderQueue();
+  }
+
+  function submit() {
+    if (busy) return;
+    var job = mkTask(curType, curSize);
+    log("wait", "[제출] " + job.id + " (" + job.type + " · " + job.size + "u)");
+    var mi = bestFit(job.size);
+    if (mi >= 0) {
+      var f = free(machines[mi]);
+      machines[mi].push(job);
+      log("place", "[배치] " + job.id + " → M" + (mi + 1) + " · best-fit, 여유 " + f + "u→" + (f - job.size) + "u");
+      render([job.id]);
+      requeuePass();
+      return;
+    }
+    if (job.type === "batch") {
+      queue.push(job);
+      log("wait", "[대기] 들어갈 자리 없음 — batch는 선점 못 하므로 " + job.id + " 대기열로");
+      renderQueue();
+      return;
+    }
+    var plan = evictionPlan(job.size);
+    if (!plan) {
+      queue.push(job);
+      log("wait", "[대기] 쫓아낼 batch도 없음(prod끼리는 선점 금지) — " + job.id + " 대기열로");
+      renderQueue();
+      return;
+    }
+    busy = true;
+    btnSubmit.disabled = true;
+    plan.take.forEach(function (t) {
+      var el = board.querySelector('[data-task="' + t.id + '"]');
+      if (el) el.classList.add("pw-borg-evict");
+      log("evict", "[선점] M" + (plan.machine + 1) + ": " + t.id + "(" + t.size + "u) 강제 종료 → 재큐잉");
+    });
+    window.setTimeout(function () {
+      machines[plan.machine] = machines[plan.machine].filter(function (t) {
+        return plan.take.indexOf(t) < 0;
+      });
+      plan.take.forEach(function (t) { queue.push(t); });
+      machines[plan.machine].push(job);
+      log("place", "[배치] " + job.id + " → M" + (plan.machine + 1) + " · 선점으로 확보한 자리");
+      render([job.id]);
+      window.setTimeout(function () {
+        requeuePass();
+        busy = false;
+        btnSubmit.disabled = false;
+      }, 420);
+    }, 480);
+  }
+
+  function setType(t) {
+    curType = t;
+    typeBtns.prod.classList.toggle("on", t === "prod");
+    typeBtns.batch.classList.toggle("on", t === "batch");
+  }
+  function setSize(s) {
+    curSize = s;
+    [2, 3, 5].forEach(function (k) { sizeBtns[k].classList.toggle("on", k === s); });
+  }
+
+  typeBtns.prod.addEventListener("click", function () { setType("prod"); });
+  typeBtns.batch.addEventListener("click", function () { setType("batch"); });
+  [2, 3, 5].forEach(function (s) {
+    sizeBtns[s].addEventListener("click", function () { setSize(s); });
+  });
+  btnSubmit.addEventListener("click", submit);
+  btnReset.addEventListener("click", function () {
+    if (busy) return;
+    initState(false);
+    render();
+    log("wait", "[리셋] 널널한 초기 배치로 되돌림");
+  });
+  btnPreset.addEventListener("click", function () {
+    if (busy) return;
+    initState(true);
+    render();
+    log("wait", "[프리셋] 혼잡 상태 — 이제 prod 3u를 제출해 보세요");
+  });
+
+  initState(false);
+  render();
+  log("wait", "[안내] 작업을 제출하면 best-fit으로 배치됩니다. 자리가 없으면 prod는 batch를 선점합니다.");
+})();
+</script>
+</body>
+</html>
