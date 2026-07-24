@@ -100,6 +100,17 @@
 .job ul li::before { content: "—"; position: absolute; left: 0; color: var(--accent); }
 .job .stack { margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
+/* narrative prose (philosophy / the person) */
+.about-prose { max-width: 62ch; }
+.about-prose p { color: var(--ink-2); font-size: var(--t-0); line-height: 1.8; margin-bottom: 1.1em; }
+.about-prose p:last-child { margin-bottom: 0; }
+.about-prose p b { color: var(--ink); font-weight: 600; }
+.about-prose .about-sub {
+  font-family: var(--serif); font-weight: 500; font-size: var(--t-1);
+  color: var(--ink); margin: var(--sp-5) 0 0.7rem;
+}
+.about-prose .about-sub:first-child { margin-top: 0; }
+
 /* principles */
 .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--sp-5); }
 .principle { }

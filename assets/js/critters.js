@@ -15,6 +15,19 @@
   /* ---------------- 스타일 주입 ---------------- */
   const css = `
   .critters-layer{position:fixed;inset:0;pointer-events:none;z-index:55;overflow:hidden;contain:layout size style;}
+  /* 놀이터 배경 — 은은하게, 콘텐츠 뒤가 아니라 레이어 안(투명·클릭통과) */
+  .cr-scene{position:absolute;inset:0;pointer-events:none;}
+  .cr-ground{position:absolute;left:0;right:0;bottom:0;height:96px;
+    background:linear-gradient(to top,rgba(120,168,120,.16),rgba(120,168,120,.05) 55%,transparent);}
+  :root[data-theme="dark"] .cr-ground{background:linear-gradient(to top,rgba(90,150,110,.14),rgba(90,150,110,.04) 55%,transparent);}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cr-ground{background:linear-gradient(to top,rgba(90,150,110,.14),rgba(90,150,110,.04) 55%,transparent);}}
+  .cr-paws{position:absolute;inset:auto 0 0 0;height:120px;opacity:.5;
+    background-repeat:repeat-x;background-position:left bottom;background-size:220px 120px;}
+  .cr-prop{position:absolute;bottom:14px;opacity:.85;}
+  .cr-prop.bush{left:4%;width:70px;height:46px;}
+  .cr-prop.tree{right:5%;width:66px;height:96px;bottom:14px;}
+  .cr-prop.ball{left:64%;width:22px;height:22px;bottom:16px;}
+  @media (max-width:640px){.cr-prop.ball{display:none;}.cr-ground,.cr-paws{height:76px;}}
   .critter{position:absolute;width:46px;height:38px;will-change:transform;transform:translate3d(0,0,0);}
   .critter svg{width:100%;height:100%;overflow:visible;display:block;
     filter:drop-shadow(0 1.5px 1.5px rgba(30,25,18,.18));}
@@ -88,6 +101,29 @@
       <div class="emote">?</div></svg>`;
   }
 
+  /* 놀이터 소품 SVG */
+  const PAW = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="120" viewBox="0 0 220 120">` +
+    [[30, 92], [96, 74], [150, 98], [188, 66]].map(([x, y]) =>
+      `<g fill="#7a8a6a" transform="translate(${x},${y})"><ellipse cx="0" cy="4" rx="4.2" ry="5.2"/>` +
+      `<circle cx="-5" cy="-3" r="1.8"/><circle cx="-1.5" cy="-5.5" r="1.8"/><circle cx="2.5" cy="-5" r="1.8"/><circle cx="5.5" cy="-2" r="1.8"/></g>`
+    ).join("") + `</svg>`);
+  function sceneHTML() {
+    return `<div class="cr-scene" aria-hidden="true">
+      <div class="cr-ground"></div>
+      <div class="cr-paws" style="background-image:url('data:image/svg+xml,${PAW}')"></div>
+      <div class="cr-prop bush"><svg viewBox="0 0 70 46" fill="none">
+        <ellipse cx="20" cy="34" rx="18" ry="12" fill="#7ea36a"/><ellipse cx="42" cy="30" rx="20" ry="15" fill="#6f9a5c"/>
+        <ellipse cx="56" cy="36" rx="12" ry="9" fill="#84ad70"/><ellipse cx="34" cy="24" rx="12" ry="9" fill="#8cb679"/></svg></div>
+      <div class="cr-prop tree"><svg viewBox="0 0 66 96" fill="none">
+        <rect x="29" y="56" width="8" height="36" rx="3" fill="#9c6531"/>
+        <circle cx="33" cy="34" r="22" fill="#6f9a5c"/><circle cx="20" cy="44" r="15" fill="#7ea36a"/>
+        <circle cx="47" cy="44" r="15" fill="#84ad70"/><circle cx="33" cy="22" r="14" fill="#8cb679"/></svg></div>
+      <div class="cr-prop ball"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="var(--accent,#db4322)"/>
+        <path d="M2 11 h18 M11 2 a12 12 0 0 1 0 18 a12 12 0 0 1 0 -18" stroke="rgba(255,255,255,.55)" stroke-width="1.3" fill="none"/></svg></div>
+    </div>`;
+  }
+
   const SPECIES = {
     dog: { svg: dogSVG, palettes: [{ b: "#c98a4b", d: "#9c6531" }, { b: "#e5d6c3", d: "#b9a488" }, { b: "#8a8172", d: "#5f584c" }] },
     cat: { svg: catSVG, palettes: [{ b: "#463f37", d: "#2b2620" }, { b: "#d98b5f", d: "#a86338" }, { b: "#b9b2a4", d: "#847c6c" }] },
@@ -123,6 +159,18 @@
       this.place();
     }
     pickTarget() {
+      // 25% 확률로 소품 근처에서 '놀기'
+      if (Math.random() < 0.25 && layer) {
+        const props = layer.querySelectorAll(".cr-prop");
+        if (props.length) {
+          const r = props[(Math.random() * props.length) | 0].getBoundingClientRect();
+          this.tx = clampX(r.left + rand(-24, r.width + 4));
+          this.ty = clampY(r.top + r.height - 34);
+          this.playing = true;
+          return;
+        }
+      }
+      this.playing = false;
       this.tx = clampX(rand(20, W() - 60));
       this.ty = clampY(rand(TOP, H() - 60));
     }
@@ -161,7 +209,8 @@
       if (this.state === "idle") {
         if (this.timer <= 0) { this.state = "walk"; this.pickTarget(); this.timer = rand(2, 5); }
       } else if (this.timer <= 0 && (this.state === "walk")) {
-        this.state = "idle"; this.timer = rand(0.6, 2.4);
+        this.state = "idle"; this.timer = this.playing ? rand(2, 4.5) : rand(0.6, 2.4);
+        if (this.playing) { this.say("♪", 0.9); this.playing = false; }
       }
       // 목표로 이동
       const gx = this.tx - this.x, gy = this.ty - this.y;
@@ -230,6 +279,7 @@
     layer = document.createElement("div");
     layer.className = "critters-layer";
     layer.setAttribute("aria-hidden", "true");
+    layer.innerHTML = sceneHTML();
     document.body.appendChild(layer);
     restore();
     if (!reduced) { last = performance.now(); raf = requestAnimationFrame(loop); }
