@@ -68,11 +68,35 @@
   nav.setAttribute("aria-label", "빠른 이동");
   nav.innerHTML =
     ITEMS.map((it) =>
-      `<a href="${it.href}"${it.key === act ? ' class="active" aria-current="page"' : ""}>` +
+      `<a href="${it.href}" data-k="${it.key}"${it.key === act ? ' class="active" aria-current="page"' : ""}>` +
       `<span class="qn-label">${it.label}</span><span class="qn-dot" aria-hidden="true"></span></a>`
     ).join("") +
     `<span class="qn-sep" aria-hidden="true"></span>` +
     `<a class="qn-top" href="#" role="button" aria-label="맨 위로"><span class="qn-label">맨 위로</span><span class="qn-dot" aria-hidden="true">↑</span></a>`;
+
+  function setActive(key) {
+    nav.querySelectorAll("a[data-k]").forEach((a) => {
+      const on = a.dataset.k === key;
+      a.classList.toggle("active", on);
+      if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+  }
+
+  /* 스크롤스파이 — 홈처럼 섹션이 있는 페이지에서 현재 섹션의 점을 강조 */
+  function scrollspy() {
+    const SEC = { cases: "cases", products: "demos", work: "labs", about: "about" };
+    const secs = Object.keys(SEC).map((id) => document.getElementById(id)).filter(Boolean);
+    if (secs.length < 2) return; // 섹션형 페이지가 아니면 스킵
+    const ratios = new Map();
+    const io = new IntersectionObserver((ents) => {
+      ents.forEach((e) => ratios.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0));
+      if ((window.scrollY || 0) < 140) { setActive("home"); return; }
+      let best = null, br = 0;
+      ratios.forEach((r, id) => { if (r > br) { br = r; best = id; } });
+      setActive(best && br > 0 ? SEC[best] : "home");
+    }, { rootMargin: "-45% 0px -45% 0px", threshold: [0, 0.01, 0.5, 1] });
+    secs.forEach((s) => io.observe(s));
+  }
 
   function boot() {
     document.body.appendChild(nav);
@@ -80,6 +104,7 @@
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     });
+    scrollspy();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
